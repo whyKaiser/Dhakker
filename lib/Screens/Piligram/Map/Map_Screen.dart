@@ -1,0 +1,645 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dhakker/Screens/Piligram/Map/services/map_controller_service.dart';
+import 'package:dhakker/Screens/Piligram/Map/services/map_zone_renderer.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../../generated/l10n.dart';
+import '../home/models/zone_model.dart';
+import '../home/services/zone_detection_service.dart';
+
+
+
+class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+  final MapController _mapController = MapController();
+
+  late final MapControllerService _mapControllerService;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
+
+  final ZoneDetectionService _zoneDetectionService = const ZoneDetectionService();
+
+  List<ZoneModel> _zones = [];
+  ZoneModel? _currentZone;
+  Position? _currentPosition;
+
+  bool _isLoading = true;
+  bool _didFocusOnce = false;
+
+  StreamSubscription<Position>? _positionSubscription;
+
+  void _log(String message) {
+    debugPrint('DHKKR_MAP => $message');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _mapControllerService = MapControllerService(_mapController);
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+
+    _pulse = Tween<double>(begin: 0.92, end: 1.22).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOutCubic),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initMapFlow();
+    });
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initMapFlow() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    await _loadZones();
+    await _startTracking();
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _loadZones() async {
+    final query = await FirebaseFirestore.instance
+        .collection('zones')
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    final items = query.docs.map(ZoneModel.fromFirestore).toList();
+    items.sort((a, b) => b.priority.compareTo(a.priority));
+
+    _zones = items;
+
+    _log('Loaded zones count: ${_zones.length}');
+    for (final zone in _zones) {
+      _log(
+        'Zone => id: ${zone.zoneId}, type: ${zone.type}, '
+            'centerLat: ${zone.centerLat}, centerLng: ${zone.centerLng}, '
+            'radiusM: ${zone.radiusM}, points: ${zone.polygonPoints.length}, '
+            'priority: ${zone.priority}',
+      );
+    }
+  }
+
+  Future<void> _startTracking() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final permission = await Geolocator.checkPermission();
+
+    final hasPermission =
+        permission == LocationPermission.always || permission == LocationPermission.whileInUse;
+
+    _log('Location service enabled: $serviceEnabled');
+    _log('Location permission: $permission');
+
+    if (!serviceEnabled || !hasPermission) {
+      _log('Map tracking skipped بسبب الخدمة أو الصلاحية.');
+      return;
+    }
+
+    final current = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
+
+    await _handlePosition(current);
+
+    await _positionSubscription?.cancel();
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 8,
+      ),
+    ).listen((position) async {
+      await _handlePosition(position);
+    });
+  }
+
+  Future<void> _handlePosition(Position position) async {
+    _currentPosition = position;
+
+    _log(
+      'Position => lat: ${position.latitude}, lng: ${position.longitude}, accuracy: ${position.accuracy}',
+    );
+
+    final detected = _zoneDetectionService.detectBestZone(
+      userLat: position.latitude,
+      userLng: position.longitude,
+      zones: _zones,
+    );
+
+    _currentZone = detected;
+
+    if (!_didFocusOnce) {
+      _didFocusOnce = true;
+      _mapControllerService.focusOnPoint(
+        LatLng(position.latitude, position.longitude),
+        zoom: 18.5,
+      );
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _focusOnUser() {
+    final p = _currentPosition;
+    if (p == null) return;
+
+    _mapControllerService.focusOnPoint(
+      LatLng(p.latitude, p.longitude),
+      zoom: 18.5,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final langCode = Localizations.localeOf(context).languageCode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAr = langCode == 'ar';
+
+    final palette = _MapPalette.fromBrightness(isDark);
+
+    final renderer = MapZoneRenderer(
+      baseGold: palette.gold,
+      highlightColor: palette.active,
+    );
+
+    final activeZoneId = _currentZone?.zoneId;
+
+    final circleZones = renderer.buildCircleZones(
+      zones: _zones,
+      activeZoneId: activeZoneId,
+    );
+
+    final polygonZones = renderer.buildPolygonZones(
+      zones: _zones,
+      activeZoneId: activeZoneId,
+    );
+
+    final labelMarkers = _zones
+        .map(
+          (zone) => renderer.buildZoneLabelMarker(
+        zone: zone,
+        label: zone.displayName(langCode),
+        isActive: zone.zoneId == activeZoneId,
+      ),
+    )
+        .whereType<Marker>()
+        .toList();
+
+    final userMarker = _buildUserMarker(
+      palette: palette,
+      position: _currentPosition,
+    );
+
+    final allMarkers = <Marker>[
+      ...labelMarkers,
+      if (userMarker != null) userMarker,
+    ];
+
+    return Container(
+      color: palette.bg,
+      child: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                child: Text(
+                  s.mapTitle,
+                  style: TextStyle(
+                    color: palette.gold,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'AlamirBold',
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                height: 1,
+                color: palette.textMuted.withOpacity(.16),
+              ),
+              const SizedBox(height: 18),
+              _MapCard(
+                palette: palette,
+                child: Stack(
+                  children: [
+                    const _DotGridBackground(),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(26),
+                      child: FlutterMap(
+                        mapController: _mapController,
+                        options: const MapOptions(
+                          initialCenter: LatLng(21.42245878388912, 39.8260935282692),
+                          initialZoom: 18.1,
+                          minZoom: 16.0,
+                          maxZoom: 20.0,
+                          interactionOptions: InteractionOptions(
+                            flags: InteractiveFlag.drag |
+                            InteractiveFlag.pinchZoom |
+                            InteractiveFlag.doubleTapZoom |
+                            InteractiveFlag.flingAnimation |
+                            InteractiveFlag.pinchMove,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: isDark
+                                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                                : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            subdomains: const ['a', 'b', 'c', 'd'],
+                            userAgentPackageName: 'dhakker',
+                          ),
+                          if (polygonZones.isNotEmpty)
+                            PolygonLayer(
+                              polygons: polygonZones,
+                            ),
+                          if (circleZones.isNotEmpty)
+                            CircleLayer(
+                              circles: circleZones,
+                            ),
+                          if (allMarkers.isNotEmpty)
+                            MarkerLayer(
+                              markers: allMarkers,
+                            ),
+                        ],
+                      ),
+                    ),
+                    PositionedDirectional(
+                      top: 14,
+                      start: 14,
+                      child: _CurrentZoneChip(
+                        palette: palette,
+                        text: _currentZone?.displayName(langCode) ?? s.mapNoZoneDetected,
+                      ),
+                    ),
+                    PositionedDirectional(
+                      end: 14,
+                      bottom: 14,
+                      child: _MiniBtn(
+                        palette: palette,
+                        icon: Icons.my_location_rounded,
+                        onTap: _focusOnUser,
+                      ),
+                    ),
+                    PositionedDirectional(
+                      end: 14,
+                      top: 14,
+                      child: _MiniBtn(
+                        palette: palette,
+                        icon: Icons.zoom_in_rounded,
+                        onTap: () {
+                          _mapControllerService.zoomIn();
+                        },
+                      ),
+                    ),
+                    PositionedDirectional(
+                      end: 14,
+                      top: 58,
+                      child: _MiniBtn(
+                        palette: palette,
+                        icon: Icons.zoom_out_rounded,
+                        onTap: () {
+                          _mapControllerService.zoomOut();
+                        },
+                      ),
+                    ),
+                    if (_isLoading)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withOpacity(.12),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: palette.gold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Align(
+                alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                child: Text(
+                  _currentZone != null ? s.mapDetectedZoneTitle : s.mapNoZoneTitle,
+                  style: TextStyle(
+                    color: _currentZone != null ? palette.active : palette.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'AlamirBold',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _currentZone != null
+                    ? s.mapDetectedZoneDesc
+                    : s.mapNoZoneDesc,
+                textAlign: isAr ? TextAlign.right : TextAlign.left,
+                style: TextStyle(
+                  color: palette.textMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Marker? _buildUserMarker({
+    required _MapPalette palette,
+    required Position? position,
+  }) {
+    if (position == null) return null;
+
+    return Marker(
+      point: LatLng(position.latitude, position.longitude),
+      width: 64,
+      height: 64,
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, _) {
+          final o = (1 - _pulseController.value).clamp(0.0, 1.0);
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.scale(
+                scale: 0.9 + (0.55 * _pulseController.value),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: palette.active.withOpacity(0.10 + o * 0.10),
+                    border: Border.all(
+                      color: palette.active.withOpacity(0.22 + o * 0.12),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: palette.active.withOpacity(.98),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(.90),
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.active.withOpacity(.28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MapPalette {
+  final Color bg;
+  final Color gold;
+  final Color textPrimary;
+  final Color textMuted;
+  final Color card;
+  final Color border;
+  final Color shadow;
+  final Color active;
+
+  const _MapPalette({
+    required this.bg,
+    required this.gold,
+    required this.textPrimary,
+    required this.textMuted,
+    required this.card,
+    required this.border,
+    required this.shadow,
+    required this.active,
+  });
+
+  factory _MapPalette.fromBrightness(bool isDark) {
+    if (isDark) {
+      return const _MapPalette(
+        bg: Color(0xFF0B0D10),
+        gold: Color(0xFFD4AF37),
+        textPrimary: Colors.white,
+        textMuted: Color(0xFF9AA4B2),
+        card: Color(0xFF303030),
+        border: Color(0xFF1B1F26),
+        shadow: Colors.black,
+        active: Color(0xFF38C793),
+      );
+    }
+
+    return const _MapPalette(
+      bg: Color(0xFFF7F7F8),
+      gold: Color(0xFFD4AF37),
+      textPrimary: Color(0xFF121316),
+      textMuted: Color(0xFF667085),
+      card: Color(0xFFFFFFFF),
+      border: Color(0xFFE5E7EB),
+      shadow: Color(0x22000000),
+      active: Color(0xFF2BAE7F),
+    );
+  }
+}
+
+class _MapCard extends StatelessWidget {
+  final Widget child;
+  final _MapPalette palette;
+
+  const _MapCard({
+    required this.child,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 500,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: palette.border.withOpacity(.95),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow.withOpacity(.16),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _CurrentZoneChip extends StatelessWidget {
+  final _MapPalette palette;
+  final String text;
+
+  const _CurrentZoneChip({
+    required this.palette,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(.56),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: palette.gold.withOpacity(.24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.34),
+            blurRadius: 14,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _DotGridBackground extends StatelessWidget {
+  const _DotGridBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DotGridPainter(),
+      size: Size.infinite,
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withOpacity(.06);
+    const step = 22.0;
+
+    for (double y = 0; y < size.height; y += step) {
+      for (double x = 0; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x + 8, y + 8), 1.2, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MiniBtn extends StatelessWidget {
+  final _MapPalette palette;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _MiniBtn({
+    required this.palette,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(.56),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: palette.gold.withOpacity(.22),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(.34),
+                blurRadius: 16,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white.withOpacity(.92),
+            size: 22,
+          ),
+        ),
+      ),
+    );
+  }
+}

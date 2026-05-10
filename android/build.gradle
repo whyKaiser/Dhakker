@@ -1,0 +1,97 @@
+// Top-level Gradle for Flutter Android (AGP 8.x, Java 17)
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    // Ensure :app config is evaluated first (Flutter default)
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+/* ======================= LEGACY FLUTTER EXT SHIM ===========================
+   Some old plugins do: android { compileSdkVersion flutter.compileSdkVersion }
+   AGP 8 no longer provides that. We inject a compatible map in every module.
+   ======================================================================== */
+subprojects { p ->
+    p.ext.set('flutter', [
+            compileSdkVersion : 35,
+            minSdkVersion     : 23,
+            targetSdkVersion  : 35
+            // If any plugin reads kotlinVersion from flutter, add it here:
+            // kotlinVersion   : '1.9.24'
+    ])
+}
+
+/* ========================= NAMESPACE INJECTOR ============================== */
+def setNamespaceFromManifest(Project p) {
+    if (!p.hasProperty('android')) return
+    def androidExt = p.android
+    if (androidExt.hasProperty('namespace') && androidExt.namespace) return
+
+    def manifest = file("${p.projectDir}/src/main/AndroidManifest.xml")
+    if (!manifest.exists()) return
+
+    def pkg = new groovy.util.XmlSlurper().parse(manifest).'@package'.text()
+    if (pkg) {
+        androidExt.namespace = pkg
+        println "Applied namespace '${pkg}' to module ':${p.name}'"
+    }
+}
+
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin('com.android.library') {
+        setNamespaceFromManifest(subproject)
+    }
+    subproject.pluginManager.withPlugin('com.android.application') {
+        setNamespaceFromManifest(subproject)
+    }
+}
+
+/* ====================== SDK LEVELS BACKFILL (AGP 8) ======================= */
+subprojects { subproject ->
+    subproject.pluginManager.withPlugin('com.android.library') {
+        if (!subproject.hasProperty('android')) return
+        def androidExt = subproject.android
+
+        // compileSdk
+        def hasCompile =
+                (androidExt.hasProperty('compileSdk') && androidExt.compileSdk) ||
+                        (androidExt.hasProperty('compileSdkVersion') && androidExt.compileSdkVersion)
+        if (!hasCompile) {
+            try {
+                androidExt.compileSdkVersion 35
+                println "Applied compileSdkVersion 35 to ':${subproject.name}'"
+            } catch (ignored) {}
+        }
+
+        // defaultConfig: min/target
+        if (androidExt.hasProperty('defaultConfig') && androidExt.defaultConfig != null) {
+            def dc = androidExt.defaultConfig
+
+            def hasMin = (dc.hasProperty('minSdk') && dc.minSdk) ||
+                    (dc.hasProperty('minSdkVersion') && dc.minSdkVersion)
+            if (!hasMin) {
+                try { dc.minSdk = 23; println "Applied minSdk 23 to ':${subproject.name}'" } catch (ignored) {}
+            }
+
+            def hasTarget = (dc.hasProperty('targetSdk') && dc.targetSdk) ||
+                    (dc.hasProperty('targetSdkVersion') && dc.targetSdkVersion)
+            if (!hasTarget) {
+                try { dc.targetSdkVersion = 35; println "Applied targetSdk 35 to ':${subproject.name}'" } catch (ignored) {}
+            }
+        }
+    }
+}
+
+
