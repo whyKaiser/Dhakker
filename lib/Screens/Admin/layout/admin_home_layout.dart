@@ -218,7 +218,7 @@ class _AdminBottomNav extends StatelessWidget {
         ),
       ),
       child: SizedBox(
-        height: 86,
+        height: 95,
         child: BottomNavigationBar(
           currentIndex: currentIndex,
           onTap: onTap,

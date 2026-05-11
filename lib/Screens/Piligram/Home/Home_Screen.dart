@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../generated/l10n.dart';
+import '../../../bloc/cubit.dart';
+import '../../../bloc/states.dart';
 import 'controllers/home_dua_controller.dart';
 import 'services/dua_playback_service.dart';
 import 'services/supplication_service.dart';
@@ -82,10 +85,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        // يتم دائماً عرض الدعاء الأول (الأكثر تشغيلاً) في البطاقة الأساسية[cite: 3, 5]
         final zoneName = _controller.displayedZoneName(langCode);
         final duaTitle = _controller.displayedDuaTitle(langCode, 0);
         final duaText = _controller.displayedDuaText(langCode, 0);
+
+        // تفعيل منطق العداد عند دخول منطقة
+        if (_controller.hasDetectedZone && zoneName != null && duaText != null) {
+          AppCubit.get(context).checkLapCounter(zoneName, duaText);
+        }
 
         String statusText() {
           if (_controller.isLoading) return s.homeStatusLoading;
@@ -115,7 +122,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Column(
                   children: [
                     const SizedBox(height: 14),
-                    // --- تصميم الكعبة والنبضات[cite: 5, 7] ---
+
+                    // --- العداد بتنسيق الكبسولة الذهبية ---
+                    BlocBuilder<AppCubit, AppState>(
+                      builder: (context, state) {
+                        var lapCount = AppCubit.get(context).lapCount;
+                        return Column(
+                          children: [
+                            Text("الشوط الحالي", style: TextStyle(color: palette.muted, fontSize: 13, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: palette.gold.withOpacity(0.35), width: 1.2),
+                              ),
+                              child: Text(
+                                "$lapCount / 7",
+                                style: TextStyle(color: palette.gold, fontSize: 26, fontWeight: FontWeight.w900),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
                     Center(
                       child: AnimatedBuilder(
                         animation: _pulseController,
@@ -148,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     Text(zoneName ?? s.homeNoZoneDetected, textAlign: TextAlign.center, style: TextStyle(color: palette.textPrimary, fontSize: 20, fontWeight: FontWeight.w900, height: 1.12, fontFamily: 'AlamirBold')),
                     const SizedBox(height: 22),
 
-                    // --- 1. بطاقة الدعاء الأساسي (يقرأ تلقائياً)[cite: 5, 8] ---
+                    // --- بطاقة الدعاء الأساسية ---
                     _DuaCard(
                       palette: palette,
                       title: duaTitle ?? s.homeRecommendedNow,
@@ -157,74 +190,62 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       canPlay: _controller.hasDua,
                       isPlaying: _controller.isPlaying,
                       playingText: s.homePlayingNow,
-                      onDone: _controller.hasDua
-                          ? () async {
-                        // تشغيل الدعاء الأول وزيادة عداد التشغيل في فايربيس[cite: 3]
-                        await _controller.onPrimaryButtonTap(langCode, 0);
-                      }
-                          : null,
+                      onDone: _controller.hasDua ? () async => await _controller.onPrimaryButtonTap(langCode, 0) : null,
                     ),
 
-                    // --- 2. قائمة الأدعية الأخرى تحت البطاقة الأساسية[cite: 1, 3] ---
-                    if (_controller.hasDua && _controller.duasCount > 1) ...[
+                    // --- قائمة الأدعية الإضافية ---
+                    if (_controller.hasDua && _controller.displayedDuaText(langCode, 1) != null) ...[
                       const SizedBox(height: 28),
                       Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          'أدعية أخرى مخصصة لهذا المكان:',
-                          style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
-                        ),
+                        child: Text('أدعية أخرى مخصصة لهذا المكان:', style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold')),
                       ),
                       const SizedBox(height: 12),
 
-                      // توليد بطاقات لبقية الأدعية[cite: 1, 7]
-                      ...List.generate(_controller.duasCount - 1, (index) {
-                        final realIndex = index + 1; // نبدأ من العنصر الثاني في القائمة
-                        final otherTitle = _controller.displayedDuaTitle(langCode, realIndex) ?? '';
-                        final otherText = _controller.displayedDuaText(langCode, realIndex) ?? '';
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: palette.card,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: palette.gold.withOpacity(0.12)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(color: palette.chipBg, borderRadius: BorderRadius.circular(10)),
-                                child: Text(otherTitle, style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(otherText, style: TextStyle(color: palette.textPrimary, fontSize: 16, height: 1.6, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 12),
-                              Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: InkWell(
-                                  onTap: () async => await _controller.onPrimaryButtonTap(langCode, realIndex),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(color: palette.gold.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                  Icon(Icons.play_circle_fill_rounded, color: palette.gold, size: 20),
-                                        const SizedBox(width: 6),
-                                        Text('تشغيل الدعاء', style: TextStyle(color: palette.gold, fontWeight: FontWeight.bold)),
-                                      ],
+                      // نعرض الأدعية الإضافية المتاحة
+                      for (int i = 1; i < 4; i++)
+                        if (_controller.displayedDuaText(langCode, i) != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: palette.card,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: palette.gold.withOpacity(0.12)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(color: palette.chipBg, borderRadius: BorderRadius.circular(10)),
+                                  child: Text(_controller.displayedDuaTitle(langCode, i) ?? '', style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(_controller.displayedDuaText(langCode, i) ?? '', style: TextStyle(color: palette.textPrimary, fontSize: 16, height: 1.6, fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  child: InkWell(
+                                    onTap: () async => await _controller.onPrimaryButtonTap(langCode, i),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(color: palette.gold.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.play_circle_fill_rounded, color: palette.gold, size: 20),
+                                          const SizedBox(width: 6),
+                                          Text('تشغيل الدعاء', style: TextStyle(color: palette.gold, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        );
-                      }),
                     ],
 
                     const SizedBox(height: 16),
@@ -247,238 +268,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 }
 
-// الأكواد المتبقية (_DhakkerPalette, _PulseRing, _DuaCard, إلخ) تبقى كما هي دون تغيير لضمان استقرار التصميم[cite: 1, 5].
+// --- الكلاسات المساعدة (بدون أي تعديل خارجي) ---
 
 class _DhakkerPalette {
-  final Color screenBg;
-  final Color card;
-  final Color gold;
-  final Color gold2;
-  final Color muted;
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color chipBg;
-  final Color shadow;
-
-  const _DhakkerPalette({
-    required this.screenBg,
-    required this.card,
-    required this.gold,
-    required this.gold2,
-    required this.muted,
-    required this.textPrimary,
-    required this.textSecondary,
-    required this.chipBg,
-    required this.shadow,
-  });
-
+  final Color screenBg, card, gold, gold2, muted, textPrimary, textSecondary, chipBg, shadow;
+  const _DhakkerPalette({required this.screenBg, required this.card, required this.gold, required this.gold2, required this.muted, required this.textPrimary, required this.textSecondary, required this.chipBg, required this.shadow});
   factory _DhakkerPalette.fromBrightness(bool isDark) {
     if (isDark) {
-      return const _DhakkerPalette(
-        screenBg: Color(0xFF0B0D10),
-        card: Color(0xFF303030),
-        gold: Color(0xFFD4AF37),
-        gold2: Color(0xFFB98B2E),
-        muted: Color(0xFF9AA4B2),
-        textPrimary: Colors.white,
-        textSecondary: Color(0xFFCBD5E1),
-        chipBg: Color(0xFF181B20),
-        shadow: Colors.black,
-      );
+      return const _DhakkerPalette(screenBg: Color(0xFF0B0D10), card: Color(0xFF303030), gold: Color(0xFFD4AF37), gold2: Color(0xFFB98B2E), muted: Color(0xFF9AA4B2), textPrimary: Colors.white, textSecondary: Color(0xFFCBD5E1), chipBg: Color(0xFF181B20), shadow: Colors.black);
     }
-
-    return const _DhakkerPalette(
-      screenBg: Color(0xFFF7F7F8),
-      card: Color(0xFFFFFFFF),
-      gold: Color(0xFFD4AF37),
-      gold2: Color(0xFFB98B2E),
-      muted: Color(0xFF667085),
-      textPrimary: Color(0xFF121316),
-      textSecondary: Color(0xFF475467),
-      chipBg: Color(0xFFF3F4F6),
-      shadow: Color(0x22000000),
-    );
+    return const _DhakkerPalette(screenBg: Color(0xFFF7F7F8), card: Color(0xFFFFFFFF), gold: Color(0xFFD4AF37), gold2: Color(0xFFB98B2E), muted: Color(0xFF667085), textPrimary: Color(0xFF121316), textSecondary: Color(0xFF475467), chipBg: Color(0xFFF3F4F6), shadow: Color(0x22000000));
   }
 }
 
 class _PulseRing extends StatelessWidget {
-  final double scale;
-  final double opacity;
-  final double stroke;
-  final Color color;
-
-  const _PulseRing({
-    required this.scale,
-    required this.opacity,
-    required this.color,
-    this.stroke = 1.6,
-  });
-
+  final double scale, opacity, stroke; final Color color;
+  const _PulseRing({required this.scale, required this.opacity, required this.color, this.stroke = 1.6});
   @override
   Widget build(BuildContext context) {
-    return Transform.scale(
-      scale: scale,
-      child: Container(
-        width: 240,
-        height: 240,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: color.withOpacity(opacity),
-            width: stroke,
-          ),
-        ),
-      ),
-    );
+    return Transform.scale(scale: scale, child: Container(width: 240, height: 240, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color.withOpacity(opacity), width: stroke))));
   }
 }
 
 class _DuaCard extends StatelessWidget {
-  final _DhakkerPalette palette;
-  final String title;
-  final String dua;
-  final String buttonText;
-  final bool canPlay;
-  final bool isPlaying;
-  final String playingText;
-  final VoidCallback? onDone;
-
-  const _DuaCard({
-    super.key,
-    required this.palette,
-    required this.title,
-    required this.dua,
-    required this.buttonText,
-    required this.canPlay,
-    required this.isPlaying,
-    required this.playingText,
-    required this.onDone,
-  });
-
+  final _DhakkerPalette palette; final String title, dua, buttonText, playingText; final bool canPlay, isPlaying; final VoidCallback? onDone;
+  const _DuaCard({required this.palette, required this.title, required this.dua, required this.buttonText, required this.canPlay, required this.isPlaying, required this.playingText, required this.onDone});
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-      decoration: BoxDecoration(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(24),
-        border: BorderDirectional(
-          end: BorderSide(
-            color: palette.gold.withOpacity(.78),
-            width: 3.2,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: palette.shadow.withOpacity(.14),
-            blurRadius: 24,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
+      width: double.infinity, padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      decoration: BoxDecoration(color: palette.card, borderRadius: BorderRadius.circular(24), border: BorderDirectional(end: BorderSide(color: palette.gold.withOpacity(.78), width: 3.2)), boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.14), blurRadius: 24, offset: const Offset(0, 16))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: palette.chipBg,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: palette.gold,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
+          Align(alignment: AlignmentDirectional.centerEnd, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: palette.chipBg, borderRadius: BorderRadius.circular(14)), child: Text(title, style: TextStyle(color: palette.gold, fontSize: 15, fontWeight: FontWeight.w900)))),
           const SizedBox(height: 16),
-          Text(
-            dua,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              height: 1.7,
-            ),
-          ),
-          if (isPlaying) ...[
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.graphic_eq_rounded,
-                  color: palette.gold,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  playingText,
-                  style: TextStyle(
-                    color: palette.gold,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          Text(dua, textAlign: TextAlign.center, style: TextStyle(color: palette.textPrimary, fontSize: 18, fontWeight: FontWeight.w800, height: 1.7)),
+          if (isPlaying) ...[const SizedBox(height: 14), Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.graphic_eq_rounded, color: palette.gold, size: 20), const SizedBox(width: 8), Text(playingText, style: TextStyle(color: palette.gold, fontSize: 14, fontWeight: FontWeight.w800))])],
           const SizedBox(height: 20),
           SizedBox(
             height: 56,
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: canPlay
-                    ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    palette.gold.withOpacity(.98),
-                    palette.gold2.withOpacity(.98),
-                  ],
-                )
-                    : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    palette.muted.withOpacity(.45),
-                    palette.muted.withOpacity(.32),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.gold.withOpacity(.16),
-                    blurRadius: 22,
-                    offset: const Offset(0, 14),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: canPlay ? onDone : null,
-                  child: Center(
-                    child: Text(
-                      buttonText,
-                      style: TextStyle(
-                        color: canPlay ? const Color(0xFF14171C) : palette.textPrimary.withOpacity(.70),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), gradient: canPlay ? LinearGradient(colors: [palette.gold.withOpacity(.98), palette.gold2.withOpacity(.98)]) : LinearGradient(colors: [palette.muted.withOpacity(.45), palette.muted.withOpacity(.32)])),
+              child: Material(color: Colors.transparent, child: InkWell(borderRadius: BorderRadius.circular(16), onTap: canPlay ? onDone : null, child: Center(child: Text(buttonText, style: TextStyle(color: canPlay ? const Color(0xFF14171C) : palette.textPrimary.withOpacity(.70), fontSize: 17, fontWeight: FontWeight.w900))))),
             ),
           ),
         ],
@@ -488,60 +320,18 @@ class _DuaCard extends StatelessWidget {
 }
 
 class _SecondaryActionCard extends StatelessWidget {
-  final _DhakkerPalette palette;
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _SecondaryActionCard({
-    required this.palette,
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
+  final _DhakkerPalette palette; final IconData icon; final String title; final VoidCallback onTap;
+  const _SecondaryActionCard({required this.palette, required this.icon, required this.title, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: palette.card,
-      borderRadius: BorderRadius.circular(20),
+      color: palette.card, borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
+        borderRadius: BorderRadius.circular(20), onTap: onTap,
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: palette.gold.withOpacity(.14)),
-            boxShadow: [
-              BoxShadow(
-                color: palette.shadow.withOpacity(.08),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: palette.gold,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: palette.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: palette.gold.withOpacity(.14)), boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.08), blurRadius: 18, offset: const Offset(0, 10))]),
+          child: Row(children: [Icon(icon, color: palette.gold, size: 22), const SizedBox(width: 12), Expanded(child: Text(title, style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)))]),
         ),
       ),
     );
