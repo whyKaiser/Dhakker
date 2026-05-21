@@ -113,8 +113,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       return;
     }
 
+    // جلب أول موقع بدقة عالية جداً لمنع القفزات البعيدة
     final current = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
     );
 
     await _handlePosition(current);
@@ -122,8 +123,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     await _positionSubscription?.cancel();
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 8,
+        accuracy: LocationAccuracy.best, // رفع الدقة لأعلى مستوى ممكن
+        distanceFilter: 2, // تحديث الموقع فور التحرك مترين فقط لثبات الإشارة عند الخيف
       ),
     ).listen((position) async {
       await _handlePosition(position);
@@ -145,6 +146,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     _currentZone = detected;
 
+    // التركيز الفوري والسلس على موقع المستخدم الفعلي عند مسجد الخيف
     if (!_didFocusOnce) {
       _didFocusOnce = true;
       _mapControllerService.focusOnPoint(
@@ -185,7 +187,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     final activeZoneId = _currentZone?.zoneId;
 
-    // تعديل القراءة المباشرة من المتغيرات لحل الـ 3 أخطاء المتبقية
     final circleZones = _zones.map((zone) {
       final color = cubit.getZoneColor(zone.zoneId, palette.gold);
       return CircleMarker(
@@ -250,8 +251,11 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                           borderRadius: BorderRadius.circular(26),
                           child: FlutterMap(
                             mapController: _mapController,
-                            options: const MapOptions(
-                              initialCenter: LatLng(21.42245878388912, 39.8260935282692),
+                            options: MapOptions(
+                              // جعل المركز الابتدائي ديناميكي يعتمد على آخر موقع تم لقطه إذا توفر، لمنع القفزات البعيدة في المحاكاة
+                              initialCenter: _currentPosition != null
+                                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                                  : const LatLng(21.4132, 39.8711), // جعل مسجد الخيف بمنى هو النقطة الاحتياطية بدلاً من مكة العامة
                               initialZoom: 18.1,
                               minZoom: 16.0,
                               maxZoom: 20.0,
