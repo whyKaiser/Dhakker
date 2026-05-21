@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:dhakker/Screens/Admin/layout/admin_home_layout.dart';
 import 'package:dhakker/Screens/Piligram/layout/Home_Layout.dart';
 import 'package:flutter/material.dart';
+// استيراد حزمة الموقع لطلب الصلاحية برمجياً من الآيفون
+import 'package:geolocator/geolocator.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
 import '../auth/login_screen.dart';
@@ -23,9 +25,24 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<Offset> _textOffset;
   Timer? _timer;
 
+  // دالة ذكية ومضمونة تطلب إذن الموقع من الآيفون فوراً عند فتح التطبيق
+  Future<void> _requestLocationPermission() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+    } catch (e) {
+      print("خطأ أثناء طلب صلاحية الموقع: $e");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+
+    // تشغيل طلب الصلاحية أول ما تفتح الشاشة مباشرة
+    _requestLocationPermission();
 
     _mainController = AnimationController(
       vsync: this,
@@ -67,32 +84,26 @@ class _SplashScreenState extends State<SplashScreen>
     _timer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
 
-
-
       switch(widget.userTypeIndex)
       {
         case 0:
-
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) => const LoginScreen(),
             ),
           );
         case 1:
-
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) =>  AdminHomeLayout(),
             ),
           );
         case 2:
-
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) =>  AppHomeLayout(),
             ),
           );
-
       }
     });
   }
