@@ -1,6 +1,7 @@
 name: dhakker
 description: "A new Flutter project."
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -9,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   cupertino_icons: ^1.0.8
   bloc: ^8.1.2
   flutter_bloc: ^8.1.2
@@ -30,11 +32,20 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   flutter_switch: ^0.3.2
-  firebase_auth: any
+
+  # النسخة الجديدة المتوافقة مع إصدار الفلاتر حقك بالملي
+  flutter_compass: ^0.8.1
+
+  # مكتبة الأنميشن الرسمية لتأثير تمدد وانفجار الكروت
+  animations: ^2.0.11
+
+  # نسخ الفايربيس المستقرة والمتوافقة مع مشروعك
+  firebase_auth: ^5.5.0
   firebase_core: ^3.13.0
-  cloud_firestore: any
+  cloud_firestore: ^5.6.0
   firebase_storage: ^12.4.5
-  firebase_messaging: any
+  firebase_messaging: ^15.2.10
+
   file_picker: ^8.1.2
   flutter_tts: ^3.4.0
   audioplayers: ^6.1.0
@@ -42,20 +53,36 @@ dependencies:
   lottie: ^3.1.2
   permission_handler: ^11.3.0
   speech_to_text: ^6.5.0
-  flutter_local_notifications: ^17.1.2
-
-  # المكتبة الجديدة للـ SOS
-  url_launcher: ^6.3.1
 
   flutter_localizations:
     sdk: flutter
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/appIcon.png"
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/images/
     - assets/animations/
+
+  fonts:
+    - family: AlamirReg
+      fonts:
+        - asset: assets/fonts/Almarai-Regular.ttf
+
+    - family: AlamirBold
+      fonts:
+        - asset: assets/fonts/Almarai-Bold.ttf
+
+flutter_intl:
+  enabled: true

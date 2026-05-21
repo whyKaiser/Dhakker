@@ -44,6 +44,11 @@ class ZoneModel {
     required this.updatedAt,
   });
 
+  // الـ Getters المضافة خصيصاً لمطابقة كود الخريطة وحل الأخطاء
+  double get latitude => centerLat ?? 0.0;
+  double get longitude => centerLng ?? 0.0;
+  double get radius => radiusM ?? 0.0;
+
   factory ZoneModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
 

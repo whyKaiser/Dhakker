@@ -20,7 +20,7 @@ class AppHomeLayout extends StatefulWidget {
   State<AppHomeLayout> createState() => _AppHomeLayoutState();
 }
 
-class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserver {
+class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _autoLocationEnabled = true;
   bool _locationServiceEnabled = false;
   bool _hasPermission = false;
@@ -28,12 +28,18 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
 
   StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
 
+  // لربط حركة التبويبات بالـ PageView الناعم
+  late PageController _pageController;
+
   bool get _isGpsReady => kIsWeb ? true : (_autoLocationEnabled && _locationServiceEnabled && _hasPermission);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // تهيئة الـ PageController بدون وجود وثبة مفاجئة
+    _pageController = PageController(initialPage: AppCubit.get(context).currentScreen);
 
     if (kIsWeb) {
       _isLoadingGps = false;
@@ -55,6 +61,7 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _serviceStatusSubscription?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -482,56 +489,72 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = _HomeLayoutPalette.fromBrightness(isDark);
 
-    return BlocConsumer<AppCubit, AppState>(
-      listener: (context, state) {},
+    return BlocConsumer<AppCubit, AppStates>(
+      listener: (context, state) {
+        if (AppCubit.get(context).currentScreen != _pageController.page?.round()) {
+          _pageController.jumpToPage(AppCubit.get(context).currentScreen);
+        }
+      },
       builder: (context, state) {
         final cubit = AppCubit.get(context);
 
+        // غمر الكود داخل كلاس Material لمنع وحل أخطاء الخطوط الصفراء تماماً من شاشات الجوال
         return Directionality(
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-          child: Scaffold(
-            backgroundColor: palette.bg,
-            extendBody: false,
-            appBar: _HomeTopBar(
-              palette: palette,
-              onLanguageTap: LocaleController.toggle,
-              onGpsTap: _onGpsTap,
-              isGpsReady: _isGpsReady,
-              isLoading: _isLoadingGps,
-            ),
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: const Alignment(0.0, -0.10),
-                        radius: 0.95,
-                        colors: [
-                          palette.gold.withOpacity(.10),
-                          palette.bg.withOpacity(.0),
-                          palette.bg,
-                        ],
-                        stops: const [0.0, 0.45, 1.0],
+          child: Material(
+            color: palette.bg,
+            child: Scaffold(
+              backgroundColor: palette.bg,
+              extendBody: false,
+              appBar: _HomeTopBar(
+                palette: palette,
+                onLanguageTap: LocaleController.toggle,
+                onGpsTap: _onGpsTap,
+                isGpsReady: _isGpsReady,
+                isLoading: _isLoadingGps,
+              ),
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0.0, -0.10),
+                          radius: 0.95,
+                          colors: [
+                            palette.gold.withOpacity(.10),
+                            palette.bg.withOpacity(.0),
+                            palette.bg,
+                          ],
+                          stops: const [0.0, 0.45, 1.0],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: KeyedSubtree(
-                    key: ValueKey(cubit.currentScreen),
-                    child: cubit.screens[cubit.currentScreen],
+                  PageView.builder(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: cubit.screens.length,
+                    onPageChanged: (index) {
+                      cubit.changeScreen(index);
+                    },
+                    itemBuilder: (context, index) {
+                      return cubit.screens[index];
+                    },
                   ),
-                ),
-              ],
-            ),
-            bottomNavigationBar: _FixedBottomNav(
-              palette: palette,
-              currentIndex: cubit.currentScreen,
-              onTap: cubit.changeScreen,
+                ],
+              ),
+              bottomNavigationBar: _FixedBottomNav(
+                palette: palette,
+                currentIndex: cubit.currentScreen,
+                onTap: (index) {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -539,9 +562,6 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     );
   }
 }
-
-// الكود الباقي (Palette و TopBar و BottomNav والـ Buttons) يبقى كما هو من كودك الأصلي..
-// تأكد من نسخهم بالكامل أسفل الكود أعلاه
 
 class _HomeLayoutPalette {
   final Color bg;
@@ -671,7 +691,8 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _GpsStatusButton extends StatelessWidget {
+// تلغيم زر الـ GPS بالتأثير المطاطي المرن والاهتزاز
+class _GpsStatusButton extends StatefulWidget {
   final _HomeLayoutPalette palette;
   final bool isActive;
   final bool isLoading;
@@ -685,17 +706,31 @@ class _GpsStatusButton extends StatelessWidget {
   });
 
   @override
+  State<_GpsStatusButton> createState() => _GpsStatusButtonState();
+}
+
+class _GpsStatusButtonState extends State<_GpsStatusButton> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final activeColor = const Color(0xFF38C793);
-    final inactiveColor = palette.danger;
-    final ringColor = isActive ? activeColor : inactiveColor;
+    final inactiveColor = widget.palette.danger;
+    final ringColor = widget.isActive ? activeColor : inactiveColor;
     final fillColor = ringColor.withOpacity(.14);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(28),
-        onTap: onTap,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.94),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
@@ -717,7 +752,7 @@ class _GpsStatusButton extends StatelessWidget {
             ],
           ),
           child: Center(
-            child: isLoading
+            child: widget.isLoading
                 ? SizedBox(
               width: 18,
               height: 18,
@@ -727,7 +762,7 @@ class _GpsStatusButton extends StatelessWidget {
               ),
             )
                 : Icon(
-              isActive ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
+              widget.isActive ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
               size: 24,
               color: ringColor,
             ),
@@ -738,7 +773,8 @@ class _GpsStatusButton extends StatelessWidget {
   }
 }
 
-class _LangPill extends StatelessWidget {
+// تلغيم زر اختيار اللغة بالتأثير المطاطي المرن والاهتزاز
+class _LangPill extends StatefulWidget {
   final _HomeLayoutPalette palette;
   final String label;
   final VoidCallback onTap;
@@ -750,33 +786,47 @@ class _LangPill extends StatelessWidget {
   });
 
   @override
+  State<_LangPill> createState() => _LangPillState();
+}
+
+class _LangPillState extends State<_LangPill> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.94),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: palette.bg,
+            color: widget.palette.bg,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: palette.gold.withOpacity(.65),
+              color: widget.palette.gold.withOpacity(.65),
               width: 1.4,
             ),
             boxShadow: [
               BoxShadow(
-                color: palette.gold.withOpacity(.08),
+                color: widget.palette.gold.withOpacity(.08),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Text(
-            label,
+            widget.label,
             style: TextStyle(
-              color: palette.gold,
+              color: widget.palette.gold,
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
@@ -883,7 +933,8 @@ class _FixedBottomNav extends StatelessWidget {
   }
 }
 
-class _DialogPrimaryButton extends StatelessWidget {
+// تلغيم زر الحوار الأساسي بالتأثير المطاطي
+class _DialogPrimaryButton extends StatefulWidget {
   final String text;
   final Color color1;
   final Color color2;
@@ -897,33 +948,47 @@ class _DialogPrimaryButton extends StatelessWidget {
   });
 
   @override
+  State<_DialogPrimaryButton> createState() => _DialogPrimaryButtonState();
+}
+
+class _DialogPrimaryButtonState extends State<_DialogPrimaryButton> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 54,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [color1, color2],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color1.withOpacity(.18),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.95),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: SizedBox(
+          height: 54,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [widget.color1, widget.color2],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color1.withOpacity(.18),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
             child: Center(
               child: Text(
-                text,
+                widget.text,
                 style: const TextStyle(
                   color: Color(0xFF14171C),
                   fontSize: 16,
@@ -938,7 +1003,8 @@ class _DialogPrimaryButton extends StatelessWidget {
   }
 }
 
-class _DialogSecondaryButton extends StatelessWidget {
+// تلغيم زر الحوار الثانوي بالتأثير المطاطي
+class _DialogSecondaryButton extends StatefulWidget {
   final String text;
   final _HomeLayoutPalette palette;
   final VoidCallback onTap;
@@ -950,28 +1016,42 @@ class _DialogSecondaryButton extends StatelessWidget {
   });
 
   @override
+  State<_DialogSecondaryButton> createState() => _DialogSecondaryButtonState();
+}
+
+class _DialogSecondaryButtonState extends State<_DialogSecondaryButton> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 54,
-      child: Material(
-        color: palette.bg,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.95),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: SizedBox(
+          height: 54,
           child: Container(
             decoration: BoxDecoration(
+              color: widget.palette.bg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: palette.gold.withOpacity(.18),
+                color: widget.palette.gold.withOpacity(.18),
                 width: 1.1,
               ),
             ),
             child: Center(
               child: Text(
-                text,
+                widget.text,
                 style: TextStyle(
-                  color: palette.textSecondary,
+                  color: widget.palette.textSecondary,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),

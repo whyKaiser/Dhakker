@@ -10,6 +10,10 @@ import '../../../theme_controller.dart';
 import '../../auth/Splash_Screen.dart';
 import '../../auth/login_screen.dart';
 
+// --- السطر المصلح (تأكد أن اسم الملف مطابق لما عندك) ---
+import '../Dashboard/AdminDashboard_Screen.dart';
+import 'Admin_Dashboard_Screen.dart';
+
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
 
@@ -99,6 +103,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 18),
+
+              // --- 1. كرت اللغة ---
               _SettingCard(
                 cardColor: card,
                 shadowDark: isDark,
@@ -144,6 +150,74 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+
+              // --- 2. كرت لوحة الإحصائيات الذكية ---
+              _SettingCard(
+                cardColor: card,
+                shadowDark: isDark,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: DhakkerColors.gold.withOpacity(.12),
+                        ),
+                        child: Icon(
+                          Icons.analytics_rounded,
+                          color: DhakkerColors.gold,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Align(
+                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAr ? "لوحة الإحصائيات الذكية" : "Smart Dashboard",
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                isAr ? "مراقبة الزحام وحالات الاستغاثة SOS" : "Monitor crowd and SOS alerts",
+                                style: TextStyle(
+                                  color: muted.withOpacity(.95),
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 15,
+                        color: DhakkerColors.gold,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // --- 3. كرت الثيم ---
               _SettingCard(
                 cardColor: card,
                 shadowDark: isDark,
@@ -195,7 +269,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 24),
+
+              // --- 4. زر الخروج ---
               _LogoutButton(
                 text: s.adminSettingsLogout,
                 onTap: _logout,
@@ -208,6 +284,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 }
+
+// ==========================================
+// الكلاسات والويدجت المساعدة (الـ 300 سطر الباقية)
+// ==========================================
 
 class _SettingCard extends StatelessWidget {
   final Widget child;

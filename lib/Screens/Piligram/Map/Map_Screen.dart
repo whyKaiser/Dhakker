@@ -6,15 +6,17 @@ import 'package:dhakker/Screens/Piligram/Map/services/map_controller_service.dar
 import 'package:dhakker/Screens/Piligram/Map/services/map_zone_renderer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../generated/l10n.dart';
 import '../home/models/zone_model.dart';
 import '../home/services/zone_detection_service.dart';
-
-
+import '../../../bloc/cubit.dart';
+import '../../../bloc/states.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -52,14 +54,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    _pulse = Tween<double>(begin: 0.92, end: 1.22).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeOutCubic),
+    _pulse = Tween<double>(begin: 0.92, end: 1.25).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutCubic),
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final cubit = AppCubit.get(context);
+      cubit.initCompass();
+      cubit.initCrowdZoneListener();
       await _initMapFlow();
     });
   }
@@ -95,16 +100,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     items.sort((a, b) => b.priority.compareTo(a.priority));
 
     _zones = items;
-
-    _log('Loaded zones count: ${_zones.length}');
-    for (final zone in _zones) {
-      _log(
-        'Zone => id: ${zone.zoneId}, type: ${zone.type}, '
-            'centerLat: ${zone.centerLat}, centerLng: ${zone.centerLng}, '
-            'radiusM: ${zone.radiusM}, points: ${zone.polygonPoints.length}, '
-            'priority: ${zone.priority}',
-      );
-    }
   }
 
   Future<void> _startTracking() async {
@@ -114,18 +109,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     final hasPermission =
         permission == LocationPermission.always || permission == LocationPermission.whileInUse;
 
-    _log('Location service enabled: $serviceEnabled');
-    _log('Location permission: $permission');
-
     if (!serviceEnabled || !hasPermission) {
-      _log('Map tracking skipped بسبب الخدمة أو الصلاحية.');
       return;
     }
 
     final current = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
 
     await _handlePosition(current);
@@ -144,9 +133,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   Future<void> _handlePosition(Position position) async {
     _currentPosition = position;
 
-    _log(
-      'Position => lat: ${position.latitude}, lng: ${position.longitude}, accuracy: ${position.accuracy}',
-    );
+    if (mounted) {
+      AppCubit.get(context).updateLocationAndCheckRounds(position);
+    }
 
     final detected = _zoneDetectionService.detectBestZone(
       userLat: position.latitude,
@@ -187,6 +176,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     final isAr = langCode == 'ar';
 
     final palette = _MapPalette.fromBrightness(isDark);
+    final cubit = AppCubit.get(context);
 
     final renderer = MapZoneRenderer(
       baseGold: palette.gold,
@@ -195,10 +185,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     final activeZoneId = _currentZone?.zoneId;
 
-    final circleZones = renderer.buildCircleZones(
-      zones: _zones,
-      activeZoneId: activeZoneId,
-    );
+    // تعديل القراءة المباشرة من المتغيرات لحل الـ 3 أخطاء المتبقية
+    final circleZones = _zones.map((zone) {
+      final color = cubit.getZoneColor(zone.zoneId, palette.gold);
+      return CircleMarker(
+        point: LatLng(zone.centerLat ?? 0.0, zone.centerLng ?? 0.0),
+        radius: zone.radiusM ?? 0.0,
+        useRadiusInMeter: true,
+        color: color,
+        borderColor: zone.zoneId == activeZoneId ? palette.active : palette.gold.withOpacity(0.5),
+        borderStrokeWidth: zone.zoneId == activeZoneId ? 3.0 : 1.5,
+      );
+    }).toList();
 
     final polygonZones = renderer.buildPolygonZones(
       zones: _zones,
@@ -206,195 +204,144 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     );
 
     final labelMarkers = _zones
-        .map(
-          (zone) => renderer.buildZoneLabelMarker(
-        zone: zone,
-        label: zone.displayName(langCode),
-        isActive: zone.zoneId == activeZoneId,
-      ),
-    )
+        .map((zone) => renderer.buildZoneLabelMarker(
+      zone: zone,
+      label: zone.displayName(langCode),
+      isActive: zone.zoneId == activeZoneId,
+    ))
         .whereType<Marker>()
         .toList();
 
-    final userMarker = _buildUserMarker(
-      palette: palette,
-      position: _currentPosition,
-    );
+    final userMarker = _buildUserMarker(palette: palette, position: _currentPosition, heading: cubit.userHeading);
 
     final allMarkers = <Marker>[
       ...labelMarkers,
       if (userMarker != null) userMarker,
     ];
 
-    return Container(
-      color: palette.bg,
-      child: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                child: Text(
-                  s.mapTitle,
-                  style: TextStyle(
-                    color: palette.gold,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'AlamirBold',
-                    height: 1.1,
+    return BlocBuilder<AppCubit, AppStates>(
+      builder: (context, state) {
+        return Container(
+          color: palette.bg,
+          child: SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Text(
+                      s.mapTitle,
+                      style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                height: 1,
-                color: palette.textMuted.withOpacity(.16),
-              ),
-              const SizedBox(height: 18),
-              _MapCard(
-                palette: palette,
-                child: Stack(
-                  children: [
-                    const _DotGridBackground(),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(26),
-                      child: FlutterMap(
-                        mapController: _mapController,
-                        options: const MapOptions(
-                          initialCenter: LatLng(21.42245878388912, 39.8260935282692),
-                          initialZoom: 18.1,
-                          minZoom: 16.0,
-                          maxZoom: 20.0,
-                          interactionOptions: InteractionOptions(
-                            flags: InteractiveFlag.drag |
-                            InteractiveFlag.pinchZoom |
-                            InteractiveFlag.doubleTapZoom |
-                            InteractiveFlag.flingAnimation |
-                            InteractiveFlag.pinchMove,
+                  const SizedBox(height: 10),
+                  Container(height: 1, color: palette.textMuted.withOpacity(.16)),
+                  const SizedBox(height: 18),
+                  _MapCard(
+                    palette: palette,
+                    child: Stack(
+                      children: [
+                        const _DotGridBackground(),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(26),
+                          child: FlutterMap(
+                            mapController: _mapController,
+                            options: const MapOptions(
+                              initialCenter: LatLng(21.42245878388912, 39.8260935282692),
+                              initialZoom: 18.1,
+                              minZoom: 16.0,
+                              maxZoom: 20.0,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: isDark
+                                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                subdomains: const ['a', 'b', 'c', 'd'],
+                                userAgentPackageName: 'dhakker',
+                              ),
+                              if (polygonZones.isNotEmpty) PolygonLayer(polygons: polygonZones),
+                              if (circleZones.isNotEmpty) CircleLayer(circles: circleZones),
+                              if (allMarkers.isNotEmpty) MarkerLayer(markers: allMarkers),
+                            ],
                           ),
                         ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: isDark
-                                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                                : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            subdomains: const ['a', 'b', 'c', 'd'],
-                            userAgentPackageName: 'dhakker',
-                          ),
-                          if (polygonZones.isNotEmpty)
-                            PolygonLayer(
-                              polygons: polygonZones,
-                            ),
-                          if (circleZones.isNotEmpty)
-                            CircleLayer(
-                              circles: circleZones,
-                            ),
-                          if (allMarkers.isNotEmpty)
-                            MarkerLayer(
-                              markers: allMarkers,
-                            ),
-                        ],
-                      ),
-                    ),
-                    PositionedDirectional(
-                      top: 14,
-                      start: 14,
-                      child: _CurrentZoneChip(
-                        palette: palette,
-                        text: _currentZone?.displayName(langCode) ?? s.mapNoZoneDetected,
-                      ),
-                    ),
-                    PositionedDirectional(
-                      end: 14,
-                      bottom: 14,
-                      child: _MiniBtn(
-                        palette: palette,
-                        icon: Icons.my_location_rounded,
-                        onTap: _focusOnUser,
-                      ),
-                    ),
-                    PositionedDirectional(
-                      end: 14,
-                      top: 14,
-                      child: _MiniBtn(
-                        palette: palette,
-                        icon: Icons.zoom_in_rounded,
-                        onTap: () {
-                          _mapControllerService.zoomIn();
-                        },
-                      ),
-                    ),
-                    PositionedDirectional(
-                      end: 14,
-                      top: 58,
-                      child: _MiniBtn(
-                        palette: palette,
-                        icon: Icons.zoom_out_rounded,
-                        onTap: () {
-                          _mapControllerService.zoomOut();
-                        },
-                      ),
-                    ),
-                    if (_isLoading)
-                      Positioned.fill(
-                        child: Container(
-                          color: Colors.black.withOpacity(.12),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: palette.gold,
+                        PositionedDirectional(
+                          top: 14,
+                          start: 14,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: _CurrentZoneChip(
+                              key: ValueKey(_currentZone?.zoneId ?? 'no_zone'),
+                              palette: palette,
+                              text: _currentZone?.displayName(langCode) ?? s.mapNoZoneDetected,
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Align(
-                alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                child: Text(
-                  _currentZone != null ? s.mapDetectedZoneTitle : s.mapNoZoneTitle,
-                  style: TextStyle(
-                    color: _currentZone != null ? palette.active : palette.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'AlamirBold',
+                        PositionedDirectional(
+                          bottom: 14,
+                          start: 14,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.black.withOpacity(0.65), borderRadius: BorderRadius.circular(10)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _LegendRow(color: Colors.greenAccent, text: isAr ? "هادئ" : "Calm"),
+                                const SizedBox(height: 4),
+                                _LegendRow(color: Colors.orangeAccent, text: isAr ? "متوسط" : "Moderate"),
+                                const SizedBox(height: 4),
+                                _LegendRow(color: Colors.redAccent, text: isAr ? "مزدحم" : "Crowded"),
+                              ],
+                            ),
+                          ),
+                        ),
+                        PositionedDirectional(
+                          end: 14,
+                          bottom: 14,
+                          child: _MiniBtn(palette: palette, icon: Icons.my_location_rounded, onTap: _focusOnUser),
+                        ),
+                        if (_isLoading)
+                          Positioned.fill(
+                            child: Container(color: Colors.black.withOpacity(.12), child: Center(child: CircularProgressIndicator(color: palette.gold))),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Text(
+                      isAr ? "نظام تتبع الأشواط والقبلة اللحظي" : "Smart Rounds & Qibla Tracking",
+                      style: TextStyle(color: palette.active, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isAr
+                        ? "يتحرك مؤشرك الآن بالتوافق مع اتجاه التفافك الفعلي لمعرفة القبلة الكعبة المشرفة، كما تتلون مناطق العبادة ديناميكياً لتوضح لك مستويات الازدحام البشري اللحظي لتجنب التدافع."
+                        : "Your indicator now rotates dynamically with your phone to show Qibla direction, and worship zones light up in real-time to display crowd density to avoid crowding.",
+                    style: TextStyle(color: palette.textMuted, fontSize: 14, fontWeight: FontWeight.w600, height: 1.6),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                _currentZone != null
-                    ? s.mapDetectedZoneDesc
-                    : s.mapNoZoneDesc,
-                textAlign: isAr ? TextAlign.right : TextAlign.left,
-                style: TextStyle(
-                  color: palette.textMuted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  height: 1.6,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Marker? _buildUserMarker({
-    required _MapPalette palette,
-    required Position? position,
-  }) {
+  Marker? _buildUserMarker({required _MapPalette palette, required Position? position, required double heading}) {
     if (position == null) return null;
-
     return Marker(
       point: LatLng(position.latitude, position.longitude),
-      width: 64,
-      height: 64,
+      width: 70,
+      height: 70,
       child: AnimatedBuilder(
         animation: _pulseController,
         builder: (context, _) {
@@ -407,32 +354,27 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 child: Container(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: palette.active.withOpacity(0.10 + o * 0.10),
-                    border: Border.all(
-                      color: palette.active.withOpacity(0.22 + o * 0.12),
-                      width: 2,
-                    ),
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: palette.active.withOpacity(0.10 + o * 0.10), border: Border.all(color: palette.active.withOpacity(0.22 + o * 0.12), width: 2)),
                 ),
               ),
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: palette.active.withOpacity(.98),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(.90),
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: palette.active.withOpacity(.28),
-                      blurRadius: 18,
-                      offset: const Offset(0, 10),
+              Transform.rotate(
+                angle: (heading * pi / 180) * -1,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 18, height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: palette.active,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: [BoxShadow(color: palette.active.withOpacity(.4), blurRadius: 10)],
+                      ),
                     ),
+                    Positioned(
+                      top: 0,
+                      child: Icon(Icons.navigation_rounded, size: 13, color: palette.active),
+                    )
                   ],
                 ),
               ),
@@ -440,6 +382,22 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           );
         },
       ),
+    );
+  }
+}
+
+class _LegendRow extends StatelessWidget {
+  final Color color;
+  final String text;
+  const _LegendRow({required this.color, required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }
@@ -478,7 +436,6 @@ class _MapPalette {
         active: Color(0xFF38C793),
       );
     }
-
     return const _MapPalette(
       bg: Color(0xFFF7F7F8),
       gold: Color(0xFFD4AF37),
@@ -495,34 +452,17 @@ class _MapPalette {
 class _MapCard extends StatelessWidget {
   final Widget child;
   final _MapPalette palette;
-
-  const _MapCard({
-    required this.child,
-    required this.palette,
-  });
-
+  const _MapCard({required this.child, required this.palette});
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 500,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(
-          color: palette.border.withOpacity(.95),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: palette.shadow.withOpacity(.16),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
-          ),
-        ],
+        border: Border.all(color: palette.border.withOpacity(.95), width: 1.2),
+        boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.16), blurRadius: 28, offset: const Offset(0, 18))],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: child,
-      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(26), child: child),
     );
   }
 }
@@ -530,54 +470,22 @@ class _MapCard extends StatelessWidget {
 class _CurrentZoneChip extends StatelessWidget {
   final _MapPalette palette;
   final String text;
-
-  const _CurrentZoneChip({
-    required this.palette,
-    required this.text,
-  });
-
+  const _CurrentZoneChip({super.key, required this.palette, required this.text});
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(.56),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: palette.gold.withOpacity(.24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.34),
-            blurRadius: 14,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(14)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
     );
   }
 }
 
 class _DotGridBackground extends StatelessWidget {
   const _DotGridBackground();
-
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DotGridPainter(),
-      size: Size.infinite,
-    );
+    return CustomPaint(painter: _DotGridPainter(), size: Size.infinite);
   }
 }
 
@@ -586,58 +494,61 @@ class _DotGridPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.white.withOpacity(.06);
     const step = 22.0;
-
     for (double y = 0; y < size.height; y += step) {
       for (double x = 0; x < size.width; x += step) {
         canvas.drawCircle(Offset(x + 8, y + 8), 1.2, paint);
       }
     }
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _MiniBtn extends StatelessWidget {
+class _MiniBtn extends StatefulWidget {
   final _MapPalette palette;
   final IconData icon;
   final VoidCallback onTap;
+  const _MiniBtn({required this.palette, required this.icon, required this.onTap});
 
-  const _MiniBtn({
-    required this.palette,
-    required this.icon,
-    required this.onTap,
-  });
+  @override
+  State<_MiniBtn> createState() => _MiniBtnState();
+}
+
+class _MiniBtnState extends State<_MiniBtn> {
+  double _scale = 1.0;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() {
+          _scale = 0.92;
+        });
+      },
+      onTapUp: (_) {
+        setState(() {
+          _scale = 1.0;
+        });
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () {
+        setState(() {
+          _scale = 1.0;
+        });
+      },
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 44, height: 44,
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(.56),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: palette.gold.withOpacity(.22),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(.34),
-                blurRadius: 16,
-                offset: const Offset(0, 10),
-              ),
-            ],
+              color: Colors.black.withOpacity(.62),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: widget.palette.gold.withOpacity(.22))
           ),
-          child: Icon(
-            icon,
-            color: Colors.white.withOpacity(.92),
-            size: 22,
-          ),
+          child: Icon(widget.icon, color: Colors.white, size: 22),
         ),
       ),
     );

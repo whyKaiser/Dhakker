@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
@@ -19,7 +20,7 @@ class AdminSupplicationDetailsScreen extends StatefulWidget {
 }
 
 class _AdminSupplicationDetailsScreenState
-    extends State<AdminSupplicationDetailsScreen> {
+    extends State<AdminSupplicationDetailsScreen> with SingleTickerProviderStateMixin {
   final FlutterTts _flutterTts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -30,9 +31,15 @@ class _AdminSupplicationDetailsScreenState
   Map<String, dynamic>? _supplicationData;
   Map<String, dynamic>? _zoneData;
 
+  late AnimationController _detailsEntranceController;
+
   @override
   void initState() {
     super.initState();
+    _detailsEntranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _configureTts();
     _loadData();
   }
@@ -103,6 +110,7 @@ class _AdminSupplicationDetailsScreenState
         _zoneData = zoneData;
         _isLoading = false;
       });
+      _detailsEntranceController.forward();
     } catch (_) {
       if (!mounted) return;
       _showSnack(S.of(context).adminSupplicationDetailsLoadError, isError: true);
@@ -200,6 +208,7 @@ class _AdminSupplicationDetailsScreenState
   void dispose() {
     _flutterTts.stop();
     _audioPlayer.dispose();
+    _detailsEntranceController.dispose();
     super.dispose();
   }
 
@@ -236,6 +245,7 @@ class _AdminSupplicationDetailsScreenState
           onStopTts: _stopTts,
           onPlayAudioFile: _playAudioFile,
           onStopAudioFile: _stopAudioFile,
+          entranceController: _detailsEntranceController,
         ),
       ),
     );
@@ -251,6 +261,7 @@ class _SupplicationDetailsBody extends StatelessWidget {
   final VoidCallback onStopTts;
   final VoidCallback onPlayAudioFile;
   final VoidCallback onStopAudioFile;
+  final AnimationController entranceController;
 
   const _SupplicationDetailsBody({
     required this.supplicationData,
@@ -261,6 +272,7 @@ class _SupplicationDetailsBody extends StatelessWidget {
     required this.onStopTts,
     required this.onPlayAudioFile,
     required this.onStopAudioFile,
+    required this.entranceController,
   });
 
   @override
@@ -272,12 +284,8 @@ class _SupplicationDetailsBody extends StatelessWidget {
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
 
-    final titleMap = supplicationData['title'] is Map
-        ? supplicationData['title'] as Map
-        : {};
-    final textMap = supplicationData['text'] is Map
-        ? supplicationData['text'] as Map
-        : {};
+    final titleMap = supplicationData['title'] is Map ? supplicationData['title'] as Map : {};
+    final textMap = supplicationData['text'] is Map ? supplicationData['text'] as Map : {};
 
     final currentTitle = isAr
         ? (titleMap['ar'] ?? titleMap['en'] ?? '').toString().trim()
@@ -292,90 +300,100 @@ class _SupplicationDetailsBody extends StatelessWidget {
 
     final zoneName = _zoneName(context, zoneData);
 
+    final List<Widget> detailElements = [
+      _SectionTitle(title: s.adminSupplicationDetailsOverviewTitle),
+      const SizedBox(height: 12),
+      _HeroCard(
+        title: currentTitle.isEmpty ? '—' : currentTitle,
+        zoneName: zoneName,
+        audioMode: audioMode,
+        isActive: isActive,
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminSupplicationDetailsZoneInfoTitle),
+      const SizedBox(height: 12),
+      _DetailsCard(
+        children: [
+          _InfoRow(
+            label: s.adminSupplicationDetailsZoneNameLabel,
+            value: zoneName,
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminSupplicationDetailsAudioModeLabel,
+            value: audioMode == 'file' ? s.adminSupplicationAudioFile : s.adminSupplicationAudioTts,
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminSupplicationDetailsStatusLabel,
+            value: isActive ? s.adminSupplicationStatusActiveText : s.adminSupplicationStatusInactiveText,
+          ),
+        ],
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminSupplicationDetailsTextTitle),
+      const SizedBox(height: 12),
+      _TextCard(
+        title: s.adminSupplicationDetailsArabicTextTitle,
+        text: textAr,
+      ),
+      const SizedBox(height: 12),
+      _TextCard(
+        title: s.adminSupplicationDetailsEnglishTextTitle,
+        text: textEn,
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminSupplicationDetailsAudioSectionTitle),
+      const SizedBox(height: 12),
+      if (audioMode == 'tts')
+        _AudioActionCard(
+          title: s.adminSupplicationDetailsTtsCardTitle,
+          subtitle: s.adminSupplicationDetailsTtsCardSubtitle,
+          buttonLabel: isSpeaking ? s.adminSupplicationDetailsStopButton : s.adminSupplicationDetailsPlayTtsButton,
+          icon: isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+          isActive: isSpeaking,
+          onTap: isSpeaking ? onStopTts : onPlayTts,
+        ),
+      if (audioMode == 'file')
+        _AudioActionCard(
+          title: s.adminSupplicationDetailsFileCardTitle,
+          subtitle: audioUrl.isEmpty ? s.adminSupplicationDetailsNoAudioFile : s.adminSupplicationDetailsFileCardSubtitle,
+          buttonLabel: isPlayingFile ? s.adminSupplicationDetailsStopButton : s.adminSupplicationDetailsPlayFileButton,
+          icon: isPlayingFile ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded,
+          isActive: isPlayingFile,
+          onTap: isPlayingFile ? onStopAudioFile : onPlayAudioFile,
+        ),
+    ];
+
     return Container(
       color: bg,
       child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SectionTitle(title: s.adminSupplicationDetailsOverviewTitle),
-            const SizedBox(height: 12),
-            _HeroCard(
-              title: currentTitle.isEmpty ? '—' : currentTitle,
-              zoneName: zoneName,
-              audioMode: audioMode,
-              isActive: isActive,
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminSupplicationDetailsZoneInfoTitle),
-            const SizedBox(height: 12),
-            _DetailsCard(
-              children: [
-                _InfoRow(
-                  label: s.adminSupplicationDetailsZoneNameLabel,
-                  value: zoneName,
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminSupplicationDetailsAudioModeLabel,
-                  value: audioMode == 'file'
-                      ? s.adminSupplicationAudioFile
-                      : s.adminSupplicationAudioTts,
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminSupplicationDetailsStatusLabel,
-                  value: isActive
-                      ? s.adminSupplicationStatusActiveText
-                      : s.adminSupplicationStatusInactiveText,
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminSupplicationDetailsTextTitle),
-            const SizedBox(height: 12),
-            _TextCard(
-              title: s.adminSupplicationDetailsArabicTextTitle,
-              text: textAr,
-            ),
-            const SizedBox(height: 12),
-            _TextCard(
-              title: s.adminSupplicationDetailsEnglishTextTitle,
-              text: textEn,
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminSupplicationDetailsAudioSectionTitle),
-            const SizedBox(height: 12),
-            if (audioMode == 'tts')
-              _AudioActionCard(
-                title: s.adminSupplicationDetailsTtsCardTitle,
-                subtitle: s.adminSupplicationDetailsTtsCardSubtitle,
-                buttonLabel: isSpeaking
-                    ? s.adminSupplicationDetailsStopButton
-                    : s.adminSupplicationDetailsPlayTtsButton,
-                icon: isSpeaking
-                    ? Icons.stop_circle_rounded
-                    : Icons.volume_up_rounded,
-                isActive: isSpeaking,
-                onTap: isSpeaking ? onStopTts : onPlayTts,
-              ),
-            if (audioMode == 'file')
-              _AudioActionCard(
-                title: s.adminSupplicationDetailsFileCardTitle,
-                subtitle: audioUrl.isEmpty
-                    ? s.adminSupplicationDetailsNoAudioFile
-                    : s.adminSupplicationDetailsFileCardSubtitle,
-                buttonLabel: isPlayingFile
-                    ? s.adminSupplicationDetailsStopButton
-                    : s.adminSupplicationDetailsPlayFileButton,
-                icon: isPlayingFile
-                    ? Icons.stop_circle_rounded
-                    : Icons.play_circle_fill_rounded,
-                isActive: isPlayingFile,
-                onTap: isPlayingFile ? onStopAudioFile : onPlayAudioFile,
-              ),
-          ],
+          children: List.generate(detailElements.length, (index) {
+            final double start = (index * 0.04).clamp(0.0, 1.0);
+            final double end = (start + 0.35).clamp(0.0, 1.0);
+
+            return AnimatedBuilder(
+              animation: entranceController,
+              builder: (context, child) {
+                final curve = CurvedAnimation(
+                  parent: entranceController,
+                  curve: Interval(start, end, curve: Curves.easeOutCubic),
+                );
+                return Transform.translate(
+                  offset: Offset(0, 24 * (1.0 - curve.value)),
+                  child: Opacity(
+                    opacity: curve.value,
+                    child: child,
+                  ),
+                );
+              },
+              child: detailElements[index],
+            );
+          }),
         ),
       ),
     );
@@ -383,13 +401,10 @@ class _SupplicationDetailsBody extends StatelessWidget {
 
   String _zoneName(BuildContext context, Map<String, dynamic>? zoneData) {
     if (zoneData == null) return '—';
-
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-
     final name = isAr
         ? (zoneData['nameAr'] ?? zoneData['nameEn'] ?? '').toString().trim()
         : (zoneData['nameEn'] ?? zoneData['nameAr'] ?? '').toString().trim();
-
     return name.isEmpty ? '—' : name;
   }
 }
@@ -415,21 +430,16 @@ class _HeroCard extends StatelessWidget {
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
-    final statusColor =
-    isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
-    final audioColor =
-    audioMode == 'file' ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
+    final statusColor = isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final audioColor = audioMode == 'file' ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(20),
         border: Border(
-          right: BorderSide(
-            color: accent.withOpacity(.55),
-            width: 3,
-          ),
+          right: BorderSide(color: accent.withOpacity(.55), width: 3),
         ),
         boxShadow: [
           BoxShadow(
@@ -450,21 +460,13 @@ class _HeroCard extends StatelessWidget {
                   color: accent.withOpacity(.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  Icons.menu_book_rounded,
-                  color: accent,
-                  size: 28,
-                ),
+                child: Icon(Icons.menu_book_rounded, color: accent, size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    color: text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -472,37 +474,20 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: _MiniBadge(
-                  label: zoneName,
-                  color: accent,
-                ),
-              ),
+              Expanded(child: _MiniBadge(label: zoneName, color: accent)),
               const SizedBox(width: 10),
-              Expanded(
-                child: _MiniBadge(
-                  label: audioMode == 'file'
-                      ? s.adminSupplicationAudioFile
-                      : s.adminSupplicationAudioTts,
-                  color: audioColor,
-                ),
-              ),
+              Expanded(child: _MiniBadge(label: audioMode == 'file' ? s.adminSupplicationAudioFile : s.adminSupplicationAudioTts, color: audioColor)),
             ],
           ),
           const SizedBox(height: 10),
-          _MiniBadge(
-            label: isActive
-                ? s.adminSupplicationStatusActiveText
-                : s.adminSupplicationStatusInactiveText,
-            color: statusColor,
-          ),
+          _MiniBadge(label: isActive ? s.adminSupplicationStatusActiveText : s.adminSupplicationStatusInactiveText, color: statusColor),
         ],
       ),
     );
   }
 }
 
-class _AudioActionCard extends StatelessWidget {
+class _AudioActionCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final String buttonLabel;
@@ -520,17 +505,22 @@ class _AudioActionCard extends StatelessWidget {
   });
 
   @override
+  State<_AudioActionCard> createState() => _AudioActionCardState();
+}
+
+class _AudioActionCardState extends State<_AudioActionCard> {
+  double _btnScale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
-    final accent = isActive
-        ? const Color(0xFFDC2626)
-        : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
+    final accent = widget.isActive ? const Color(0xFFDC2626) : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -546,46 +536,41 @@ class _AudioActionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: accent, size: 24),
+              Icon(widget.icon, color: accent, size: 24),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: text,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14.4,
-                  ),
-                ),
+                child: Text(widget.title, style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 14.4)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: muted,
-              fontWeight: FontWeight.w700,
-              height: 1.5,
-            ),
-          ),
+          Text(widget.subtitle, style: TextStyle(color: muted, fontWeight: FontWeight.w700, height: 1.5)),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          GestureDetector(
+            onTapDown: (_) => setState(() => _btnScale = 0.95),
+            onTapUp: (_) {
+              setState(() => _btnScale = 1.0);
+              HapticFeedback.lightImpact();
+              widget.onTap();
+            },
+            onTapCancel: () => setState(() => _btnScale = 1.0),
+            child: AnimatedScale(
+              scale: _btnScale,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOutCubic,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: null,
+                  icon: Icon(widget.icon),
+                  label: Text(widget.buttonLabel, style: const TextStyle(fontWeight: FontWeight.w800)),
                 ),
-              ),
-              onPressed: onTap,
-              icon: Icon(icon),
-              label: Text(
-                buttonLabel,
-                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -598,11 +583,7 @@ class _AudioActionCard extends StatelessWidget {
 class _TextCard extends StatelessWidget {
   final String title;
   final String text;
-
-  const _TextCard({
-    required this.title,
-    required this.text,
-  });
+  const _TextCard({required this.title, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -612,7 +593,7 @@ class _TextCard extends StatelessWidget {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -627,24 +608,9 @@ class _TextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: muted.withOpacity(.95),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          Text(title, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.5, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          Text(
-            text.isEmpty ? '—' : text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14.2,
-              fontWeight: FontWeight.w700,
-              height: 1.75,
-            ),
-          ),
+          Text(text.isEmpty ? '—' : text, style: TextStyle(color: textColor, fontSize: 14.2, fontWeight: FontWeight.w700, height: 1.75)),
         ],
       ),
     );
@@ -653,10 +619,7 @@ class _TextCard extends StatelessWidget {
 
 class _DetailsCard extends StatelessWidget {
   final List<Widget> children;
-
-  const _DetailsCard({
-    required this.children,
-  });
+  const _DetailsCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -664,8 +627,7 @@ class _DetailsCard extends StatelessWidget {
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
 
     return Container(
-
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -685,11 +647,7 @@ class _DetailsCard extends StatelessWidget {
 class _MiniBadge extends StatelessWidget {
   final String label;
   final Color color;
-
-  const _MiniBadge({
-    required this.label,
-    required this.color,
-  });
+  const _MiniBadge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -702,15 +660,7 @@ class _MiniBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withOpacity(.18)),
       ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -718,11 +668,7 @@ class _MiniBadge extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -732,29 +678,9 @@ class _InfoRow extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: muted.withOpacity(.95),
-              fontSize: 12.4,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
+        Expanded(child: Text(label, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.4, fontWeight: FontWeight.w800))),
         const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              color: text,
-              fontSize: 12.8,
-              fontWeight: FontWeight.w800,
-              height: 1.45,
-            ),
-          ),
-        ),
+        Expanded(child: Text(value, textAlign: TextAlign.end, style: TextStyle(color: text, fontSize: 12.8, fontWeight: FontWeight.w800, height: 1.45))),
       ],
     );
   }
@@ -762,10 +688,7 @@ class _InfoRow extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-
-  const _SectionTitle({
-    required this.title,
-  });
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -775,25 +698,8 @@ class _SectionTitle extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: text,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              letterSpacing: .1,
-            ),
-          ),
-        ),
-        Container(
-          width: 26,
-          height: 3,
-          decoration: BoxDecoration(
-            color: muted.withOpacity(.35),
-            borderRadius: BorderRadius.circular(99),
-          ),
-        ),
+        Expanded(child: Text(title, style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: .1))),
+        Container(width: 26, height: 3, decoration: BoxDecoration(color: muted.withOpacity(.35), borderRadius: BorderRadius.circular(99))),
       ],
     );
   }
@@ -811,23 +717,13 @@ class _SupplicationDetailsLoadingView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
       child: Column(
         children: [
-          const _SectionTitle(title: '...'),
-          const SizedBox(height: 12),
           _LoadingCard(card: card, height: 160),
           const SizedBox(height: 18),
-          const _SectionTitle(title: '...'),
-          const SizedBox(height: 12),
           _LoadingCard(card: card, height: 140),
           const SizedBox(height: 18),
-          const _SectionTitle(title: '...'),
-          const SizedBox(height: 12),
           _LoadingCard(card: card, height: 180),
           const SizedBox(height: 12),
           _LoadingCard(card: card, height: 180),
-          const SizedBox(height: 18),
-          const _SectionTitle(title: '...'),
-          const SizedBox(height: 12),
-          _LoadingCard(card: card, height: 150),
         ],
       ),
     );
@@ -837,20 +733,13 @@ class _SupplicationDetailsLoadingView extends StatelessWidget {
 class _LoadingCard extends StatelessWidget {
   final Color card;
   final double height;
-
-  const _LoadingCard({
-    required this.card,
-    required this.height,
-  });
+  const _LoadingCard({required this.card, required this.height});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(18)),
     );
   }
 }

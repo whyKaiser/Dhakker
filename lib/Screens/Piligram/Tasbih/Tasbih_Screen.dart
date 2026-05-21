@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // مستدعاة للتحكم بالاهتزازات الحسية بالملي
 import '../../../generated/l10n.dart';
 import '../../../shared/network/local/cash_helper.dart';
 
@@ -14,6 +15,10 @@ class _TasbihScreenState extends State<TasbihScreen> {
 
   int _count = 0;
   bool _isLoading = true;
+
+  // متغيرات للتحكم بالتحجيم المطاطي للدائرة الكبيرة وزر التصفير
+  double _circleScale = 1.0;
+  double _buttonScale = 1.0;
 
   @override
   void initState() {
@@ -39,6 +44,13 @@ class _TasbihScreenState extends State<TasbihScreen> {
       _count = newValue;
     });
 
+    // لغة الحركة: نبضات حسية ذكية متوافقة مع الأذكار والتسبيح
+    if (newValue % 33 == 0) {
+      HapticFeedback.mediumImpact(); // نبضة واضحة تنبه الحاج عند الوصول لـ 33 أو مضاعفاتها
+    } else {
+      HapticFeedback.lightImpact(); // نبضة ناعمة وخفيفة جداً مع كل خرزة تسبيح
+    }
+
     await CashHelper.saveCash(
       key: _countKey,
       value: newValue,
@@ -46,6 +58,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
   }
 
   Future<void> _reset() async {
+    HapticFeedback.vibrate(); // اهتزاز متتابع يؤكد للحاج نجاح تصفير السبحة
+
     setState(() {
       _count = 0;
     });
@@ -101,53 +115,102 @@ class _TasbihScreenState extends State<TasbihScreen> {
                     color: palette.gold,
                   )
                       : GestureDetector(
-                    onTap: _inc,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: 240,
-                      height: 240,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: palette.circleBg,
-                        border: Border.all(
-                          color: palette.stroke.withOpacity(.88),
-                          width: 4,
+                    onTapDown: (_) {
+                      setState(() {
+                        _circleScale = 0.94; // كبس الدائرة الكبيرة للداخل عند الضغط
+                      });
+                    },
+                    onTapUp: (_) {
+                      setState(() {
+                        _circleScale = 1.0; // الارتداد المرن فور رفع الإصبع
+                      });
+                      _inc();
+                    },
+                    onTapCancel: () {
+                      setState(() {
+                        _circleScale = 1.0;
+                      });
+                    },
+                    child: AnimatedScale(
+                      scale: _circleScale,
+                      duration: const Duration(milliseconds: 100),
+                      curve: Curves.easeOutCubic,
+                      child: Container(
+                        width: 240,
+                        height: 240,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: palette.circleBg,
+                          border: Border.all(
+                            color: palette.stroke.withOpacity(.88),
+                            width: 4,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: palette.shadow.withOpacity(.18),
+                              blurRadius: 28,
+                              offset: const Offset(0, 16),
+                            ),
+                            BoxShadow(
+                              color: palette.gold.withOpacity(.06),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: palette.shadow.withOpacity(.18),
-                            blurRadius: 28,
-                            offset: const Offset(0, 16),
-                          ),
-                          BoxShadow(
-                            color: palette.gold.withOpacity(.06),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$_count',
-                            style: TextStyle(
-                              color: palette.gold,
-                              fontSize: 58,
-                              fontWeight: FontWeight.w900,
-                              height: 1.0,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // أنميشن تدحرج وصعود الأرقام الأنيق
+                            SizedBox(
+                              height: 62,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 240),
+                                transitionBuilder: (Widget child, Animation<double> animation) {
+                                  final isReset = child.key == const ValueKey(0);
+
+                                  // إذا كانت العملية تصفير (Reset)، تتدحرج الأرقام من الأعلى، وإذا كانت تسبيح تصعد من الأسفل
+                                  final offsetIn = isReset
+                                      ? const Offset(0.0, -0.6)
+                                      : const Offset(0.0, 0.6);
+                                  final offsetOut = isReset
+                                      ? const Offset(0.0, 0.6)
+                                      : const Offset(0.0, -0.6);
+
+                                  return SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: child.key == ValueKey(_count) ? offsetIn : Offset.zero,
+                                      end: child.key == ValueKey(_count) ? Offset.zero : offsetOut,
+                                    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutBack)),
+                                    child: FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  '$_count',
+                                  key: ValueKey(_count),
+                                  style: TextStyle(
+                                    color: palette.gold,
+                                    fontSize: 58,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.0,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            s.tasbihTapHint,
-                            style: TextStyle(
-                              color: palette.muted,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                            const SizedBox(height: 10),
+                            Text(
+                              s.tasbihTapHint,
+                              style: TextStyle(
+                                color: palette.muted,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -159,7 +222,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                   children: [
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: palette.card,
                         borderRadius: BorderRadius.circular(22),
@@ -187,30 +250,44 @@ class _TasbihScreenState extends State<TasbihScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 58,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: _reset,
-                                child: Ink(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    color: palette.buttonBg,
-                                    border: Border.all(
-                                      color: palette.border.withOpacity(.95),
-                                    ),
+                          GestureDetector(
+                            onTapDown: (_) {
+                              setState(() {
+                                _buttonScale = 0.96; // تأثير الكبس لزر التصفير
+                              });
+                            },
+                            onTapUp: (_) {
+                              setState(() {
+                                _buttonScale = 1.0;
+                              });
+                              _reset();
+                            },
+                            onTapCancel: () {
+                              setState(() {
+                                _buttonScale = 1.0;
+                              });
+                            },
+                            child: AnimatedScale(
+                              scale: _buttonScale,
+                              duration: const Duration(milliseconds: 100),
+                              curve: Curves.easeOutCubic,
+                              child: Container(
+                                width: double.infinity,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  color: palette.buttonBg,
+                                  border: Border.all(
+                                    color: palette.border.withOpacity(.95),
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      s.tasbihReset,
-                                      style: TextStyle(
-                                        color: palette.buttonText,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    s.tasbihReset,
+                                    style: TextStyle(
+                                      color: palette.buttonText,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ),

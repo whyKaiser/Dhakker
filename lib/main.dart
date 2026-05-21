@@ -5,41 +5,50 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-// استيراد مكتبة الإشعارات الجديدة
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+// استيراد الملف الجديد الذي قمنا بتوليده
 import 'firebase_options.dart';
+
 import 'Screens/auth/Login_Screen.dart';
 import 'Screens/auth/Splash_Screen.dart';
 import 'admin_bloc/admin_cubit.dart';
 import 'bloc/cubit.dart';
 import 'generated/l10n.dart';
 import 'locale_controller.dart';
+
 import 'theme/dhakker_theme.dart';
 
-// تعريف محرك الإشعارات بشكل عالمي لسهولة الوصول إليه
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  print("--- 1. بدء التشغيل ---");
 
-  // 1. تهيئة الفايربيس [cite: 111, 480]
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // تعديل تهيئة الفايربيس لتشمل الخيارات الذكية لكل المنصات
+  try {
+    print("--- 2. جاري تهيئة الفايربيس ---");
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("--- تم الفايربيس بنجاح ---");
+  } catch (e) {
+    print("خطأ في الفايربيس: $e");
+  }
 
-  // 2. تهيئة الإشعارات المحلية (الميزة الجديدة)
-  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  try {
+    print("--- 3. جاري تهيئة التخزين CashHelper ---");
+    await CashHelper.initPreference();
+    print("--- تم CashHelper بنجاح ---");
+  } catch (e) {
+    print("خطأ في CashHelper: $e");
+  }
 
-  // 3. تهيئة التخزين المحلي والإعدادات
-  await CashHelper.initPreference();
+  print("--- 4. جاري جلب الإعدادات ---");
   final savedDarkMode = CashHelper.getCash(key: 'dark_mode_enabled');
   ThemeController.setTheme(savedDarkMode is bool ? savedDarkMode : true);
 
   Widget widget;
   var userTypeIndex = CashHelper.getCash(key: 'userTypeIndex');
+
   tempId = CashHelper.getCash(key: 'uid');
 
   if (tempId != null) {
@@ -52,11 +61,12 @@ Future<void> main() async {
     widget = SplashScreen(0);
   }
 
+  print("--- 5. بدء رسم الواجهة runApp ---");
   runApp(MyApp(widget));
 }
 
 class MyApp extends StatefulWidget {
-  final Widget screen;
+  final Widget screen; // إضافة final للتحسين
   MyApp(this.screen);
 
   @override
@@ -64,8 +74,11 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final ValueNotifier<ThemeMode> _themeMode = ValueNotifier(ThemeMode.dark);
+
   @override
   void dispose() {
+    _themeMode.dispose();
     super.dispose();
   }
 
@@ -76,7 +89,6 @@ class _MyAppState extends State<MyApp> {
       builder: (context, loc, _) {
         return MultiBlocProvider(
           providers: [
-            // تهيئة الـ Cubits لإدارة حالة التطبيق [cite: 167, 482]
             BlocProvider(create: (_) => AppCubit()),
             BlocProvider(create: (_) => AdminCubit()),
           ],

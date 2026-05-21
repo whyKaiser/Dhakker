@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/Screens/Components/components.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // حزمة الاهتزاز الحسّي بالملي
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
 import 'admin_zone_add_screen.dart';
@@ -20,6 +21,9 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
   String _search = '';
   String _selectedType = 'all';
   String _selectedStatus = 'all';
+
+  // متغير تحكم لحركة انضغاط الزر العائم FAB
+  double _fabScale = 1.0;
 
   @override
   void dispose() {
@@ -42,27 +46,40 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         .collection('zones')
         .orderBy('updatedAt', descending: true);
 
+    // الـ Scaffold الأساسي المحيط لحل مشكلة الخطوط الصفراء تماماً من الواجهة
     return Scaffold(
       backgroundColor: bg,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accent,
-        foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-        onPressed: () {
-
-          GoToScreen(context: context, screen: AdminZoneAddScreen());
+      floatingActionButton: GestureDetector(
+        onTapDown: (_) => setState(() => _fabScale = 0.94),
+        onTapUp: (_) {
+          setState(() => _fabScale = 1.0);
+          HapticFeedback.lightImpact();
+          GoToScreen(context: context, screen: const AdminZoneAddScreen());
         },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          s.adminZonesAddZone,
-          style: const TextStyle(fontWeight: FontWeight.w800),
+        onTapCancel: () => setState(() => _fabScale = 1.0),
+        child: AnimatedScale(
+          scale: _fabScale,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOutCubic,
+          child: FloatingActionButton.extended(
+            backgroundColor: accent,
+            foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+            onPressed: null, // معطل لأن الـ GestureDetector يتعامل مع اللمس والأنميشن
+            icon: const Icon(Icons.add_rounded),
+            label: Text(
+              s.adminZonesAddZone,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
-        top: false,
+        top: true, // تفعيل التغطية الآمنة لمنع تداخل النصوص مع شريط الحالات العلوية
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(), // فيزياء ارتداد سلسة ومرنة ومطاطية للسحب
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -71,7 +88,7 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                     const SizedBox(height: 12),
 
                     Container(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: card,
                         borderRadius: BorderRadius.circular(18),
@@ -272,12 +289,10 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                                 docId: doc.id,
                                 data: data,
                                 onView: () {
-                                  GoToScreen(context: context, screen: AdminZoneDetailsScreen(zoneId:doc.id ,));
-
+                                  GoToScreen(context: context, screen: AdminZoneDetailsScreen(zoneId: doc.id));
                                 },
                                 onEdit: () {
-                                GoToScreen(context: context, screen: AdminZoneEditScreen(zoneId: doc.id,));
-
+                                  GoToScreen(context: context, screen: AdminZoneEditScreen(zoneId: doc.id));
                                 },
                                 onDelete: () async {
                                   await _deleteZone(context, doc.id, data);
@@ -344,7 +359,7 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         return AlertDialog(
           backgroundColor: card,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(18), // التعديل هنا: BorderRadius بدلاً من المكرر القديم
           ),
           title: Text(
             s.adminZonesDeleteTitle,
@@ -597,7 +612,7 @@ class _ZoneCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -719,7 +734,7 @@ class _ZoneCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: (isDark ? Colors.white : Colors.black).withOpacity(.04),
@@ -852,7 +867,8 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+// تعديل أزرار الكروت السفلية لتطبيق فيزياء الانضغاط المطاطي والاهتزاز الحسّي
+class _ActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isDanger;
@@ -866,40 +882,57 @@ class _ActionButton extends StatelessWidget {
   });
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  double _btnScale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final baseColor = isDanger
+    final baseColor = widget.isDanger
         ? const Color(0xFFDC2626)
         : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: baseColor.withOpacity(.10),
-          border: Border.all(color: baseColor.withOpacity(.18)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: baseColor),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: baseColor,
-                  fontSize: 12.2,
-                  fontWeight: FontWeight.w800,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _btnScale = 0.94),
+      onTapUp: (_) {
+        setState(() => _btnScale = 1.0);
+        HapticFeedback.lightImpact(); // نبضة حسية تفاعلية مع النقر
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _btnScale = 1.0),
+      child: AnimatedScale(
+        scale: _btnScale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: baseColor.withOpacity(.10),
+            border: Border.all(color: baseColor.withOpacity(.18)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, size: 18, color: baseColor),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: baseColor,
+                    fontSize: 12.2,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -927,7 +960,7 @@ class _StateCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -988,7 +1021,7 @@ class _ZoneSkeletonCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: base,
         borderRadius: BorderRadius.circular(18),

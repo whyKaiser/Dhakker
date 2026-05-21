@@ -1,26 +1,24 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:dhakker/bloc/states.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 
-import '../Screens/Piligram/Home/Home_Screen.dart';
-import '../Screens/Piligram/Map/Map_Screen.dart';
+import 'package:dhakker/Screens/Piligram/Home/Home_Screen.dart';
+import 'package:dhakker/Screens/Piligram/Map/Map_Screen.dart';
 import '../Screens/Piligram/Duas/Duas_Screen.dart';
 import '../Screens/Piligram/Settings/Settings_Screen.dart';
 import '../Screens/Piligram/Tasbih/Tasbih_Screen.dart';
-import 'states.dart';
-import '../main.dart';
 
-class AppCubit extends Cubit<AppState> {
-  AppCubit() : super(AppInitState());
+class AppCubit extends Cubit<AppStates> {
+  AppCubit() : super(AppInitialState());
 
   static AppCubit get(BuildContext context) => BlocProvider.of(context);
 
   int currentScreen = 0;
-  int lapCount = 0;
-  DateTime? lastLapTime;
 
   final List<Widget> screens = [
     const HomeScreen(),
@@ -32,58 +30,144 @@ class AppCubit extends Cubit<AppState> {
 
   void changeScreen(int index) {
     currentScreen = index;
-    emit(AppChangeScreenState());
+    emit(AppChangeBottomNavState());
   }
 
-  // دالة الـ SOS لإرسال الموقع عبر الواتساب
-  Future<void> sendSOS() async {
-    try {
-      // الحصول على الموقع الحالي بطريقة حديثة
-      Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
-      );
+  // ==========================================
+  // --- منطق عد الأشواط الذكي والقبلة اللحظية ---
+  // ==========================================
+  int roundCount = 0;
+  final double startLat = 21.422487;
+  final double startLng = 39.826206;
+  bool hasExitedThreshold = true;
 
-      String mapUrl = "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}";
-      String message = "نداء استغاثة من تطبيق (ذاكر):\nأحتاج لمساعدة فورية، موقعي الحالي:\n$mapUrl";
+  double userHeading = 0.0;
+  StreamSubscription? _compassSubscription;
 
-      var whatsappUrl = Uri.parse("whatsapp://send?text=${Uri.encodeComponent(message)}");
-
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-      } else {
-        var smsUrl = Uri.parse("sms:?body=${Uri.encodeComponent(message)}");
-        await launchUrl(smsUrl);
-      }
-    } catch (e) {
-      Fluttertoast.showToast(msg: "تأكد من تفعيل صلاحيات الموقع");
-    }
+  void initCompass() {
+    _compassSubscription?.cancel();
+    _compassSubscription = FlutterCompass.events?.listen((event) {
+      userHeading = event.heading ?? 0.0;
+      emit(AppQiblaDirectionUpdateState());
+    });
   }
 
-  Future<void> sendSmartNotification(String title, String body) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'dhakker_channel', 'Dhakker Notifications', importance: Importance.max, priority: Priority.high,
+  void updateLocationAndCheckRounds(Position position) {
+    double distance = Geolocator.distanceBetween(
+      position.latitude, position.longitude, startLat, startLng,
     );
-    await flutterLocalNotificationsPlugin.show(0, title, body, const NotificationDetails(android: androidDetails));
-  }
 
-  void checkLapCounter(String zoneName, String duaText) {
-    if (zoneName.contains("حجر") || zoneName.toLowerCase().contains("hajar")) {
-      DateTime now = DateTime.now();
-      if (lastLapTime == null || now.difference(lastLapTime!).inMinutes >= 4) {
-        lapCount++;
-        lastLapTime = now;
-        sendSmartNotification("تقبل الله! الشوط رقم $lapCount", "استمر في الطواف والدعاء.");
-        Fluttertoast.showToast(msg: "تم تسجيل الشوط رقم $lapCount", backgroundColor: Colors.amber);
-        emit(AppChangeScreenState());
-      }
-    } else {
-      sendSmartNotification("منطقة $zoneName", "الدعاء: $duaText");
+    if (distance < 8 && hasExitedThreshold) {
+      incrementRound();
+      hasExitedThreshold = false;
+    }
+    if (distance > 20) {
+      hasExitedThreshold = true;
     }
   }
 
-  void resetLaps() {
-    lapCount = 0;
-    lastLapTime = null;
-    emit(AppChangeScreenState());
+  void incrementRound() {
+    if (roundCount < 7) {
+      roundCount++;
+      emit(AppRoundIncrementState());
+    }
+  }
+
+  void resetRounds() {
+    roundCount = 0;
+    hasExitedThreshold = true;
+    emit(AppRoundResetState());
+  }
+
+  // ==========================================
+  // --- منطق مؤشر الازدحام اللحظي للمناطق ---
+  // ==========================================
+  Map<String, int> zoneUserCount = {};
+
+  void initCrowdZoneListener() {
+    FirebaseFirestore.instance.collection('users').snapshots().listen((event) {
+      final Map<String, int> tempCount = {};
+      for (var doc in event.docs) {
+        final data = doc.data();
+        if (data.containsKey('currentZone')) {
+          final zoneId = data['currentZone'].toString();
+          tempCount[zoneId] = (tempCount[zoneId] ?? 0) + 1;
+        }
+      }
+      zoneUserCount = tempCount;
+      emit(AppMapCrowdDensityUpdateState());
+    });
+  }
+
+  Color getZoneColor(String zoneId, Color defaultGold) {
+    final count = zoneUserCount[zoneId] ?? 0;
+    if (count == 0) return defaultGold.withOpacity(0.20);
+    if (count > 50) return Colors.redAccent.withOpacity(0.40);
+    if (count > 20) return Colors.orangeAccent.withOpacity(0.30);
+    return Colors.greenAccent.withOpacity(0.25);
+  }
+
+  // ==========================================
+  // --- منطق الـ SOS ---
+  // ==========================================
+  void sendWhatsAppSOS() async {
+    const String phoneNumber = "+966500000000";
+    const String message = "نداء استغاثة SOS! موقعي الحالي: https://maps.google.com/?q=21.422,39.826";
+    final Uri url = Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+      emit(AppSOSSuccessState());
+    } else {
+      emit(AppSOSErrorState());
+    }
+  }
+
+  // ======================================================
+  // --- منطق لوحة الإحصائيات (Admin Logic) ---
+  // ======================================================
+  Map<String, dynamic> adminStats = {
+    'totalUsers': 0,
+    'sosActive': 0,
+    'haramCrowd': 0
+  };
+
+  List<Map<String, dynamic>> sosRequests = [];
+
+  void getAdminStats() {
+    emit(AppAdminLoadingStatsState());
+    FirebaseFirestore.instance.collection('users').snapshots().listen((event) {
+      adminStats['totalUsers'] = event.docs.length;
+      try {
+        adminStats['haramCrowd'] = event.docs.where((doc) {
+          final data = doc.data();
+          return data.containsKey('currentZone') && data['currentZone'] == 'Al-Haram';
+        }).length;
+      } catch (e) {
+        debugPrint("Error counting crowd: $e");
+      }
+      emit(AppAdminGetStatsSuccessState());
+    }).onError((error) {
+      emit(AppAdminGetStatsErrorState(error.toString()));
+    });
+  }
+
+  void getSOSRequests() {
+    FirebaseFirestore.instance
+        .collection('sos_requests')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((event) {
+      sosRequests = event.docs.map((doc) => doc.data()).toList();
+      adminStats['sosActive'] = sosRequests.length;
+      emit(AppAdminGetSOSRequestsSuccessState());
+    }).onError((error) {
+      emit(AppAdminGetSOSRequestsErrorState(error.toString()));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _compassSubscription?.cancel();
+    return super.close();
   }
 }

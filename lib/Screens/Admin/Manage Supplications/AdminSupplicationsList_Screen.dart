@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // استدعاء حزمة الاهتزاز الحسّي التفاعلي بالملي
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
 import 'admin_supplication_add_screen.dart';
@@ -31,6 +32,9 @@ class _AdminSupplicationsListScreenState
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
   Map<String, String> _zoneNameById = {};
   bool _zonesLoading = true;
+
+  // متغير تحكم لحركة انضغاط الزر العائم FAB
+  double _fabScale = 1.0;
 
   @override
   void initState() {
@@ -218,164 +222,200 @@ class _AdminSupplicationsListScreenState
 
     return Scaffold(
       backgroundColor: bg,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accent,
-        foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-        onPressed: () {
+      floatingActionButton: GestureDetector(
+        onTapDown: (_) => setState(() => _fabScale = 0.94),
+        onTapUp: (_) {
+          setState(() => _fabScale = 1.0);
+          HapticFeedback.lightImpact();
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => AdminSupplicationAddScreen(
-                initialZoneId:
-                _selectedZoneId == 'all' ? null : _selectedZoneId,
+                initialZoneId: _selectedZoneId == 'all' ? null : _selectedZoneId,
               ),
             ),
           );
         },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          s.adminSupplicationsAddButton,
-          style: const TextStyle(fontWeight: FontWeight.w800),
+        onTapCancel: () => setState(() => _fabScale = 1.0),
+        child: AnimatedScale(
+          scale: _fabScale,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOutCubic,
+          child: FloatingActionButton.extended(
+            backgroundColor: accent,
+            foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+            onPressed: null, // معطل تفادياً للتداخل مع الـ GestureDetector الحركي
+            icon: const Icon(Icons.add_rounded),
+            label: Text(
+              s.adminSupplicationsAddButton,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _SectionTitle(title: s.adminSupplicationsTitle),
-              const SizedBox(height: 12),
-              _FilterPanel(
-                searchController: _searchController,
-                zoneDocs: _zoneDocs,
-                selectedZoneId: _selectedZoneId,
-                selectedAudioMode: _selectedAudioMode,
-                selectedStatus: _selectedStatus,
-                onSearchChanged: (value) {
-                  setState(() {
-                    _search = value.trim().toLowerCase();
-                  });
-                },
-                onClearSearch: () {
-                  _searchController.clear();
-                  setState(() {
-                    _search = '';
-                  });
-                },
-                onZoneChanged: (value) {
-                  setState(() {
-                    _selectedZoneId = value ?? 'all';
-                  });
-                },
-                onAudioModeChanged: (value) {
-                  setState(() {
-                    _selectedAudioMode = value ?? 'all';
-                  });
-                },
-                onStatusChanged: (value) {
-                  setState(() {
-                    _selectedStatus = value ?? 'all';
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              if (_zonesLoading)
-                Column(
-                  children: const [
-                    _SupplicationSkeletonCard(),
-                    _SupplicationSkeletonCard(),
-                    _SupplicationSkeletonCard(),
-                  ],
-                )
-              else
-                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: supplicationsQuery.snapshots(),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return Column(
+        top: true, // تفعيل الحماية من الحواف العلوية لشريط الحالات
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(), // فيزياء ارتداد مطاطية ناعمة لتمطيط القوائم عند السحب
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SectionTitle(title: s.adminSupplicationsTitle),
+                    const SizedBox(height: 12),
+                    _FilterPanel(
+                      searchController: _searchController,
+                      zoneDocs: _zoneDocs,
+                      selectedZoneId: _selectedZoneId,
+                      selectedAudioMode: _selectedAudioMode,
+                      selectedStatus: _selectedStatus,
+                      onSearchChanged: (value) {
+                        setState(() {
+                          _search = value.trim().toLowerCase();
+                        });
+                      },
+                      onClearSearch: () {
+                        _searchController.clear();
+                        setState(() {
+                          _search = '';
+                        });
+                      },
+                      onZoneChanged: (value) {
+                        setState(() {
+                          _selectedZoneId = value ?? 'all';
+                        });
+                      },
+                      onAudioModeChanged: (value) {
+                        setState(() {
+                          _selectedAudioMode = value ?? 'all';
+                        });
+                      },
+                      onStatusChanged: (value) {
+                        setState(() {
+                          _selectedStatus = value ?? 'all';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    if (_zonesLoading)
+                      Column(
                         children: const [
                           _SupplicationSkeletonCard(),
                           _SupplicationSkeletonCard(),
                           _SupplicationSkeletonCard(),
                         ],
-                      );
-                    }
+                      )
+                    else
+                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: supplicationsQuery.snapshots(),
+                        builder: (context, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return Column(
+                              children: const [
+                                _SupplicationSkeletonCard(),
+                                _SupplicationSkeletonCard(),
+                                _SupplicationSkeletonCard(),
+                              ],
+                            );
+                          }
 
-                    if (snap.hasError) {
-                      return _StateCard(
-                        icon: Icons.error_outline_rounded,
-                        title: s.adminSupplicationsLoadErrorTitle,
-                        subtitle: s.adminSupplicationsLoadErrorMessage,
-                      );
-                    }
+                          if (snap.hasError) {
+                            return _StateCard(
+                              icon: Icons.error_outline_rounded,
+                              title: s.adminSupplicationsLoadErrorTitle,
+                              subtitle: s.adminSupplicationsLoadErrorMessage,
+                            );
+                          }
 
-                    final docs = snap.data?.docs ?? const [];
-                    final filtered =
-                    docs.where((doc) => _matchesFilters(doc)).toList();
+                          final docs = snap.data?.docs ?? const [];
+                          final filtered = docs.where((doc) => _matchesFilters(doc)).toList();
 
-                    if (filtered.isEmpty) {
-                      return _StateCard(
-                        icon: Icons.menu_book_outlined,
-                        title: s.adminSupplicationsEmptyTitle,
-                        subtitle: s.adminSupplicationsEmptyMessage,
-                      );
-                    }
+                          if (filtered.isEmpty) {
+                            return _StateCard(
+                              icon: Icons.menu_book_outlined,
+                              title: s.adminSupplicationsEmptyTitle,
+                              subtitle: s.adminSupplicationsEmptyMessage,
+                            );
+                          }
 
-                    return Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              '${filtered.length} ${s.adminSupplicationsResultsLabel}',
-                              style: TextStyle(
-                                color: muted.withOpacity(.95),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12.8,
+                          return Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Text(
+                                    '${filtered.length} ${s.adminSupplicationsResultsLabel}',
+                                    style: TextStyle(
+                                      color: muted.withOpacity(.95),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12.8,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
-                        ...filtered.map((doc) {
-                          final data = doc.data();
-                          return _SupplicationCard(
-                            docId: doc.id,
-                            data: data,
-                            zoneNameById: _zoneNameById,
-                            onView: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AdminSupplicationDetailsScreen(
-                                    supplicationId: doc.id,
+                              // تطبيق نظام التحريك الصعودي المتتابع والناعم لكل عناصر القائمة بالملي
+                              ...List.generate(filtered.length, (index) {
+                                final doc = filtered[index];
+                                final data = doc.data();
+                                final double start = (index * 0.03).clamp(0.0, 1.0);
+                                final double end = (start + 0.30).clamp(0.0, 1.0);
+
+                                return TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 500),
+                                  curve: Interval(start, end, curve: Curves.easeOutCubic),
+                                  builder: (context, value, child) {
+                                    return Transform.translate(
+                                      offset: Offset(0, 24 * (1.0 - value)),
+                                      child: Opacity(
+                                        opacity: value,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: _SupplicationCard(
+                                    docId: doc.id,
+                                    data: data,
+                                    zoneNameById: _zoneNameById,
+                                    onView: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AdminSupplicationDetailsScreen(
+                                            supplicationId: doc.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onEdit: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AdminSupplicationEditScreen(
+                                            supplicationId: doc.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onDelete: () async {
+                                      await _deleteSupplication(context, doc.id);
+                                    },
                                   ),
-                                ),
-                              );
-                            },
-                            onEdit: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AdminSupplicationEditScreen(
-                                    supplicationId: doc.id,
-                                  ),
-                                ),
-                              );
-                            },
-                            onDelete: () async {
-                              await _deleteSupplication(context, doc.id);
-                            },
+                                );
+                              }),
+                            ],
                           );
-                        }),
-                      ],
-                    );
-                  },
+                        },
+                      ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -418,7 +458,7 @@ class _FilterPanel extends StatelessWidget {
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -631,7 +671,7 @@ class _SupplicationCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -753,7 +793,7 @@ class _SupplicationCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: (isDark ? Colors.white : Colors.black).withOpacity(.04),
@@ -849,7 +889,6 @@ class _FilterDropdown extends StatelessWidget {
             color: muted.withOpacity(.95),
             fontSize: 12,
             fontWeight: FontWeight.w800,
-
           ),
         ),
         const SizedBox(height: 6),
@@ -861,7 +900,7 @@ class _FilterDropdown extends StatelessWidget {
           style: TextStyle(
             color: text,
             fontWeight: FontWeight.w700,
-            fontFamily: isAr?'AlamirReg':'AlamirReg',
+            fontFamily: isAr ? 'AlamirReg' : 'AlamirReg',
           ),
           decoration: InputDecoration(
             filled: true,
@@ -986,7 +1025,8 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+// تعديل أزرار الكروت السفلية لتطبيق فيزياء الانضغاط المطاطي والاهتزاز الحسّي التفاعلي
+class _ActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isDanger;
@@ -1000,40 +1040,57 @@ class _ActionButton extends StatelessWidget {
   });
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  double _btnScale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final baseColor = isDanger
+    final baseColor = widget.isDanger
         ? const Color(0xFFDC2626)
         : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: baseColor.withOpacity(.10),
-          border: Border.all(color: baseColor.withOpacity(.18)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: baseColor),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: baseColor,
-                  fontSize: 12.2,
-                  fontWeight: FontWeight.w800,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _btnScale = 0.94),
+      onTapUp: (_) {
+        setState(() => _btnScale = 1.0);
+        HapticFeedback.lightImpact(); // اهتزاز حسّي ناعم ومتناسق مع اللمس
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _btnScale = 1.0),
+      child: AnimatedScale(
+        scale: _btnScale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: baseColor.withOpacity(.10),
+            border: Border.all(color: baseColor.withOpacity(.18)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, size: 18, color: baseColor),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: baseColor,
+                    fontSize: 12.2,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

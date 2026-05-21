@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/admin_bloc/admin_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // استدعاء حزمة الاهتزاز الحسّي بالملي
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../generated/l10n.dart';
@@ -100,7 +102,8 @@ class _AdminZoneDetailsScreenState extends State<AdminZoneDetailsScreen> {
   }
 }
 
-class _ZoneDetailsBody extends StatelessWidget {
+// تم تحويل الـ Body إلى StatefulWidget لتفعيل أنميشن الدخول المتتابع لكروت البيانات
+class _ZoneDetailsBody extends StatefulWidget {
   final String zoneId;
   final Map<String, dynamic> data;
 
@@ -108,6 +111,30 @@ class _ZoneDetailsBody extends StatelessWidget {
     required this.zoneId,
     required this.data,
   });
+
+  @override
+  State<_ZoneDetailsBody> createState() => _ZoneDetailsBodyState();
+}
+
+class _ZoneDetailsBodyState extends State<_ZoneDetailsBody> with SingleTickerProviderStateMixin {
+  late AnimationController _entranceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    // تشغيل أنميشن الدخول فور بناء الشاشة وبدء سحب الحقول
+    _entranceController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,18 +147,18 @@ class _ZoneDetailsBody extends StatelessWidget {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
     final name = isAr
-        ? (data['nameAr'] ?? data['nameEn'] ?? '').toString().trim()
-        : (data['nameEn'] ?? data['nameAr'] ?? '').toString().trim();
+        ? (widget.data['nameAr'] ?? widget.data['nameEn'] ?? '').toString().trim()
+        : (widget.data['nameEn'] ?? widget.data['nameAr'] ?? '').toString().trim();
 
-    final type = (data['type'] ?? '').toString().trim().toLowerCase();
-    final isActive = data['isActive'] == true;
-    final priority = data['priority'];
+    final type = (widget.data['type'] ?? '').toString().trim().toLowerCase();
+    final isActive = widget.data['isActive'] == true;
+    final priority = widget.data['priority'];
 
-    final center = data['center'];
+    final center = widget.data['center'];
     final centerLat = _toDouble(center is Map ? center['lat'] : null);
     final centerLng = _toDouble(center is Map ? center['lng'] : null);
-    final radiusM = _toDouble(data['radiusM']);
-    final points = _extractPoints(data['points']);
+    final radiusM = _toDouble(widget.data['radiusM']);
+    final points = _extractPoints(widget.data['points']);
 
     final typeLabel = type == 'circle'
         ? s.adminZoneDetailsTypeCircle
@@ -143,137 +170,153 @@ class _ZoneDetailsBody extends StatelessWidget {
         ? s.adminZoneDetailsStatusActive
         : s.adminZoneDetailsStatusInactive;
 
+    // مصفوفة عناصر الشاشة ليتم تطبيق أنميشن الصعود المتتابع عليها بالملي
+    final List<Widget> detailSections = [
+      const _SectionTitle(title: "نظرة عامة على النطاق"),
+      const SizedBox(height: 12),
+      _HeroInfoCard(
+        title: name.isEmpty ? '—' : name,
+        typeLabel: typeLabel,
+        statusLabel: statusLabel,
+        priority: priority?.toString() ?? '—',
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminZoneDetailsMapTitle),
+      const SizedBox(height: 12),
+      _ZoneMapCard(
+        zoneName: name,
+        type: type,
+        centerLat: centerLat,
+        centerLng: centerLng,
+        radiusM: radiusM,
+        points: points,
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminZoneDetailsInfoTitle),
+      const SizedBox(height: 12),
+      _DetailsCard(
+        children: [
+          _InfoRow(
+            label: s.adminZoneDetailsNameAr,
+            value: (widget.data['nameAr'] ?? '').toString().trim().isEmpty
+                ? '—'
+                : (widget.data['nameAr'] ?? '').toString().trim(),
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminZoneDetailsNameEn,
+            value: (widget.data['nameEn'] ?? '').toString().trim().isEmpty
+                ? '—'
+                : (widget.data['nameEn'] ?? '').toString().trim(),
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminZoneDetailsTypeLabel,
+            value: typeLabel,
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminZoneDetailsPriorityLabel,
+            value: priority?.toString() ?? '—',
+          ),
+          const SizedBox(height: 10),
+          _InfoRow(
+            label: s.adminZoneDetailsStatusLabel,
+            value: statusLabel,
+          ),
+          if (type == 'circle') ...[
+            const SizedBox(height: 10),
+            _InfoRow(
+              label: s.adminZoneDetailsCenterLatLabel,
+              value: centerLat?.toString() ?? '—',
+            ),
+            const SizedBox(height: 10),
+            _InfoRow(
+              label: s.adminZoneDetailsCenterLngLabel,
+              value: centerLng?.toString() ?? '—',
+            ),
+            const SizedBox(height: 10),
+            _InfoRow(
+              label: s.adminZoneDetailsRadiusLabel,
+              value: radiusM == null ? '—' : '${radiusM.toString()} m',
+            ),
+          ],
+          if (type == 'polygon') ...[
+            const SizedBox(height: 10),
+            _InfoRow(
+              label: s.adminZoneDetailsPointsCountLabel,
+              value: points.length.toString(),
+            ),
+          ],
+        ],
+      ),
+      if (type == 'polygon') ...[
+        const SizedBox(height: 18),
+        _SectionTitle(title: s.adminZoneDetailsPointsTitle),
+        const SizedBox(height: 12),
+        _PolygonPointsCard(points: points),
+      ],
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminZoneDetailsRelatedTitle),
+      const SizedBox(height: 12),
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('supplications')
+            .where('zoneId', isEqualTo: widget.zoneId)
+            .snapshots(),
+        builder: (context, snap) {
+          final count = snap.data?.docs.length ?? 0;
+          return _RelatedSupplicationsCard(
+            count: count,
+            onTap: () {
+              AdminCubit.get(context).changeScreen(2);
+            },
+          );
+        },
+      ),
+      const SizedBox(height: 20),
+      Text(
+        s.adminZoneDetailsHint,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: muted.withOpacity(.9),
+          fontWeight: FontWeight.w700,
+          fontSize: 12.3,
+          height: 1.5,
+        ),
+      ),
+    ];
+
     return Container(
       color: bg,
       child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(), // تمطيط وارتداد هيدروليكي فخم عند السحب للحدود
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SectionTitle(title: s.adminZoneDetailsOverviewTitle),
-            const SizedBox(height: 12),
-            _HeroInfoCard(
-              title: name.isEmpty ? '—' : name,
-              typeLabel: typeLabel,
-              statusLabel: statusLabel,
-              priority: priority?.toString() ?? '—',
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminZoneDetailsMapTitle),
-            const SizedBox(height: 12),
-            _ZoneMapCard(
-              zoneName: name,
-              type: type,
-              centerLat: centerLat,
-              centerLng: centerLng,
-              radiusM: radiusM,
-              points: points,
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminZoneDetailsInfoTitle),
-            const SizedBox(height: 12),
-            _DetailsCard(
-              children: [
-                _InfoRow(
-                  label: s.adminZoneDetailsNameAr,
-                  value: (data['nameAr'] ?? '').toString().trim().isEmpty
-                      ? '—'
-                      : (data['nameAr'] ?? '').toString().trim(),
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminZoneDetailsNameEn,
-                  value: (data['nameEn'] ?? '').toString().trim().isEmpty
-                      ? '—'
-                      : (data['nameEn'] ?? '').toString().trim(),
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminZoneDetailsTypeLabel,
-                  value: typeLabel,
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminZoneDetailsPriorityLabel,
-                  value: priority?.toString() ?? '—',
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: s.adminZoneDetailsStatusLabel,
-                  value: statusLabel,
-                ),
-                if (type == 'circle') ...[
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: s.adminZoneDetailsCenterLatLabel,
-                    value: centerLat?.toString() ?? '—',
-                  ),
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: s.adminZoneDetailsCenterLngLabel,
-                    value: centerLng?.toString() ?? '—',
-                  ),
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: s.adminZoneDetailsRadiusLabel,
-                    value: radiusM == null ? '—' : '${radiusM.toString()} m',
-                  ),
-                ],
-                if (type == 'polygon') ...[
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: s.adminZoneDetailsPointsCountLabel,
-                    value: points.length.toString(),
-                  ),
-                ],
-              ],
-            ),
-            if (type == 'polygon') ...[
-              const SizedBox(height: 18),
-              _SectionTitle(title: s.adminZoneDetailsPointsTitle),
-              const SizedBox(height: 12),
-              _PolygonPointsCard(points: points),
-            ],
-            const SizedBox(height: 18),
-            _SectionTitle(title: s.adminZoneDetailsRelatedTitle),
-            const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('supplications')
-                  .where('zoneId', isEqualTo: zoneId)
-                  .snapshots(),
-              builder: (context, snap) {
-                final count = snap.data?.docs.length ?? 0;
-                return _RelatedSupplicationsCard(
-                  count: count,
-                  onTap: () {
+          children: List.generate(detailSections.length, (index) {
+            final double start = (index * 0.04).clamp(0.0, 1.0);
+            final double end = (start + 0.35).clamp(0.0, 1.0);
 
-                    AdminCubit.get(context).changeScreen(2);
+            return AnimatedBuilder(
+              animation: _entranceController,
+              builder: (context, child) {
+                final curve = CurvedAnimation(
+                  parent: _entranceController,
+                  curve: Interval(start, end, curve: Curves.easeOutCubic),
+                );
 
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (_) => AdminSupplicationsListScreen(
-                    //       initialZoneId: zoneId,
-                    //     ),
-                    //   ),
-                    // );
-                  },
+                return Transform.translate(
+                  offset: Offset(0, 26 * (1.0 - curve.value)),
+                  child: Opacity(
+                    opacity: curve.value,
+                    child: child,
+                  ),
                 );
               },
-            ),
-            const SizedBox(height: 20),
-            Text(
-              s.adminZoneDetailsHint,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: muted.withOpacity(.9),
-                fontWeight: FontWeight.w700,
-                fontSize: 12.3,
-                height: 1.5,
-              ),
-            ),
-          ],
+              child: detailSections[index],
+            );
+          }),
         ),
       ),
     );
@@ -333,7 +376,7 @@ class _HeroInfoCard extends StatelessWidget {
         : const Color(0xFF7C3AED);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(20),
@@ -402,7 +445,7 @@ class _HeroInfoCard extends StatelessWidget {
           const SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: (isDark ? Colors.white : Colors.black).withOpacity(.04),
@@ -470,7 +513,7 @@ class _ZoneMapCard extends StatelessWidget {
     final hasValidMap = mapCenter != null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(20),
@@ -545,7 +588,7 @@ class _ZoneMapCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: (isDark ? Colors.white : Colors.black).withOpacity(.04),
@@ -617,9 +660,7 @@ class _ZoneMapCard extends StatelessWidget {
       if (radiusM! <= 300) return 16;
       return 15;
     }
-
     if (type == 'polygon') return 17;
-
     return 16;
   }
 
@@ -645,17 +686,13 @@ class _ZoneMapCard extends StatelessWidget {
         ),
       ];
     }
-
     return [];
   }
 }
 
 class _MapPin extends StatelessWidget {
   final Color accent;
-
-  const _MapPin({
-    required this.accent,
-  });
+  const _MapPin({required this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -683,11 +720,7 @@ class _MapPin extends StatelessWidget {
 class _EmptyMapState extends StatelessWidget {
   final String title;
   final String subtitle;
-
-  const _EmptyMapState({
-    required this.title,
-    required this.subtitle,
-  });
+  const _EmptyMapState({required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -738,10 +771,7 @@ class _EmptyMapState extends StatelessWidget {
 
 class _DetailsCard extends StatelessWidget {
   final List<Widget> children;
-
-  const _DetailsCard({
-    required this.children,
-  });
+  const _DetailsCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -749,7 +779,7 @@ class _DetailsCard extends StatelessWidget {
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -768,10 +798,7 @@ class _DetailsCard extends StatelessWidget {
 
 class _PolygonPointsCard extends StatelessWidget {
   final List<LatLng> points;
-
-  const _PolygonPointsCard({
-    required this.points,
-  });
+  const _PolygonPointsCard({required this.points});
 
   @override
   Widget build(BuildContext context) {
@@ -784,7 +811,7 @@ class _PolygonPointsCard extends StatelessWidget {
 
     if (points.isEmpty) {
       return Container(
-        padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
         decoration: BoxDecoration(
           color: card,
           borderRadius: BorderRadius.circular(18),
@@ -801,7 +828,7 @@ class _PolygonPointsCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
@@ -818,7 +845,7 @@ class _PolygonPointsCard extends StatelessWidget {
           final point = points[index];
           return Container(
             margin: EdgeInsets.only(bottom: index == points.length - 1 ? 0 : 10),
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               color: (isDark ? Colors.white : Colors.black).withOpacity(.04),
@@ -860,7 +887,8 @@ class _PolygonPointsCard extends StatelessWidget {
   }
 }
 
-class _RelatedSupplicationsCard extends StatelessWidget {
+// تعديل كرت الأدعية المتبادلة وتغليفه بالكبس المطاطي والاهتزاز الحسّي عند النقر
+class _RelatedSupplicationsCard extends StatefulWidget {
   final int count;
   final VoidCallback onTap;
 
@@ -868,6 +896,13 @@ class _RelatedSupplicationsCard extends StatelessWidget {
     required this.count,
     required this.onTap,
   });
+
+  @override
+  State<_RelatedSupplicationsCard> createState() => _RelatedSupplicationsCardState();
+}
+
+class _RelatedSupplicationsCardState extends State<_RelatedSupplicationsCard> {
+  double _cardScale = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -878,74 +913,94 @@ class _RelatedSupplicationsCard extends StatelessWidget {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border(
-            right: BorderSide(
-              color: accent.withOpacity(.55),
-              width: 3,
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() {
+          _cardScale = 0.96; // انضغاط الكرت للداخل عند اللمس
+        });
+      },
+      onTapUp: (_) {
+        setState(() {
+          _cardScale = 1.0;
+        });
+        HapticFeedback.lightImpact(); // نبضة حسية تفاعلية فخمة
+        widget.onTap();
+      },
+      onTapCancel: () {
+        setState(() {
+          _cardScale = 1.0;
+        });
+      },
+      child: AnimatedScale(
+        scale: _cardScale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border(
+              right: BorderSide(
+                color: accent.withOpacity(.55),
+                width: 3,
+              ),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? .30 : .07),
+                blurRadius: 18,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? .30 : .07),
-              blurRadius: 18,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: accent.withOpacity(.10),
-                borderRadius: BorderRadius.circular(16),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: accent,
+                  size: 26,
+                ),
               ),
-              child: Icon(
-                Icons.menu_book_rounded,
-                color: accent,
-                size: 26,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s.adminZoneDetailsRelatedSupplicationsButton,
-                    style: TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14.2,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      s.adminZoneDetailsRelatedSupplicationsButton,
+                      style: TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14.2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${s.adminZoneDetailsRelatedCountLabel}: $count',
-                    style: TextStyle(
-                      color: muted,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.3,
+                    const SizedBox(height: 4),
+                    Text(
+                      '${s.adminZoneDetailsRelatedCountLabel}: ${widget.count}',
+                      style: TextStyle(
+                        color: muted,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.3,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: muted,
-              size: 16,
-            ),
-          ],
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: muted,
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1032,10 +1087,7 @@ class _InfoRow extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-
-  const _SectionTitle({
-    required this.title,
-  });
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -1087,7 +1139,7 @@ class _ZoneDetailsLoadingView extends StatelessWidget {
           const SizedBox(height: 18),
           const _SectionTitle(title: '...'),
           const SizedBox(height: 12),
-          _LoadingCard(card: card, height: 360),
+          _LoadingCard(card: card, height: 310),
           const SizedBox(height: 18),
           const _SectionTitle(title: '...'),
           const SizedBox(height: 12),

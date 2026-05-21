@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
 
@@ -10,7 +11,7 @@ class AdminZoneAddScreen extends StatefulWidget {
   State<AdminZoneAddScreen> createState() => _AdminZoneAddScreenState();
 }
 
-class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
+class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _nameArController = TextEditingController();
@@ -30,6 +31,19 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
 
   final List<Map<String, double>> _polygonPoints = [];
 
+  late AnimationController _entranceController;
+  double _saveBtnScale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _entranceController.forward();
+  }
+
   @override
   void dispose() {
     _nameArController.dispose();
@@ -40,6 +54,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
     _priorityController.dispose();
     _pointLatController.dispose();
     _pointLngController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
@@ -50,9 +65,298 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
     final text = isDark ? Colors.white : DhakkerColors.lightText;
-    final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
+
+    final List<Widget> formElements = [
+      _SectionTitle(title: s.adminZoneAddBasicInfoTitle),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border(
+            right: BorderSide(
+              color: accent.withOpacity(.55),
+              width: 3,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? .30 : .07),
+              blurRadius: 18,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _AppField(
+              controller: _nameArController,
+              label: s.adminZoneAddNameAr,
+              hint: s.adminZoneAddNameArHint,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return s.adminZoneAddNameArRequired;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _nameEnController,
+              label: s.adminZoneAddNameEn,
+              hint: s.adminZoneAddNameEnHint,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return s.adminZoneAddNameEnRequired;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _priorityController,
+              label: s.adminZoneAddPriority,
+              hint: s.adminZoneAddPriorityHint,
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return s.adminZoneAddPriorityRequired;
+                }
+                final number = int.tryParse(value.trim());
+                if (number == null) {
+                  return s.adminZoneAddPriorityInvalid;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _SwitchCard(
+              title: s.adminZoneAddStatusTitle,
+              subtitle: _isActive
+                  ? s.adminZoneAddStatusActiveText
+                  : s.adminZoneAddStatusInactiveText,
+              value: _isActive,
+              onChanged: (value) {
+                setState(() {
+                  _isActive = value;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 18),
+      _SectionTitle(title: s.adminZoneAddTypeTitle),
+      const SizedBox(height: 12),
+      _TypeSelector(
+        value: _zoneType,
+        onChanged: (value) {
+          setState(() {
+            _zoneType = value;
+          });
+        },
+      ),
+      const SizedBox(height: 16),
+      if (_zoneType == 'circle') ...[
+        _ShapeIntroCard(
+          icon: Icons.circle_outlined,
+          title: s.adminZoneAddCircleCardTitle,
+          subtitle: s.adminZoneAddCircleCardSubtitle,
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? .30 : .07),
+                blurRadius: 18,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _AppField(
+                      controller: _centerLatController,
+                      label: s.adminZoneAddCenterLat,
+                      hint: s.adminZoneAddCenterLatHint,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (value) {
+                        if (_zoneType != 'circle') return null;
+                        if (value == null || value.trim().isEmpty) {
+                          return s.adminZoneAddCenterLatRequired;
+                        }
+                        final number = double.tryParse(value.trim());
+                        if (number == null || number < -90 || number > 90) {
+                          return s.adminZoneAddLatitudeInvalid;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AppField(
+                      controller: _centerLngController,
+                      label: s.adminZoneAddCenterLng,
+                      hint: s.adminZoneAddCenterLngHint,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (value) {
+                        if (_zoneType != 'circle') return null;
+                        if (value == null || value.trim().isEmpty) {
+                          return s.adminZoneAddCenterLngRequired;
+                        }
+                        final number = double.tryParse(value.trim());
+                        if (number == null || number < -180 || number > 180) {
+                          return s.adminZoneAddLongitudeInvalid;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _AppField(
+                controller: _radiusController,
+                label: s.adminZoneAddRadius,
+                hint: s.adminZoneAddRadiusHint,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (_zoneType != 'circle') return null;
+                  if (value == null || value.trim().isEmpty) {
+                    return s.adminZoneAddRadiusRequired;
+                  }
+                  final number = double.tryParse(value.trim());
+                  if (number == null || number <= 0) {
+                    return s.adminZoneAddRadiusInvalid;
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+      if (_zoneType == 'polygon') ...[
+        _ShapeIntroCard(
+          icon: Icons.polyline_rounded,
+          title: s.adminZoneAddPolygonCardTitle,
+          subtitle: s.adminZoneAddPolygonCardSubtitle,
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? .30 : .07),
+                blurRadius: 18,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _AppField(
+                      controller: _pointLatController,
+                      label: s.adminZoneAddPointLat,
+                      hint: s.adminZoneAddCenterLatHint,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AppField(
+                      controller: _pointLngController,
+                      label: s.adminZoneAddPointLng,
+                      hint: s.adminZoneAddCenterLngHint,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _HapticButton(
+                onTap: _addPolygonPoint,
+                label: s.adminZoneAddPointButton,
+                icon: Icons.add_rounded,
+                color: accent,
+                textColor: isDark ? DhakkerColors.bg : Colors.white,
+              ),
+              const SizedBox(height: 14),
+              _PolygonPointsPanel(
+                points: _polygonPoints,
+                onDelete: (index) {
+                  setState(() {
+                    _polygonPoints.removeAt(index);
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+      const SizedBox(height: 22),
+      GestureDetector(
+        onTapDown: (_) => setState(() => _saveBtnScale = 0.96),
+        onTapUp: (_) {
+          setState(() => _saveBtnScale = 1.0);
+          HapticFeedback.lightImpact();
+          if (!_isSaving) _saveZone();
+        },
+        onTapCancel: () => setState(() => _saveBtnScale = 1.0),
+        child: AnimatedScale(
+          scale: _saveBtnScale,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOutCubic,
+          child: SizedBox(
+            height: 54,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: null,
+              icon: _isSaving
+                  ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.3,
+                  color: isDark ? DhakkerColors.bg : Colors.white,
+                ),
+              )
+                  : const Icon(Icons.save_rounded),
+              label: Text(
+                _isSaving ? s.adminZoneAddSaving : s.adminZoneAddSave,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: bg,
@@ -70,296 +374,32 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _SectionTitle(title: s.adminZoneAddBasicInfoTitle),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                  decoration: BoxDecoration(
-                    color: card,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border(
-                      right: BorderSide(
-                        color: accent.withOpacity(.55),
-                        width: 3,
+              children: List.generate(formElements.length, (index) {
+                final double start = (index * 0.03).clamp(0.0, 1.0);
+                final double end = (start + 0.30).clamp(0.0, 1.0);
+
+                return AnimatedBuilder(
+                  animation: _entranceController,
+                  builder: (context, child) {
+                    final curve = CurvedAnimation(
+                      parent: _entranceController,
+                      curve: Interval(start, end, curve: Curves.easeOutCubic),
+                    );
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1.0 - curve.value)),
+                      child: Opacity(
+                        opacity: curve.value,
+                        child: child,
                       ),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? .30 : .07),
-                        blurRadius: 18,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _AppField(
-                        controller: _nameArController,
-                        label: s.adminZoneAddNameAr,
-                        hint: s.adminZoneAddNameArHint,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return s.adminZoneAddNameArRequired;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _AppField(
-                        controller: _nameEnController,
-                        label: s.adminZoneAddNameEn,
-                        hint: s.adminZoneAddNameEnHint,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return s.adminZoneAddNameEnRequired;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _AppField(
-                        controller: _priorityController,
-                        label: s.adminZoneAddPriority,
-                        hint: s.adminZoneAddPriorityHint,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: false),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return s.adminZoneAddPriorityRequired;
-                          }
-                          final number = int.tryParse(value.trim());
-                          if (number == null) {
-                            return s.adminZoneAddPriorityInvalid;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _SwitchCard(
-                        title: s.adminZoneAddStatusTitle,
-                        subtitle: _isActive
-                            ? s.adminZoneAddStatusActiveText
-                            : s.adminZoneAddStatusInactiveText,
-                        value: _isActive,
-                        onChanged: (value) {
-                          setState(() {
-                            _isActive = value;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _SectionTitle(title: s.adminZoneAddTypeTitle),
-                const SizedBox(height: 12),
-                _TypeSelector(
-                  value: _zoneType,
-                  onChanged: (value) {
-                    setState(() {
-                      _zoneType = value;
-                    });
+                    );
                   },
-                ),
-                const SizedBox(height: 16),
-                if (_zoneType == 'circle') ...[
-                  _ShapeIntroCard(
-                    icon: Icons.circle_outlined,
-                    title: s.adminZoneAddCircleCardTitle,
-                    subtitle: s.adminZoneAddCircleCardSubtitle,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                    decoration: BoxDecoration(
-                      color: card,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? .30 : .07),
-                          blurRadius: 18,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _AppField(
-                                controller: _centerLatController,
-                                label: s.adminZoneAddCenterLat,
-                                hint: s.adminZoneAddCenterLatHint,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) {
-                                  if (_zoneType != 'circle') return null;
-                                  if (value == null || value.trim().isEmpty) {
-                                    return s.adminZoneAddCenterLatRequired;
-                                  }
-                                  final number = double.tryParse(value.trim());
-                                  if (number == null || number < -90 || number > 90) {
-                                    return s.adminZoneAddLatitudeInvalid;
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _AppField(
-                                controller: _centerLngController,
-                                label: s.adminZoneAddCenterLng,
-                                hint: s.adminZoneAddCenterLngHint,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) {
-                                  if (_zoneType != 'circle') return null;
-                                  if (value == null || value.trim().isEmpty) {
-                                    return s.adminZoneAddCenterLngRequired;
-                                  }
-                                  final number = double.tryParse(value.trim());
-                                  if (number == null || number < -180 || number > 180) {
-                                    return s.adminZoneAddLongitudeInvalid;
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _AppField(
-                          controller: _radiusController,
-                          label: s.adminZoneAddRadius,
-                          hint: s.adminZoneAddRadiusHint,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          validator: (value) {
-                            if (_zoneType != 'circle') return null;
-                            if (value == null || value.trim().isEmpty) {
-                              return s.adminZoneAddRadiusRequired;
-                            }
-                            final number = double.tryParse(value.trim());
-                            if (number == null || number <= 0) {
-                              return s.adminZoneAddRadiusInvalid;
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (_zoneType == 'polygon') ...[
-                  _ShapeIntroCard(
-                    icon: Icons.polyline_rounded,
-                    title: s.adminZoneAddPolygonCardTitle,
-                    subtitle: s.adminZoneAddPolygonCardSubtitle,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                    decoration: BoxDecoration(
-                      color: card,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? .30 : .07),
-                          blurRadius: 18,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _AppField(
-                                controller: _pointLatController,
-                                label: s.adminZoneAddPointLat,
-                                hint: s.adminZoneAddCenterLatHint,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _AppField(
-                                controller: _pointLngController,
-                                label: s.adminZoneAddPointLng,
-                                hint: s.adminZoneAddCenterLngHint,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            onPressed: _addPolygonPoint,
-                            icon: const Icon(Icons.add_rounded),
-                            label: Text(
-                              s.adminZoneAddPointButton,
-                              style: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _PolygonPointsPanel(
-                          points: _polygonPoints,
-                          onDelete: (index) {
-                            setState(() {
-                              _polygonPoints.removeAt(index);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 22),
-                SizedBox(
-                  height: 54,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    onPressed: _isSaving ? null : _saveZone,
-                    icon: _isSaving
-                        ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.3,
-                        color: isDark ? DhakkerColors.bg : Colors.white,
-                      ),
-                    )
-                        : const Icon(Icons.save_rounded),
-                    label: Text(
-                      _isSaving ? s.adminZoneAddSaving : s.adminZoneAddSave,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                  child: formElements[index],
+                );
+              }),
             ),
           ),
         ),
@@ -469,6 +509,66 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> {
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         backgroundColor: isError ? const Color(0xFFDC2626) : null,
+      ),
+    );
+  }
+}
+
+class _HapticButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color textColor;
+
+  const _HapticButton({
+    required this.onTap,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  State<_HapticButton> createState() => _HapticButtonState();
+}
+
+class _HapticButtonState extends State<_HapticButton> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.95),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.color,
+              foregroundColor: widget.textColor,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            onPressed: null,
+            icon: Icon(widget.icon),
+            label: Text(
+              widget.label,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -709,7 +809,7 @@ class _TypeSelector extends StatelessWidget {
   }
 }
 
-class _TypeCard extends StatelessWidget {
+class _TypeCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
@@ -725,6 +825,13 @@ class _TypeCard extends StatelessWidget {
   });
 
   @override
+  State<_TypeCard> createState() => _TypeCardState();
+}
+
+class _TypeCardState extends State<_TypeCard> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
@@ -732,61 +839,71 @@ class _TypeCard extends StatelessWidget {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected
-                ? accent.withOpacity(.75)
-                : (isDark ? Colors.white : Colors.black).withOpacity(.07),
-            width: isSelected ? 1.4 : 1,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.95),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: widget.isSelected
+                  ? accent.withOpacity(.75)
+                  : (isDark ? Colors.white : Colors.black).withOpacity(.07),
+              width: widget.isSelected ? 1.4 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? .30 : .07),
+                blurRadius: 18,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? .30 : .07),
-              blurRadius: 18,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: accent.withOpacity(.10),
-                borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(widget.icon, color: accent, size: 28),
               ),
-              child: Icon(icon, color: accent, size: 28),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: text,
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
+              const SizedBox(height: 10),
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: text,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: muted,
-                fontWeight: FontWeight.w700,
-                fontSize: 11.8,
-                height: 1.45,
+              const SizedBox(height: 4),
+              Text(
+                widget.subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: muted,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.8,
+                  height: 1.45,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

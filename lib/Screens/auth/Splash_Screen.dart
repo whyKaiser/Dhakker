@@ -8,7 +8,7 @@ import '../auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   int userTypeIndex;
-   SplashScreen(this.userTypeIndex);
+  SplashScreen(this.userTypeIndex);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

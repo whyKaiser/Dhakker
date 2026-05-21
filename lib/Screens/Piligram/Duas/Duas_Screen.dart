@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // للاهتزاز والتحكم بالحس التفاعلي
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../generated/l10n.dart';
@@ -18,7 +19,7 @@ class DuasScreen extends StatefulWidget {
   State<DuasScreen> createState() => _DuasScreenState();
 }
 
-class _DuasScreenState extends State<DuasScreen> {
+class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
 
   final DuaSearchService _searchService = const DuaSearchService();
@@ -37,9 +38,17 @@ class _DuasScreenState extends State<DuasScreen> {
 
   String? _selectedZoneId;
 
+  // أنميشن الدخول المتتابع لـ كروت الأدعية
+  late AnimationController _listAnimationController;
+
   @override
   void initState() {
     super.initState();
+
+    _listAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
 
     _supplicationService = SupplicationService(
       firestore: FirebaseFirestore.instance,
@@ -59,6 +68,7 @@ class _DuasScreenState extends State<DuasScreen> {
   void dispose() {
     _searchController.dispose();
     _playbackService.dispose();
+    _listAnimationController.dispose();
     super.dispose();
   }
 
@@ -110,6 +120,8 @@ class _DuasScreenState extends State<DuasScreen> {
     setState(() {
       _isLoading = false;
     });
+
+    _listAnimationController.forward(from: 0.0);
   }
 
   void _applyFilters() {
@@ -131,10 +143,23 @@ class _DuasScreenState extends State<DuasScreen> {
     setState(() {
       _filteredItems = items;
     });
+
+    _listAnimationController.forward(from: 0.0);
   }
 
   Future<void> _playDua(SupplicationModel dua) async {
     final langCode = Localizations.localeOf(context).languageCode;
+
+    try {
+      FirebaseFirestore.instance
+          .collection('supplications')
+          .doc(dua.duaId)
+          .update({
+        'playCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      debugPrint("Analytics Update Error: $e");
+    }
 
     await _playbackService.play(
       dua: dua,
@@ -152,8 +177,6 @@ class _DuasScreenState extends State<DuasScreen> {
   }
 
   Future<void> _startVoiceSearch() async {
-    final s = S.of(context);
-
     var status = await Permission.microphone.status;
     if (!status.isGranted) {
       status = await Permission.microphone.request();
@@ -247,9 +270,9 @@ class _DuasScreenState extends State<DuasScreen> {
 
     final palette = _DuasPalette.fromBrightness(isDark);
 
-    return Container(
-      color: palette.bg,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
         bottom: false,
         child: Column(
           children: [
@@ -259,6 +282,7 @@ class _DuasScreenState extends State<DuasScreen> {
                 backgroundColor: palette.card,
                 onRefresh: _loadData,
                 child: ListView(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                   children: [
                     Align(
@@ -323,20 +347,48 @@ class _DuasScreenState extends State<DuasScreen> {
                         message: s.duasEmptyMessage,
                       )
                     else
-                      ..._filteredItems.map(
-                            (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _DuaResultCard(
-                            palette: palette,
-                            title: item.dua.titleByLanguage(langCode),
-                            text: item.dua.textByLanguage(langCode),
-                            zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
-                            buttonText: s.duasPlayButton,
-                            onPlay: () async {
-                              await _playDua(item.dua);
+                      ListView.builder(
+                        shrinkWrap: true,
+                        primary: false,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _filteredItems[index];
+
+                          final double start = (index * 0.08).clamp(0.0, 1.0);
+                          final double end = (start + 0.4).clamp(0.0, 1.0);
+
+                          return AnimatedBuilder(
+                            animation: _listAnimationController,
+                            builder: (context, child) {
+                              final animationCurve = CurvedAnimation(
+                                parent: _listAnimationController,
+                                curve: Interval(start, end, curve: Curves.easeOutCubic),
+                              );
+
+                              return Transform.translate(
+                                offset: Offset(0, 36 * (1.0 - animationCurve.value)),
+                                child: Opacity(
+                                  opacity: animationCurve.value,
+                                  child: child,
+                                ),
+                              );
                             },
-                          ),
-                        ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _DuaResultCard(
+                                palette: palette,
+                                title: item.dua.titleByLanguage(langCode),
+                                text: item.dua.textByLanguage(langCode),
+                                zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
+                                buttonText: s.duasPlayButton,
+                                onPlay: () async {
+                                  await _playDua(item.dua);
+                                },
+                              ),
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
@@ -470,7 +522,7 @@ class _SearchBar extends StatelessWidget {
             ),
           ),
           Container(
-            margin: const EdgeInsetsDirectional.only(end: 8),
+            margin: const EdgeInsets.only(left: 8, right: 8),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -531,6 +583,7 @@ class _ZoneFilterBar extends StatelessWidget {
       height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
@@ -575,7 +628,7 @@ class _ZoneFilterData {
   });
 }
 
-class _DuaResultCard extends StatelessWidget {
+class _DuaResultCard extends StatefulWidget {
   final _DuasPalette palette;
   final String title;
   final String text;
@@ -593,21 +646,28 @@ class _DuaResultCard extends StatelessWidget {
   });
 
   @override
+  State<_DuaResultCard> createState() => _DuaResultCardState();
+}
+
+class _DuaResultCardState extends State<_DuaResultCard> {
+  double _buttonScale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: palette.card,
+        color: widget.palette.card,
         borderRadius: BorderRadius.circular(22),
         border: BorderDirectional(
           end: BorderSide(
-            color: palette.gold.withOpacity(.76),
+            color: widget.palette.gold.withOpacity(.76),
             width: 3,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.shadow.withOpacity(.12),
+            color: widget.palette.shadow.withOpacity(.12),
             blurRadius: 20,
             offset: const Offset(0, 14),
           ),
@@ -624,22 +684,22 @@ class _DuaResultCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: palette.chipBg,
+                  color: widget.palette.chipBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  zoneName,
+                  widget.zoneName,
                   style: TextStyle(
-                    color: palette.gold,
+                    color: widget.palette.gold,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
               Text(
-                title,
+                widget.title,
                 style: TextStyle(
-                  color: palette.text,
+                  color: widget.palette.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -648,48 +708,68 @@ class _DuaResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            text,
+            widget.text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: palette.text,
+              color: widget.palette.text,
               fontSize: 16,
               fontWeight: FontWeight.w700,
               height: 1.7,
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 52,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: onPlay,
-                child: Ink(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: [
-                        palette.gold.withOpacity(.98),
-                        palette.gold2.withOpacity(.98),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: palette.gold.withOpacity(.18),
-                        blurRadius: 18,
-                        offset: const Offset(0, 12),
-                      ),
+
+          GestureDetector(
+            onTapDown: (_) {
+              setState(() {
+                _buttonScale = 0.95;
+              });
+            },
+            onTapUp: (_) {
+              setState(() {
+                _buttonScale = 1.0;
+              });
+            },
+            onTapCancel: () {
+              setState(() {
+                _buttonScale = 1.0;
+              });
+            },
+            onTap: () {
+              HapticFeedback.lightImpact();
+              widget.onPlay();
+            },
+            child: AnimatedScale(
+              scale: _buttonScale,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOutCubic,
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.palette.gold,
+                      widget.palette.gold2,
                     ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  child: Center(
-                    child: Text(
-                      buttonText,
-                      style: const TextStyle(
-                        color: Color(0xFF14171C),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.palette.gold.withOpacity(.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    widget.buttonText,
+                    style: const TextStyle(
+                      color: Color(0xFF14171C),
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
