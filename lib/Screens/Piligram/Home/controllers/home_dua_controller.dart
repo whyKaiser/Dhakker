@@ -120,6 +120,26 @@ class HomeDuaController extends ChangeNotifier {
     }
   }
 
+  /// يصفّر حالة آخر دعاء تم تشغيله (في الذاكرة والكاش).
+  /// نستدعيها عند الخروج من النطاق حتى تُعامَل العودة كدخول جديد فيشتغل الدعاء.
+  /// نخرج مبكراً إذا كانت الحالة مصفّرة أصلاً لتفادي كتابة الكاش في كل تحديث موقع
+  /// أثناء وجود المستخدم خارج النطاقات.
+  Future<void> _clearLastHandledState() async {
+    if (_lastTriggeredZoneId == null &&
+        _lastTriggeredDuaId == null &&
+        _lastTriggerTimestamp == null) {
+      return;
+    }
+
+    _lastTriggeredZoneId = null;
+    _lastTriggeredDuaId = null;
+    _lastTriggerTimestamp = null;
+
+    await CashHelper.removeCash(key: _zoneKey('last_triggered_zone_id'));
+    await CashHelper.removeCash(key: _zoneKey('last_triggered_dua_id'));
+    await CashHelper.removeCash(key: _zoneKey('last_triggered_time'));
+  }
+
   Future<void> _loadZones() async {
     final query = await firestore
         .collection('zones')
@@ -176,9 +196,12 @@ class HomeDuaController extends ChangeNotifier {
     );
 
     if (detectedZone == null) {
+      // خرج المستخدم من كل النطاقات: نصفّر حالة "تم التشغيل" في الذاكرة والكاش
+      // حتى لو رجع لنفس النطاق مرة ثانية يشتغل الدعاء من جديد.
       currentZone = null;
       currentDuasList = []; // تصفير القائمة
       _isCurrentZoneHandled = false;
+      await _clearLastHandledState();
       notifyListeners();
       return;
     }

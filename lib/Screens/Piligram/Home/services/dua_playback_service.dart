@@ -10,15 +10,6 @@ class DuaPlaybackService {
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
-  // --- [إضافة الذاكرة الذكية لتتبع الزونات وتصفيرها تلقائياً] ---
-  String? _lastPlayedZoneId;
-
-  /// دالة مخصصة لتصفير الزون عند الخروج، يتم استدعاؤها برمجياً أو تلقائياً
-  void resetZoneMemory() {
-    _lastPlayedZoneId = null;
-  }
-  // -------------------------------------------------------------
-
   void Function(bool isPlaying)? onPlayingStateChanged;
 
   void _updatePlayingState(bool value) {
@@ -59,7 +50,7 @@ class DuaPlaybackService {
     _updatePlayingState(false);
   }
 
-  /// زر إعادة التشغيل اليدوي (يتخطى حماية التكرار دائماً ويشغل الصوت فوراً)
+  /// زر إعادة التشغيل اليدوي
   Future<void> replay({
     required SupplicationModel dua,
     required String langCode,
@@ -67,35 +58,17 @@ class DuaPlaybackService {
     await play(
       dua: dua,
       langCode: langCode,
-      forcePlay: true, // نمرر إذن الإجبار هنا
     );
   }
 
-  /// دالة التشغيل التلقائي الذكية والمحمية من التكرار المزعج
+  /// تشغيل الدعاء: يوقف أي تشغيل سابق ثم يبدأ من جديد.
+  /// منطق منع التكرار (داخل نفس النطاق، وإعادة التشغيل عند العودة) يتكفّل
+  /// به HomeDuaController، فمهمة هذه الدالة هي التشغيل فقط.
   Future<void> play({
     required SupplicationModel dua,
     required String langCode,
-    String? zoneId,       // نمرر الـ zoneId الحالي هنا لتتبعه
-    bool forcePlay = false, // لتحديد هل الدخول يدوي أو تلقائي من الجيوفنس
   }) async {
-    // إذا كان الخروج للنطاق المفتوح (zoneId == null)، نصفّر الذاكرة فوراً ونقفل التشغيل
-    if (zoneId == null && !forcePlay) {
-      resetZoneMemory();
-      await stop();
-      return;
-    }
-
-    // إذا كان التشغيل تلقائي من الجيوفنس والزون الحالي هو نفسه اللي توه اشتغل، نرفض التكرار
-    if (!forcePlay && zoneId != null && _lastPlayedZoneId == zoneId) {
-      return;
-    }
-
     await stop();
-
-    // حفظ الزون الحالي في الذاكرة عشان ما يرجع يكرر تلقائياً داخل نفس المكان
-    if (zoneId != null) {
-      _lastPlayedZoneId = zoneId;
-    }
 
     final hasFile = dua.audioMode == 'file' && dua.audioUrl.trim().isNotEmpty;
 
