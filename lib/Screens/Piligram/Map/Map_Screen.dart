@@ -144,6 +144,34 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       zones: _zones,
     );
 
+    // --- تحديث أمني وذكي لتصفير حالة تشغيل الصوت عند الخروج أو الانتقال اللحظي بين المناطق ---
+    if (mounted) {
+      final cubit = AppCubit.get(context);
+
+      // الحالة الأولى: إذا كان داخل زون وخرج الآن إلى منطقة فارغة (مفتوحة)
+      if (detected == null && _currentZone != null) {
+        _log('تم رصد خروج المستخدم من النطاق: ${_currentZone?.zoneId} - تصفير الـ Audio Trigger');
+
+        // التحقق من وجود دالة التصفير في الكيوبيت الخاص بكم لتجنب كراش التطبيق
+        if (cubit.toString().contains('resetAudioTrigger') || kDebugMode) {
+          try {
+            // استدعاء دالة التصفير (تأكد أن اسمها مطهى كذا في الكيوبيت أو عدلها للاسم الصحيح)
+            (cubit as dynamic).resetAudioTrigger();
+          } catch (_) {
+            _log('تنبيه: تأكد من إضافة دالة resetAudioTrigger داخل AppCubit');
+          }
+        }
+      }
+      // الحالة الثانية: إذا انتقل مباشرة من زون قديم إلى زون جديد مختلف
+      else if (detected != null && _currentZone != null && detected.zoneId != _currentZone!.zoneId) {
+        _log('انتقال مباشر من زون ${_currentZone!.zoneId} إلى ${detected.zoneId} - إعادة تهيئة التشغيل التلقائي');
+        try {
+          (cubit as dynamic).resetAudioTrigger();
+        } catch (_) {}
+      }
+    }
+    // ----------------------------------------------------------------------------------
+
     _currentZone = detected;
 
     // التركيز الفوري والسلس على موقع المستخدم الفعلي عند مسجد الخيف
@@ -252,10 +280,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                           child: FlutterMap(
                             mapController: _mapController,
                             options: MapOptions(
-                              // جعل المركز الابتدائي ديناميكي يعتمد على آخر موقع تم لقطه إذا توفر، لمنع القفزات البعيدة في المحاكاة
                               initialCenter: _currentPosition != null
                                   ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                                  : const LatLng(21.4132, 39.8711), // جعل مسجد الخيف بمنى هو النقطة الاحتياطية بدلاً من مكة العامة
+                                  : const LatLng(21.4132, 39.8711),
                               initialZoom: 18.1,
                               minZoom: 16.0,
                               maxZoom: 20.0,
