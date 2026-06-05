@@ -134,41 +134,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   Future<void> _handlePosition(Position position) async {
     _currentPosition = position;
 
-    if (mounted) {
-      AppCubit.get(context).updateLocationAndCheckRounds(position);
-    }
-
     final detected = _zoneDetectionService.detectBestZone(
       userLat: position.latitude,
       userLng: position.longitude,
       zones: _zones,
     );
 
-    // --- تحديث أمني وذكي لتصفير حالة تشغيل الصوت عند الخروج أو الانتقال اللحظي بين المناطق ---
+    // --- [التحديث المعتمد] ربط شاشة الخريطة بالكيوبيت وتصفير الصوت تلقائياً عند الخروج اللحظي ---
     if (mounted) {
-      final cubit = AppCubit.get(context);
-
-      // الحالة الأولى: إذا كان داخل زون وخرج الآن إلى منطقة فارغة (مفتوحة)
-      if (detected == null && _currentZone != null) {
-        _log('تم رصد خروج المستخدم من النطاق: ${_currentZone?.zoneId} - تصفير الـ Audio Trigger');
-
-        // التحقق من وجود دالة التصفير في الكيوبيت الخاص بكم لتجنب كراش التطبيق
-        if (cubit.toString().contains('resetAudioTrigger') || kDebugMode) {
-          try {
-            // استدعاء دالة التصفير (تأكد أن اسمها مطهى كذا في الكيوبيت أو عدلها للاسم الصحيح)
-            (cubit as dynamic).resetAudioTrigger();
-          } catch (_) {
-            _log('تنبيه: تأكد من إضافة دالة resetAudioTrigger داخل AppCubit');
-          }
-        }
-      }
-      // الحالة الثانية: إذا انتقل مباشرة من زون قديم إلى زون جديد مختلف
-      else if (detected != null && _currentZone != null && detected.zoneId != _currentZone!.zoneId) {
-        _log('انتقال مباشر من زون ${_currentZone!.zoneId} إلى ${detected.zoneId} - إعادة تهيئة التشغيل التلقائي');
-        try {
-          (cubit as dynamic).resetAudioTrigger();
-        } catch (_) {}
-      }
+      AppCubit.get(context).updateLocationAndCheckRounds(
+        position,
+        isInZone: detected != null, // يرسل true إذا كان داخل زون الصالة، و false إذا خرج للمنطقة المفتوحة
+      );
     }
     // ----------------------------------------------------------------------------------
 

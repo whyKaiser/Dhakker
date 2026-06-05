@@ -52,7 +52,8 @@ class AppCubit extends Cubit<AppStates> {
     });
   }
 
-  void updateLocationAndCheckRounds(Position position) {
+  // تم تحديث الدالة لتستقبل حالة التواجد داخل الزون لربطها بالصوت تلقائياً
+  void updateLocationAndCheckRounds(Position position, {bool isInZone = false}) {
     double distance = Geolocator.distanceBetween(
       position.latitude, position.longitude, startLat, startLng,
     );
@@ -63,6 +64,11 @@ class AppCubit extends Cubit<AppStates> {
     }
     if (distance > 20) {
       hasExitedThreshold = true;
+    }
+
+    // --- تصفير لوجيك الصوت تلقائياً عند الخروج من الزون ---
+    if (!isInZone) {
+      isAudioPlayed = false;
     }
   }
 
@@ -84,16 +90,13 @@ class AppCubit extends Cubit<AppStates> {
   // ==========================================
   bool isAudioPlayed = false;
 
-  /// تصفير حالة تشغيل الصوت فور الخروج من النطاق ليتمكن من العمل تلقائياً عند الدخول مجدداً
+  /// تصفير حالة تشغيل الصوت يدوياً أو عند الحاجة
   void resetAudioTrigger() {
-    if (isAudioPlayed) {
-      isAudioPlayed = false;
-      debugPrint('DHKKR_CUBIT => تم تصفير الـ Audio Trigger بنجاح لتشغيل الصوت تلقائياً في الدخول القادم.');
-      // نقوم بعمل emit لحالة تحديث الخريطة أو الصوت إذا لزم الأمر، وإذا لم تكن مضافة في الـ AppStates فلن تسبب كراش
-      try {
-        emit(AppMapCrowdDensityUpdateState());
-      } catch (_) {}
-    }
+    isAudioPlayed = false;
+    debugPrint('DHKKR_CUBIT => تم تصفير الـ Audio Trigger بنجاح.');
+    try {
+      emit(AppMapCrowdDensityUpdateState());
+    } catch (_) {}
   }
 
   // ==========================================
