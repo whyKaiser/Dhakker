@@ -10,6 +10,9 @@ class DuaPlaybackService {
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
+  // أفضل صوت عربي متوفّر بالجهاز (نختاره مرة وحدة في init)
+  Map<String, String>? _bestArabicVoice;
+
   void Function(bool isPlaying)? onPlayingStateChanged;
 
   void _updatePlayingState(bool value) {
@@ -22,6 +25,9 @@ class DuaPlaybackService {
     await _tts.setSpeechRate(0.42);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
+
+    // نختار أفضل صوت عربي متوفّر بالجهاز (محسّن/شبكي إن وُجد)
+    await _loadBestArabicVoice();
 
     _audioPlayer.onPlayerComplete.listen((_) {
       _updatePlayingState(false);
@@ -42,6 +48,46 @@ class DuaPlaybackService {
     _tts.setErrorHandler((_) {
       _updatePlayingState(false);
     });
+  }
+
+  /// يبحث عن كل الأصوات العربية المتوفّرة بالجهاز ويختار الأفضل جودة.
+  /// يفضّل الأصوات المحسّنة/الشبكية (enhanced/network) على المحلية البسيطة.
+  /// لو فشل أو ما فيه أصوات عربية، نكتفي بـ setLanguage العادي لاحقاً.
+  Future<void> _loadBestArabicVoice() async {
+    try {
+      final dynamic raw = await _tts.getVoices;
+      if (raw is! List) return;
+
+      final arabic = <Map<String, String>>[];
+      for (final v in raw) {
+        if (v is Map) {
+          final name = (v['name'] ?? '').toString();
+          final locale = (v['locale'] ?? '').toString();
+          if (name.isEmpty) continue;
+          if (locale.toLowerCase().startsWith('ar') ||
+              name.toLowerCase().startsWith('ar')) {
+            arabic.add({'name': name, 'locale': locale});
+          }
+        }
+      }
+      if (arabic.isEmpty) return;
+
+      int score(Map<String, String> v) {
+        final n = v['name']!.toLowerCase();
+        final loc = v['locale']!.toLowerCase();
+        int s = 0;
+        if (n.contains('network')) s += 4;
+        if (n.contains('enhanced') || n.contains('neural') || n.contains('premium')) s += 4;
+        if (loc.contains('sa')) s += 2; // العربية السعودية مفضّلة
+        if (loc.contains('xa')) s += 1; // صوت قوقل العربي
+        return s;
+      }
+
+      arabic.sort((a, b) => score(b).compareTo(score(a)));
+      _bestArabicVoice = arabic.first;
+    } catch (_) {
+      _bestArabicVoice = null;
+    }
   }
 
   Future<void> stop() async {
@@ -86,6 +132,12 @@ class DuaPlaybackService {
 
     if (langCode == 'ar') {
       await _tts.setLanguage('ar-SA');
+      // نطبّق أفضل صوت عربي اخترناه (إن وُجد) لنطق أوضح
+      if (_bestArabicVoice != null) {
+        try {
+          await _tts.setVoice(_bestArabicVoice!);
+        } catch (_) {}
+      }
     } else {
       await _tts.setLanguage('en-US');
     }

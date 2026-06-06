@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
+import 'map_location_picker_screen.dart';
 
 class AdminZoneAddScreen extends StatefulWidget {
   const AdminZoneAddScreen({super.key});
@@ -62,6 +64,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTick
   Widget build(BuildContext context) {
     final s = S.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
     final text = isDark ? Colors.white : DhakkerColors.lightText;
@@ -182,6 +185,14 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTick
           ),
           child: Column(
             children: [
+              _HapticButton(
+                onTap: _pickCircleCenterFromMap,
+                label: isAr ? 'اختر المركز من الخريطة' : 'Pick center on map',
+                icon: Icons.map_rounded,
+                color: accent,
+                textColor: isDark ? DhakkerColors.bg : Colors.white,
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -269,6 +280,14 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTick
           ),
           child: Column(
             children: [
+              _HapticButton(
+                onTap: _pickPolygonFromMap,
+                label: isAr ? 'ارسم الحدود على الخريطة' : 'Draw boundary on map',
+                icon: Icons.map_rounded,
+                color: accent,
+                textColor: isDark ? DhakkerColors.bg : Colors.white,
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -330,6 +349,8 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTick
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                disabledBackgroundColor: accent,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -438,6 +459,55 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTick
       _pointLatController.clear();
       _pointLngController.clear();
     });
+  }
+
+  // فتح الخريطة لاختيار مركز الدائرة بالضغط (يعبّي خط الطول والعرض تلقائياً)
+  Future<void> _pickCircleCenterFromMap() async {
+    LatLng? initial;
+    final lat = double.tryParse(_centerLatController.text.trim());
+    final lng = double.tryParse(_centerLngController.text.trim());
+    if (lat != null && lng != null) {
+      initial = LatLng(lat, lng);
+    }
+
+    final result = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapLocationPickerScreen(initialPoint: initial),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _centerLatController.text = result.latitude.toStringAsFixed(6);
+        _centerLngController.text = result.longitude.toStringAsFixed(6);
+      });
+    }
+  }
+
+  // فتح الخريطة لرسم نقاط حدود المضلّع بالضغط بالتسلسل
+  Future<void> _pickPolygonFromMap() async {
+    final initial = _polygonPoints
+        .map((e) => LatLng(e['lat']!, e['lng']!))
+        .toList();
+
+    final result = await Navigator.push<List<LatLng>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapLocationPickerScreen(
+          multiPoint: true,
+          initialPoints: initial,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _polygonPoints
+          ..clear()
+          ..addAll(result.map((p) => {'lat': p.latitude, 'lng': p.longitude}));
+      });
+    }
   }
 
   Future<void> _saveZone() async {
@@ -556,6 +626,8 @@ class _HapticButtonState extends State<_HapticButton> {
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.color,
               foregroundColor: widget.textColor,
+              disabledBackgroundColor: widget.color,
+              disabledForegroundColor: widget.textColor,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

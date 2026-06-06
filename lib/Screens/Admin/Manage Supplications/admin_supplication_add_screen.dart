@@ -365,6 +365,8 @@ class _AdminSupplicationAddScreenState
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                disabledBackgroundColor: accent,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -645,6 +647,8 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                    disabledBackgroundColor: accent,
+                    disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),

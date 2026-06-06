@@ -49,6 +49,7 @@ class HomeDuaController extends ChangeNotifier {
   String? _lastTriggeredDuaId;
   DateTime? _lastTriggerTimestamp;
   bool _isCurrentZoneHandled = false;
+  String? _lastWrittenZoneId; // آخر نطاق كتبناه في حساب المستخدم (لحساب الكثافة الحقيقي)
 
   String _zoneKey(String key) => '${key}_$userId';
 
@@ -140,6 +141,26 @@ class HomeDuaController extends ChangeNotifier {
     await CashHelper.removeCash(key: _zoneKey('last_triggered_time'));
   }
 
+  // يكتب النطاق الحالي في مستند المستخدم بـ Firestore، عشان لوحة التحكم
+  // تحسب الكثافة وألوان الخريطة بشكل حقيقي. نكتب فقط عند تغيّر النطاق
+  // (zoneId جديد، أو '' عند الخروج) لتقليل عمليات الكتابة على القاعدة.
+  Future<void> _writeUserCurrentZone(String zoneValue) async {
+    if (_lastWrittenZoneId == zoneValue) return;
+    _lastWrittenZoneId = zoneValue;
+
+    final uid = userId;
+    if (uid.isEmpty) return;
+
+    try {
+      await firestore.collection('users').doc(uid).set({
+        'currentZone': zoneValue,
+        'currentZoneAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      _log('تعذّر تحديث currentZone: $e');
+    }
+  }
+
   Future<void> _loadZones() async {
     final query = await firestore
         .collection('zones')
@@ -202,12 +223,16 @@ class HomeDuaController extends ChangeNotifier {
       currentDuasList = []; // تصفير القائمة
       _isCurrentZoneHandled = false;
       await _clearLastHandledState();
+      await _writeUserCurrentZone(''); // تحديث التواجد: خارج كل النطاقات
       notifyListeners();
       return;
     }
 
     final previousZoneId = currentZone?.zoneId;
     currentZone = detectedZone;
+
+    // تحديث حالة التواجد في حساب المستخدم (للكثافة وألوان الخريطة الحقيقية)
+    await _writeUserCurrentZone(detectedZone.zoneId);
 
     // 2. جلب كل الأدعية الخاصة بالمنطقة وحفظها في القائمة
     final supplications = await supplicationService.getSupplicationsByZone(
@@ -222,8 +247,17 @@ class HomeDuaController extends ChangeNotifier {
       return;
     }
 
-    // يتم تشغيل الدعاء الأول تلقائياً (الذي يفترض أن يكون الأكثر تشغيلاً بناءً على استعلامكم)
-    final selected = currentDuasList.first;
+    // نختار أول دعاء "قابل للتشغيل" (له ملف صوتي أو نص غير فارغ بهذه اللغة)
+    // حتى لا يطلع الدعاء صامتاً لو كان الأول بدون صوت ولا نص بهاللغة.
+    SupplicationModel selected = currentDuasList.first;
+    for (final d in currentDuasList) {
+      final playable = (d.audioMode == 'file' && d.audioUrl.trim().isNotEmpty) ||
+          d.textByLanguage(langCode).trim().isNotEmpty;
+      if (playable) {
+        selected = d;
+        break;
+      }
+    }
 
     final isSameZone = previousZoneId == detectedZone.zoneId;
     final isSameHandledZone = _lastTriggeredZoneId == detectedZone.zoneId;

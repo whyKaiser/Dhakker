@@ -48,17 +48,17 @@ class AdminDashboardScreen extends StatelessWidget {
                       title: isAr ? "نداءات SOS" : "SOS Alerts",
                       icon: Icons.warning_amber_rounded,
                       accent: Colors.redAccent,
-                      stream: FirebaseFirestore.instance.collection('sos_requests').snapshots(),
+                      stream: FirebaseFirestore.instance.collection('sos_requests').where('status', isEqualTo: 'active').snapshots(),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _CountCard(
-                title: isAr ? "الكثافة في صحن المطاف" : "Mataf Crowd Density",
+                title: isAr ? "المتواجدون في النطاقات الآن" : "Currently in Zones",
                 icon: Icons.mosque_rounded,
                 accent: DhakkerColors.gold,
-                stream: FirebaseFirestore.instance.collection('users').where('currentZone', isEqualTo: 'Al-Haram').snapshots(),
+                stream: FirebaseFirestore.instance.collection('users').where('currentZone', isNotEqualTo: '').snapshots(),
               ),
 
               const SizedBox(height: 24),
@@ -72,12 +72,12 @@ class AdminDashboardScreen extends StatelessWidget {
                 icon: Icons.trending_up_rounded,
                 query: FirebaseFirestore.instance
                     .collection('supplications')
-                    .orderBy('playCount', descending: true)
+                    .orderBy('usage_count', descending: true)
                     .limit(3),
                 itemBuilder: (data) {
                   final titleMap = (data['title'] is Map) ? data['title'] : {};
                   final title = isAr ? (titleMap['ar'] ?? 'دعاء') : (titleMap['en'] ?? 'Dua');
-                  final count = data['playCount'] ?? 0;
+                  final count = data['usage_count'] ?? 0;
 
                   return _OpenContainerTileWrapper(
                     duaId: (data['duaId'] ?? '').toString(),

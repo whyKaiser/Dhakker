@@ -11,7 +11,7 @@ import '../../auth/Splash_Screen.dart';
 import '../../auth/login_screen.dart';
 
 // --- السطر المصلح (تأكد أن اسم الملف مطابق لما عندك) ---
-import '../Dashboard/AdminDashboard_Screen.dart';
+import '../SOS/AdminSosMonitor_Screen.dart';
 import 'Admin_Dashboard_Screen.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
@@ -159,7 +159,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                      MaterialPageRoute(builder: (context) => const AdminSosMonitorScreen()),
                     );
                   },
                   child: Row(
@@ -172,7 +172,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           color: DhakkerColors.gold.withOpacity(.12),
                         ),
                         child: Icon(
-                          Icons.analytics_rounded,
+                          Icons.warning_amber_rounded,
                           color: DhakkerColors.gold,
                           size: 22,
                         ),
@@ -185,7 +185,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                             crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isAr ? "لوحة الإحصائيات الذكية" : "Smart Dashboard",
+                                isAr ? "مراقبة نداءات SOS" : "SOS Monitor",
                                 style: TextStyle(
                                   color: textColor,
                                   fontSize: 16,
@@ -194,7 +194,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                isAr ? "مراقبة الزحام وحالات الاستغاثة SOS" : "Monitor crowd and SOS alerts",
+                                isAr ? "متابعة حالات الاستغاثة ومواقعها" : "Track emergency alerts & locations",
                                 style: TextStyle(
                                   color: muted.withOpacity(.95),
                                   fontSize: 12.8,

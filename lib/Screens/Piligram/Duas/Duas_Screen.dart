@@ -155,7 +155,7 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
           .collection('supplications')
           .doc(dua.duaId)
           .update({
-        'playCount': FieldValue.increment(1),
+        'usage_count': FieldValue.increment(1),
       });
     } catch (e) {
       debugPrint("Analytics Update Error: $e");

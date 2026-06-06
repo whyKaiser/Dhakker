@@ -409,6 +409,8 @@ class _AdminSupplicationEditScreenState
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                disabledBackgroundColor: accent,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: null,
@@ -611,7 +613,7 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: isDark ? DhakkerColors.bg : Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: isDark ? DhakkerColors.bg : Colors.white, disabledBackgroundColor: accent, disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   onPressed: null,
                   icon: const Icon(Icons.upload_file_rounded),
                   label: Text(s.adminSupplicationPickAudio, style: const TextStyle(fontWeight: FontWeight.w800)),

@@ -294,6 +294,8 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen> with SingleTi
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                disabledBackgroundColor: accent,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -589,6 +591,8 @@ class _HapticButtonState extends State<_HapticButton> {
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.color,
               foregroundColor: widget.textColor,
+              disabledBackgroundColor: widget.color,
+              disabledForegroundColor: widget.textColor,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

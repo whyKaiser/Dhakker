@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dhakker/bloc/states.dart';
@@ -131,9 +132,65 @@ class AppCubit extends Cubit<AppStates> {
   // --- منطق الـ SOS ---
   // ==========================================
   void sendWhatsAppSOS() async {
-    const String phoneNumber = "+966500000000";
-    const String message = "نداء استغاثة SOS! موقعي الحالي: https://maps.google.com/?q=21.422,39.826";
-    final Uri url = Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
+    const String phoneNumber = "+966500000000"; // TODO: ضع رقم الطوارئ الحقيقي هنا
+
+    // 1) نجيب الموقع الحقيقي للمستخدم (مع بدائل احتياطية)
+    Position? pos;
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      final allowed = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      if (serviceEnabled && allowed) {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        );
+      }
+    } catch (_) {}
+    pos ??= await Geolocator.getLastKnownPosition();
+
+    final bool hasLoc = pos != null;
+    final double? lat = pos?.latitude;
+    final double? lng = pos?.longitude;
+    final String mapUrl = hasLoc ? "https://maps.google.com/?q=$lat,$lng" : "";
+
+    // نجيب اسم المستخدم من ملفه الشخصي عشان يظهر للأدمن في شاشة المراقبة
+    final String? uid = FirebaseAuth.instance.currentUser?.uid;
+    String? userName = FirebaseAuth.instance.currentUser?.displayName;
+    try {
+      if (uid != null) {
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final n = userDoc.data()?['fullName'];
+        if (n != null && n.toString().trim().isNotEmpty) userName = n.toString();
+      }
+    } catch (_) {}
+
+    // 2) نسجّل النداء في قاعدة البيانات عشان لوحة التحكم تشوفه فعلاً
+    try {
+      await FirebaseFirestore.instance.collection('sos_requests').add({
+        'uid': uid,
+        'name': userName,
+        'lat': lat,
+        'lng': lng,
+        'mapUrl': hasLoc ? mapUrl : null,
+        'status': 'active',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint("SOS log error: $e");
+    }
+
+    // 3) نفتح واتساب برسالة فيها الموقع الحقيقي
+    final String message = hasLoc
+        ? "🆘 نداء استغاثة SOS! موقعي الحالي: $mapUrl"
+        : "🆘 نداء استغاثة SOS! (تعذّر تحديد الموقع تلقائياً)";
+    final Uri url =
+        Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
+
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
       emit(AppSOSSuccessState());
