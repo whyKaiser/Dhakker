@@ -9,8 +9,8 @@ import '../../../theme/dhakker_theme.dart';
 import '../auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  int userTypeIndex;
-  SplashScreen(this.userTypeIndex);
+  final int userTypeIndex;
+  const SplashScreen(this.userTypeIndex, {super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -95,13 +95,13 @@ class _SplashScreenState extends State<SplashScreen>
         case 1:
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) =>  AdminHomeLayout(),
+              builder: (_) =>  const AdminHomeLayout(),
             ),
           );
         case 2:
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) =>  AppHomeLayout(),
+              builder: (_) =>  const AppHomeLayout(),
             ),
           );
       }

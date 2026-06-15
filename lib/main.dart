@@ -1,7 +1,10 @@
 import 'package:dhakker/shared/network/local/cash_helper.dart';
 import 'package:dhakker/shared/network/local/uid.dart';
 import 'package:dhakker/theme_controller.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dhakker/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,8 +12,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 // استيراد الملف الجديد الذي قمنا بتوليده
 import 'firebase_options.dart';
 
-import 'Screens/auth/Login_Screen.dart';
 import 'Screens/auth/Splash_Screen.dart';
+import 'Screens/auth/onboarding_screen.dart';
 import 'admin_bloc/admin_cubit.dart';
 import 'bloc/cubit.dart';
 import 'generated/l10n.dart';
@@ -21,28 +24,35 @@ import 'theme/dhakker_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  print("--- 1. بدء التشغيل ---");
 
-  // تعديل تهيئة الفايربيس لتشمل الخيارات الذكية لكل المنصات
+  // تهيئة الفايربيس لكل المنصات.
   try {
-    print("--- 2. جاري تهيئة الفايربيس ---");
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print("--- تم الفايربيس بنجاح ---");
+
+    // تفعيل التخزين المحلي لـ Firestore: بعد أول تحميل بنت، تُحفظ المناطق
+    // والأدعية محلياً وتعمل بدون إنترنت — مهم لأن شبكة مكة تتعطّل أيام الذروة.
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
-    print("خطأ في الفايربيس: $e");
+    debugPrint("خطأ في تهيئة الفايربيس: $e");
   }
 
   try {
-    print("--- 3. جاري تهيئة التخزين CashHelper ---");
     await CashHelper.initPreference();
-    print("--- تم CashHelper بنجاح ---");
   } catch (e) {
-    print("خطأ في CashHelper: $e");
+    debugPrint("خطأ في تهيئة التخزين المحلي: $e");
   }
 
-  print("--- 4. جاري جلب الإعدادات ---");
+  try {
+    await NotificationService.instance.init();
+  } catch (e) {
+    debugPrint("خطأ في تهيئة الإشعارات: $e");
+  }
+
   final savedDarkMode = CashHelper.getCash(key: 'dark_mode_enabled');
   ThemeController.setTheme(savedDarkMode is bool ? savedDarkMode : true);
 
@@ -55,22 +65,46 @@ Future<void> main() async {
     userID = tempId!;
   }
 
+  final onboardingDone = CashHelper.getCash(key: 'onboarding_done');
   if (userTypeIndex != null) {
     widget = SplashScreen(userTypeIndex);
+  } else if (onboardingDone != true) {
+    widget = const OnboardingScreen();
   } else {
-    widget = SplashScreen(0);
+    widget = const SplashScreen(0);
   }
 
-  print("--- 5. بدء رسم الواجهة runApp ---");
   runApp(MyApp(widget));
 }
 
 class MyApp extends StatefulWidget {
   final Widget screen; // إضافة final للتحسين
-  MyApp(this.screen);
+  const MyApp(this.screen, {super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
+}
+
+/// سلوك تمرير عام بإحساس iOS: ارتداد ناعم، بلا توهّج أندرويد، ويدعم
+/// السحب باللمس والماوس واللوحة لتجربة سلسة حيّة في كل الشاشات.
+class _SmoothScrollBehavior extends MaterialScrollBehavior {
+  const _SmoothScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  @override
+  Widget buildOverscrollIndicator(
+          BuildContext context, Widget child, ScrollableDetails details) =>
+      child; // إزالة توهّج الحافة الأندرويدي
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
 }
 
 class _MyAppState extends State<MyApp> {
@@ -98,6 +132,8 @@ class _MyAppState extends State<MyApp> {
               return MaterialApp(
                 title: 'Dhakker',
                 debugShowCheckedModeBanner: false,
+                // تمرير ناعم بإحساس iOS على كل الشاشات (ارتداد + بلا توهّج أندرويد).
+                scrollBehavior: const _SmoothScrollBehavior(),
                 theme: dhakkerLightTheme(),
                 darkTheme: dhakkerDarkTheme(),
                 themeMode: mode,

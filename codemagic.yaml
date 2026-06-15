@@ -1,0 +1,70 @@
+# إعداد Codemagic لبناء تطبيق Dhakker على iOS (من السحابة، بدون جهاز Mac).
+#
+# يحتوي على مسارين (workflows):
+#   1) ios-unsigned : بناء سريع للتأكد أن الكود يُجمّع على iOS. لا يمكن تثبيته
+#      على آيفون حقيقي (غير موقّع) — مفيد فقط للتحقق من البناء.
+#   2) ios-signed   : بناء موقّع قابل للتثبيت عبر TestFlight. يتطلّب حساب
+#      Apple Developer ($99/سنة) وربطه في Codemagic.
+#
+# المفتاح الذكي يُمرَّر عبر الـ Proxy فقط — لا يدخل أي مفتاح Groq في البناء.
+
+workflows:
+  # ───────────────────────────────────────────────────────────────
+  # 1) بناء غير موقّع — للتحقق أن المشروع يُجمّع على iOS فقط
+  # ───────────────────────────────────────────────────────────────
+  ios-unsigned:
+    name: iOS Build (Unsigned - test compile only)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.24.2
+      xcode: latest
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Flutter build iOS (no codesign)
+        script: |
+          flutter build ios --release --no-codesign \
+            --dart-define=ASSISTANT_PROXY_URL=https://dhakker-proxy.songokualshareef.workers.dev
+    artifacts:
+      - build/ios/iphoneos/*.app
+
+  # ───────────────────────────────────────────────────────────────
+  # 2) بناء موقّع — قابل للتثبيت عبر TestFlight (يحتاج Apple Developer)
+  # ───────────────────────────────────────────────────────────────
+  ios-signed:
+    name: iOS Build (Signed - TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      # اسم مفتاح App Store Connect الذي تضيفه في إعدادات Codemagic.
+      app_store_connect: codemagic_asc_key
+    environment:
+      flutter: 3.24.2
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        # غيّره لمعرّف الحزمة المسجّل في Apple Developer (مثل com.dhakker.app).
+        bundle_identifier: com.dhakker.app
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Flutter build IPA
+        script: |
+          flutter build ipa --release \
+            --dart-define=ASSISTANT_PROXY_URL=https://dhakker-proxy.songokualshareef.workers.dev \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

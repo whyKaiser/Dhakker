@@ -18,9 +18,9 @@ class CashHelper
     required dynamic value,
   })async
   {
-    if(value is int)
+    if(value is int) {
       return await preferences?.setInt(key, value);
-    else if(value is String)
+    } else if(value is String)
       return await preferences?.setString(key, value);
     else  if(value is bool)
       return await preferences?.setBool(key, value);

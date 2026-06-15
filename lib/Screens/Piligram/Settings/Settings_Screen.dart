@@ -8,7 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../generated/l10n.dart';
 import '../../../shared/network/local/cash_helper.dart';
-import '../../auth/Login_Screen.dart';
+import '../About/about_screen.dart';
 import '../../../bloc/cubit.dart';
 import '../../../bloc/states.dart';
 
@@ -382,7 +382,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) =>  SplashScreen(0)),
+        MaterialPageRoute(builder: (_) =>  const SplashScreen(0)),
             (route) => false,
       );
     } catch (_) {
@@ -439,7 +439,19 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             onTap: () {
               HapticFeedback.mediumImpact();
               cubit.resetRounds();
-              _showSnackBar(isAr ? "تم إعادة تصفير الأشواط بنجاح" : "Rounds reset successfully");
+              _showSnackBar(isAr ? "تم تصفير عدّاد الأشواط بنجاح" : "Rounds reset successfully");
+            },
+          ),
+          const SizedBox(height: 14),
+          _ActionTile(
+            title: isAr ? "إعادة ضبط السعي" : "Reset Sa'i",
+            subtitle: isAr ? "تصفير عداد أشواط السعي لبدء سعي جديد" : "Reset the Sa'i counter",
+            icon: Icons.refresh_rounded,
+            palette: palette,
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              cubit.resetSai();
+              _showSnackBar(isAr ? "تم تصفير عدّاد السعي بنجاح" : "Sa'i reset successfully");
             },
           ),
           const SizedBox(height: 14),
@@ -476,6 +488,19 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             icon: Icons.lock_reset_rounded,
             palette: palette,
             onTap: _isBusy ? null : _showResetPasswordDialog,
+          ),
+          const SizedBox(height: 14),
+          _ActionTile(
+            title: isAr ? "عن التطبيق والخصوصية" : "About & Privacy",
+            subtitle: isAr ? "معلومات التطبيق وكيف نحمي بياناتك" : "App info & how we protect your data",
+            icon: Icons.privacy_tip_rounded,
+            palette: palette,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
+            },
           ),
           const SizedBox(height: 14),
           _ActionTile(

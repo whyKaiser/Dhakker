@@ -7,11 +7,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.dhakker"
+    namespace = "com.dhakker.app"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // مطلوب لحزمة flutter_local_notifications (تعتمد على java.time عبر desugaring).
+        coreLibraryDesugaringEnabled true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
@@ -21,8 +23,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.dhakker"
+        applicationId = "com.dhakker.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
@@ -43,4 +44,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

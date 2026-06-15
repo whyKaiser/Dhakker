@@ -193,7 +193,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "adminSupplicationSave": MessageLookupByLibrary.simpleMessage("حفظ الدعاء"),
     "adminSupplicationSaving": MessageLookupByLibrary.simpleMessage(
-      "جاري الحفظ...",
+      "جارٍ الحفظ...",
     ),
     "adminSupplicationStatusActiveText": MessageLookupByLibrary.simpleMessage(
       "هذا الدعاء نشط ويمكن استخدامه داخل التطبيق.",
@@ -441,7 +441,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "نصف القطر مطلوب",
     ),
     "adminZoneAddSave": MessageLookupByLibrary.simpleMessage("حفظ المنطقة"),
-    "adminZoneAddSaving": MessageLookupByLibrary.simpleMessage("جاري الحفظ..."),
+    "adminZoneAddSaving": MessageLookupByLibrary.simpleMessage("جارٍ الحفظ..."),
     "adminZoneAddStatusActiveText": MessageLookupByLibrary.simpleMessage(
       "هذه المنطقة نشطة حاليًا ويمكن استخدامها داخل النظام.",
     ),
@@ -667,7 +667,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "adminZoneEditSave": MessageLookupByLibrary.simpleMessage("حفظ التعديلات"),
     "adminZoneEditSaving": MessageLookupByLibrary.simpleMessage(
-      "جاري الحفظ...",
+      "جارٍ الحفظ...",
     ),
     "adminZoneEditStatusActiveText": MessageLookupByLibrary.simpleMessage(
       "هذه المنطقة نشطة حاليًا ويمكن استخدامها داخل النظام.",
@@ -1067,7 +1067,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "تشغيل أو إيقاف النطق التلقائي للدعاء حسب المنطقة الحالية.",
     ),
     "settingsTitle": MessageLookupByLibrary.simpleMessage("الإعدادات العامة"),
-    "splashLoading": MessageLookupByLibrary.simpleMessage("جاري التحميل..."),
+    "splashLoading": MessageLookupByLibrary.simpleMessage("جارٍ التحميل..."),
     "splashSubtitle": MessageLookupByLibrary.simpleMessage(
       "أدعية وإرشادات ذكية حسب موقعك داخل المشاعر المقدسة.",
     ),

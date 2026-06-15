@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../bloc/cubit.dart';
@@ -25,6 +25,12 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
   bool _locationServiceEnabled = false;
   bool _hasPermission = false;
   bool _isLoadingGps = true;
+
+  // مؤشر انقطاع الإنترنت: يظهر بانر بسيط أعلى الشاشة، ويبقى باقي التطبيق
+  // يعمل من ذاكرة Firestore المحلية (المناطق والأدعية). نكشف الاتصال بفحص DNS
+  // خفيف دورياً عبر dart:io — بلا أي حزمة native ولا ترقية SDK.
+  bool _offline = false;
+  Timer? _connTimer;
 
   StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
 
@@ -48,11 +54,16 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     } else {
       _loadLocationState();
       _listenToServiceChanges();
+      _initConnectivity();
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!kIsWeb) {
         await _tryAutoStartLocationFlow();
+        // تشغيل خط عدّ الأشواط المستقل حتى يحتسب في كل التبويبات وليس الخريطة فقط.
+        if (mounted) {
+          await AppCubit.get(context).startRoundTracking();
+        }
       }
     });
   }
@@ -61,14 +72,42 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _serviceStatusSubscription?.cancel();
+    _connTimer?.cancel();
+    AppCubit.get(context).stopRoundTracking();
     _pageController.dispose();
     super.dispose();
+  }
+
+  // يفحص الاتصال أول مرة ثم كل ٣٠ ثانية (فحص خفيف لا يرهق البطارية).
+  void _initConnectivity() {
+    _checkConnectivity();
+    _connTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _checkConnectivity(),
+    );
+  }
+
+  // فحص اتصال خفيف عبر DNS لخادم Firestore — أدقّ من مجرد وجود واي فاي
+  // لأنه يؤكّد وصولاً فعلياً للإنترنت. عند الفشل/المهلة نعتبره غير متصل.
+  Future<void> _checkConnectivity() async {
+    bool offline;
+    try {
+      final result = await InternetAddress.lookup('firestore.googleapis.com')
+          .timeout(const Duration(seconds: 4));
+      offline = result.isEmpty || result.first.rawAddress.isEmpty;
+    } catch (_) {
+      offline = true;
+    }
+    if (mounted && offline != _offline) {
+      setState(() => _offline = offline);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !kIsWeb) {
       _loadLocationState();
+      _checkConnectivity();
     }
   }
 
@@ -140,6 +179,27 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
                     permission == LocationPermission.whileInUse;
           });
         });
+  }
+
+  // زر الطوارئ السريع في الشريط العلوي: تأكيد قصير ثم إرسال الموقع.
+  Future<void> _onSosTap() async {
+    final s = S.of(context);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    HapticFeedback.heavyImpact();
+
+    final confirmed = await _showActionDialog(
+      title: isAr ? "نداء استغاثة (SOS)" : "Emergency (SOS)",
+      message: isAr
+          ? "سيتم إرسال موقعك الحالي لطلب المساعدة. هل أنت متأكد؟"
+          : "Your current location will be sent to request help. Are you sure?",
+      confirmText: isAr ? "إرسال" : "Send",
+      cancelText: s.commonCancel,
+      isDestructive: true,
+    );
+
+    if (confirmed == true && mounted) {
+      AppCubit.get(context).sendWhatsAppSOS();
+    }
   }
 
   Future<void> _onGpsTap() async {
@@ -490,9 +550,27 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     final palette = _HomeLayoutPalette.fromBrightness(isDark);
 
     return BlocConsumer<AppCubit, AppStates>(
+      // لا نعيد بناء الواجهة (ولا نتفاعل) مع تحديثات اتجاه البوصلة عالية التردد —
+      // فهي لا تخص هذه الطبقة، وكانت تسبّب إعادة بناء مستمرة تعطّل اللمس.
+      buildWhen: (prev, curr) => curr is! AppQiblaDirectionUpdateState,
+      listenWhen: (prev, curr) => curr is! AppQiblaDirectionUpdateState,
       listener: (context, state) {
         if (AppCubit.get(context).currentScreen != _pageController.page?.round()) {
           _pageController.jumpToPage(AppCubit.get(context).currentScreen);
+        }
+
+        // رسالة تأكيد بعد محاولة إرسال نداء الطوارئ.
+        final isAr = Localizations.localeOf(context).languageCode == 'ar';
+        if (state is AppSOSSuccessState) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: const Color(0xFF2E7D32),
+            content: Text(isAr ? "تم إرسال نداء الاستغاثة" : "Emergency request sent"),
+          ));
+        } else if (state is AppSOSErrorState) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: const Color(0xFFCC4B47),
+            content: Text(isAr ? "تعذّر إرسال نداء الاستغاثة" : "Could not send emergency request"),
+          ));
         }
       },
       builder: (context, state) {
@@ -510,37 +588,45 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
                 palette: palette,
                 onLanguageTap: LocaleController.toggle,
                 onGpsTap: _onGpsTap,
+                onSosTap: _onSosTap,
                 isGpsReady: _isGpsReady,
                 isLoading: _isLoadingGps,
               ),
-              body: Stack(
+              body: Column(
                 children: [
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: const Alignment(0.0, -0.10),
-                          radius: 0.95,
-                          colors: [
-                            palette.gold.withOpacity(.10),
-                            palette.bg.withOpacity(.0),
-                            palette.bg,
-                          ],
-                          stops: const [0.0, 0.45, 1.0],
+                  if (_offline) _OfflineBanner(palette: palette, isAr: isAr),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                center: const Alignment(0.0, -0.10),
+                                radius: 0.95,
+                                colors: [
+                                  palette.gold.withOpacity(.10),
+                                  palette.bg.withOpacity(.0),
+                                  palette.bg,
+                                ],
+                                stops: const [0.0, 0.45, 1.0],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        PageView.builder(
+                          controller: _pageController,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: cubit.screens.length,
+                          onPageChanged: (index) {
+                            cubit.changeScreen(index);
+                          },
+                          itemBuilder: (context, index) {
+                            return cubit.screens[index];
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                  PageView.builder(
-                    controller: _pageController,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: cubit.screens.length,
-                    onPageChanged: (index) {
-                      cubit.changeScreen(index);
-                    },
-                    itemBuilder: (context, index) {
-                      return cubit.screens[index];
-                    },
                   ),
                 ],
               ),
@@ -559,6 +645,45 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
           ),
         );
       },
+    );
+  }
+}
+
+/// بانر رفيع يظهر أعلى الشاشة عند انقطاع الإنترنت — يطمئن الحاج أن التطبيق
+/// ما زال يعمل من البيانات المحفوظة محلياً (المناطق والأدعية والمواقيت).
+class _OfflineBanner extends StatelessWidget {
+  final _HomeLayoutPalette palette;
+  final bool isAr;
+
+  const _OfflineBanner({required this.palette, required this.isAr});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF8A6D1A),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_rounded, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              isAr
+                  ? 'غير متصل — التطبيق يعمل من البيانات المحفوظة'
+                  : 'Offline — running from saved data',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -623,6 +748,7 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
   final _HomeLayoutPalette palette;
   final VoidCallback onLanguageTap;
   final VoidCallback onGpsTap;
+  final VoidCallback onSosTap;
   final bool isGpsReady;
   final bool isLoading;
 
@@ -630,6 +756,7 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.palette,
     required this.onLanguageTap,
     required this.onGpsTap,
+    required this.onSosTap,
     required this.isGpsReady,
     required this.isLoading,
   });
@@ -664,6 +791,8 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsetsDirectional.only(end: 8),
           child: Row(
             children: [
+              _SosButton(palette: palette, onTap: onSosTap),
+              const SizedBox(width: 8),
               _GpsStatusButton(
                 palette: palette,
                 isActive: isGpsReady,
@@ -685,6 +814,119 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
         child: Container(
           height: 1,
           color: palette.gold2.withOpacity(.08),
+        ),
+      ),
+    );
+  }
+}
+
+// زر الطوارئ السريع (SOS) في الشريط العلوي — دائرة حمراء بارزة لكن أنيقة.
+class _ThemeToggleButton extends StatefulWidget {
+  final _HomeLayoutPalette palette;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ThemeToggleButton({required this.palette, required this.isDark, required this.onTap});
+
+  @override
+  State<_ThemeToggleButton> createState() => _ThemeToggleButtonState();
+}
+
+class _ThemeToggleButtonState extends State<_ThemeToggleButton> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.88),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.palette.gold.withOpacity(.12),
+            border: Border.all(color: widget.palette.gold.withOpacity(.4), width: 1.3),
+          ),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: Icon(
+                widget.isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                key: ValueKey(widget.isDark),
+                color: widget.palette.gold,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SosButton extends StatefulWidget {
+  final _HomeLayoutPalette palette;
+  final VoidCallback onTap;
+
+  const _SosButton({required this.palette, required this.onTap});
+
+  @override
+  State<_SosButton> createState() => _SosButtonState();
+}
+
+class _SosButtonState extends State<_SosButton> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    const red = Color(0xFFE0463F);
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.94),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: red.withOpacity(.14),
+            border: Border.all(color: red.withOpacity(.95), width: 2.2),
+            boxShadow: [
+              BoxShadow(
+                color: red.withOpacity(.20),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Text(
+              "SOS",
+              style: TextStyle(
+                color: red,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -714,7 +956,7 @@ class _GpsStatusButtonState extends State<_GpsStatusButton> {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = const Color(0xFF38C793);
+    const activeColor = Color(0xFF38C793);
     final inactiveColor = widget.palette.danger;
     final ringColor = widget.isActive ? activeColor : inactiveColor;
     final fillColor = ringColor.withOpacity(.14);
@@ -851,6 +1093,7 @@ class _FixedBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return Container(
       decoration: BoxDecoration(
@@ -910,14 +1153,14 @@ class _FixedBottomNav extends StatelessWidget {
                 padding: EdgeInsets.only(top: 6),
                 child: Icon(Icons.menu_book_rounded),
               ),
-              label: s.navDuas,
+              label: isAr ? 'الدليل' : 'Guide',
             ),
             BottomNavigationBarItem(
               icon: const Padding(
                 padding: EdgeInsets.only(top: 6),
-                child: Icon(FlutterIslamicIcons.solidTasbih3),
+                child: Icon(Icons.auto_awesome_rounded),
               ),
-              label: s.navTasbih,
+              label: isAr ? 'المساعد' : 'Assistant',
             ),
             BottomNavigationBarItem(
               icon: const Padding(

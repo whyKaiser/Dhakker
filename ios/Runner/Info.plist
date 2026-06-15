@@ -52,6 +52,10 @@
     <string>يحتاج تطبيق ذِكر للوصول إلى موقعك في الخلفية لتنبيهك تلقائياً بالأدعية والمعالم الأثرية القريبة منك فور اقترابك منها.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>يحتاج تطبيق ذِكر للوصول الدائم إلى موقعك لتشغيل ميزة التوجيه الذكي والـ Geofencing حول المناطق الجغرافية الثقافية.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>يحتاج تطبيق ذِكر إلى الميكروفون لتمكين البحث الصوتي والتحدّث مع المساعد الذكي للحج والعمرة.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>يحتاج تطبيق ذِكر إلى التعرّف على الكلام لتحويل سؤالك الصوتي إلى نص والإجابة عنه.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>

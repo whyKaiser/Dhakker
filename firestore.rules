@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// قواعد أمان Cloud Firestore لتطبيق Dhakker.
+// المبدأ: لا أحد يقرأ أو يكتب إلا ما يخصّه. الأدمن (role == 'admin' في users)
+// يدير المحتوى، والحاج يقرأ المحتوى ويحدّث وثيقته فقط.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // الأدمن يُحدَّد من حقل role في وثيقة المستخدم نفسه.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // users: المستخدم يقرأ/يحدّث وثيقته فقط؛ الأدمن يقرأ الجميع (للإحصائيات).
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      // التسجيل: ينشئ المستخدم وثيقته بنفسه بدور pilgrim فقط (لا يمنح نفسه admin).
+      allow create: if isOwner(userId)
+                    && request.resource.data.role == 'pilgrim';
+
+      // التحديث: الحاج يحدّث وثيقته دون تغيير دوره؛ الأدمن صلاحية كاملة.
+      allow update: if isAdmin()
+                    || (isOwner(userId)
+                        && request.resource.data.role == resource.data.role);
+
+      allow delete: if isAdmin();
+    }
+
+    // zones: قراءة لأي مستخدم مسجّل؛ الكتابة للأدمن فقط.
+    match /zones/{zoneId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // supplications: قراءة للجميع؛ الأدمن كتابة كاملة؛ الحاج يحدّث usage_count فقط.
+    match /supplications/{duaId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data)
+                  .affectedKeys().hasOnly(['usage_count']));
+    }
+
+    // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.
+    match /alerts/{alertId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // config: إعدادات عامة (مثل رقم طوارئ SOS). قراءة لأي مسجّل، كتابة للأدمن.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // sos_requests: الحاج ينشئ نداء استغاثته باسمه؛ الأدمن يقرأ ويحدّث الحالة.
+    match /sos_requests/{reqId} {
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // groups: مجموعات الحجّاج العائلية.
+    // - وثيقة المجموعة: يقرؤها أي مسجّل (للانضمام بالكود)، وينشئها صاحبها،
+    //   ويعدّلها/يحذفها مالكها فقط. لا تحوي مواقع — فقط الاسم والكود.
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+                    && resource.data.ownerId == request.auth.uid;
+
+      // أفراد المجموعة (تحوي المواقع): يقرؤها أعضاء المجموعة فقط (خصوصية
+      // المواقع)، وكل حاج يكتب/يحذف وثيقته هو فقط.
+      match /members/{memberId} {
+        allow read: if isSignedIn()
+          && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        allow create, update, delete: if isSignedIn()
+          && memberId == request.auth.uid;
+      }
+    }
+
+    // الافتراضي: منع كل ما سوى ذلك صراحةً.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -14,12 +14,21 @@ class DhakkerColors {
   static const lightMuted = Color(0xFF667085);
 }
 
+// انتقالات صفحات بإحساس iOS (انزلاق أفقي ناعم) على كل المنصّات.
+const PageTransitionsTheme _kSmoothPageTransitions = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+  },
+);
+
 ThemeData dhakkerDarkTheme() {
 
   return ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: DhakkerColors.bg,
     fontFamily: 'AlamirReg',
+    pageTransitionsTheme: _kSmoothPageTransitions,
     colorScheme: const ColorScheme.dark(
       primary: DhakkerColors.gold,
       secondary: DhakkerColors.gold2,
@@ -62,6 +71,7 @@ ThemeData dhakkerLightTheme() {
     brightness: Brightness.light,
     scaffoldBackgroundColor: DhakkerColors.lightBg,
     fontFamily: 'AlamirReg',
+    pageTransitionsTheme: _kSmoothPageTransitions,
     colorScheme: const ColorScheme.light(
       primary: DhakkerColors.gold2,
       secondary: DhakkerColors.gold,

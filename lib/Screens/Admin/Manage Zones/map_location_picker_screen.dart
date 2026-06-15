@@ -6,12 +6,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../theme/dhakker_theme.dart';
 
-/// شاشة اختيار موقع من الخريطة (مثل تجربة قوقل ماب: تتنقّل وتكبّر وتضغط).
-///
-/// - الوضع المفرد (multiPoint=false): تختار نقطة واحدة (مركز الدائرة)
-///   وترجع `LatLng` عبر Navigator.pop.
-/// - وضع تعدد النقاط (multiPoint=true): ترسم نقاط حدود المضلّع بالتسلسل
-///   وترجع `List<LatLng>`.
+/// شاشة اختيار موقع من الخريطة — UX قريب من قوقل ماب:
+///   - الوضع المفرد: crosshair في المنتصف دائماً، الخريطة تتحرك تحته.
+///   - وضع المضلّع (multiPoint): تضغط على الخريطة لإضافة نقاط.
 class MapLocationPickerScreen extends StatefulWidget {
   final LatLng? initialPoint;
   final bool multiPoint;
@@ -28,45 +25,72 @@ class MapLocationPickerScreen extends StatefulWidget {
   State<MapLocationPickerScreen> createState() => _MapLocationPickerScreenState();
 }
 
-class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
+class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
 
-  // مركز افتراضي: مكة المكرمة (يُستخدم فقط لو ما فيه نقطة بداية ولا موقع للمستخدم)
   static const LatLng _defaultCenter = LatLng(21.4225, 39.8262);
 
-  LatLng? _selected; // الوضع المفرد
-  final List<LatLng> _points = []; // وضع المضلّع
+  // وضع المضلّع
+  final List<LatLng> _points = [];
+
+  // المركز الحالي للخريطة (يُحدّث مع كل حركة)
+  late LatLng _center;
+  bool _isDragging = false;
+
+  late final AnimationController _pinAnim;
+  late final Animation<double> _pinLift;
 
   @override
   void initState() {
     super.initState();
-    if (widget.multiPoint) {
-      _points.addAll(widget.initialPoints);
-    } else {
-      _selected = widget.initialPoint;
-    }
 
-    // لو ما فيه نقطة بداية، نحاول نركّز على موقع المستخدم الحالي (إن كان الإذن متاحاً)
+    _center = widget.initialPoint ??
+        (widget.initialPoints.isNotEmpty ? widget.initialPoints.first : _defaultCenter);
+
+    if (widget.multiPoint) _points.addAll(widget.initialPoints);
+
+    _pinAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _pinLift = Tween<double>(begin: 0, end: 14).animate(
+      CurvedAnimation(parent: _pinAnim, curve: Curves.easeOut),
+    );
+
     if (widget.initialPoint == null && widget.initialPoints.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _goToMyLocation(silent: true));
     }
   }
 
-  LatLng get _initialCenter {
-    if (widget.initialPoint != null) return widget.initialPoint!;
-    if (widget.initialPoints.isNotEmpty) return widget.initialPoints.first;
-    return _defaultCenter;
+  @override
+  void dispose() {
+    _pinAnim.dispose();
+    super.dispose();
+  }
+
+  void _onMapEvent(MapEvent event) {
+    if (event is MapEventMoveStart) {
+      setState(() => _isDragging = true);
+      _pinAnim.forward();
+    } else if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
+      setState(() {
+        _isDragging = false;
+        _center = event.camera.center;
+      });
+      _pinAnim.reverse();
+      HapticFeedback.selectionClick();
+    } else if (event is MapEventMove) {
+      setState(() => _center = event.camera.center);
+    }
   }
 
   void _handleTap(LatLng point) {
+    if (!widget.multiPoint) return;
     HapticFeedback.lightImpact();
-    setState(() {
-      if (widget.multiPoint) {
-        _points.add(point);
-      } else {
-        _selected = point;
-      }
-    });
+    setState(() => _points.add(point));
+  }
+
+  void _addCenterPoint() {
+    HapticFeedback.mediumImpact();
+    setState(() => _points.add(_center));
   }
 
   Future<void> _goToMyLocation({bool silent = false}) async {
@@ -76,10 +100,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
         if (!silent) _toast(_t('فعّل خدمة الموقع أولاً', 'Enable location service first'));
         return;
       }
-
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        if (silent) return; // لا نطلب الإذن تلقائياً عند الفتح
+        if (silent) return;
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied ||
@@ -87,15 +110,19 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
         if (!silent) _toast(_t('لا يوجد إذن للوصول للموقع', 'Location permission denied'));
         return;
       }
-
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
-      _mapController.move(LatLng(pos.latitude, pos.longitude), 17.0);
+      _mapController.move(LatLng(pos.latitude, pos.longitude), 17.5);
     } catch (_) {
       if (!silent) _toast(_t('تعذّر تحديد موقعك', 'Could not get your location'));
     }
+  }
+
+  void _zoom(double delta) {
+    _mapController.move(_mapController.camera.center,
+        (_mapController.camera.zoom + delta).clamp(3.0, 20.0));
   }
 
   void _confirm() {
@@ -106,19 +133,14 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
       }
       Navigator.pop(context, List<LatLng>.from(_points));
     } else {
-      if (_selected == null) {
-        _toast(_t('اضغط على الخريطة لتحديد الموقع', 'Tap the map to set a location'));
-        return;
-      }
-      Navigator.pop(context, _selected);
+      Navigator.pop(context, _center);
     }
   }
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
   }
 
   bool get _isAr => Localizations.localeOf(context).languageCode == 'ar';
@@ -128,53 +150,55 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
-    final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
     final markers = <Marker>[];
+    final polygons = <Polygon>[];
+
     if (widget.multiPoint) {
       for (var i = 0; i < _points.length; i++) {
         markers.add(_numberedMarker(_points[i], i + 1, accent));
       }
-    } else if (_selected != null) {
-      markers.add(_dotMarker(_selected!, accent));
-    }
-
-    final polygons = <Polygon>[];
-    if (widget.multiPoint && _points.length >= 2) {
-      polygons.add(
-        Polygon(
+      if (_points.length >= 2) {
+        polygons.add(Polygon(
           points: _points,
-          color: accent.withOpacity(0.18),
+          color: accent.withOpacity(0.15),
           borderColor: accent,
           borderStrokeWidth: 2.5,
-        ),
-      );
+        ));
+      }
     }
 
-    final canConfirm = widget.multiPoint ? _points.length >= 3 : _selected != null;
+    final canConfirm = widget.multiPoint ? _points.length >= 3 : true;
+    final lat = _center.latitude.toStringAsFixed(6);
+    final lng = _center.longitude.toStringAsFixed(6);
 
     return Scaffold(
       backgroundColor: bg,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: bg,
-        foregroundColor: textColor,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         title: Text(
-          _t('اختر الموقع من الخريطة', 'Pick location on map'),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          _t('اختر الموقع', 'Pick Location'),
+          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 8)]),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
+          // ── الخريطة ──────────────────────────────────
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _initialCenter,
+              initialCenter: _center,
               initialZoom: 16.5,
               minZoom: 3,
               maxZoom: 20,
-              onTap: (tapPosition, point) => _handleTap(point),
+              onTap: (_, point) => _handleTap(point),
+              onMapEvent: _onMapEvent,
             ),
             children: [
               TileLayer(
@@ -189,32 +213,93 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
             ],
           ),
 
-          // شريط التعليمات أعلى
-          PositionedDirectional(
-            top: 12,
-            start: 12,
-            end: 12,
-            child: _InfoChip(
-              text: widget.multiPoint
-                  ? _t('اضغط على الخريطة لإضافة نقاط الحدود (٣ على الأقل)',
-                      'Tap the map to add boundary points (min 3)')
-                  : _t('اضغط على الخريطة لتحديد المركز',
-                      'Tap the map to set the center'),
+          // ── Crosshair (وضع النقطة المفردة) ───────────
+          if (!widget.multiPoint)
+            AnimatedBuilder(
+              animation: _pinLift,
+              builder: (_, __) {
+                return Center(
+                  child: Transform.translate(
+                    offset: Offset(0, -(_pinLift.value + 24)),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ظل تحت البين
+                        if (!_isDragging)
+                          Container(
+                            width: 8,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.black38,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        // البين نفسه
+                        Icon(Icons.location_pin, color: accent, size: 48,
+                            shadows: const [Shadow(color: Colors.black54, blurRadius: 12)]),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+
+          // ── شريط الإحداثيات أعلى الخريطة ────────────
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 64,
+            left: 12,
+            right: 12,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(.65),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.multiPoint
+                          ? Icons.touch_app_rounded
+                          : Icons.drag_indicator_rounded,
+                      color: accent, size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.multiPoint
+                          ? _t('اضغط لإضافة نقطة', 'Tap to add point')
+                          : '$lat, $lng',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
 
-          // زر "موقعي"
+          // ── أزرار التحكم (يمين) ──────────────────────
           PositionedDirectional(
             end: 14,
-            bottom: 168,
-            child: _RoundBtn(
-              icon: Icons.my_location_rounded,
-              accent: accent,
-              onTap: () => _goToMyLocation(),
+            bottom: 160,
+            child: Column(
+              children: [
+                _MapBtn(icon: Icons.add_rounded, accent: accent, onTap: () => _zoom(1)),
+                const SizedBox(height: 8),
+                _MapBtn(icon: Icons.remove_rounded, accent: accent, onTap: () => _zoom(-1)),
+                const SizedBox(height: 16),
+                _MapBtn(
+                  icon: Icons.my_location_rounded,
+                  accent: accent,
+                  onTap: () => _goToMyLocation(),
+                ),
+              ],
             ),
           ),
 
-          // اللوحة السفلية
+          // ── اللوحة السفلية ────────────────────────────
           PositionedDirectional(
             start: 12,
             end: 12,
@@ -223,15 +308,10 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
               isDark: isDark,
               accent: accent,
               multiPoint: widget.multiPoint,
-              selected: _selected,
+              center: _center,
               pointsCount: _points.length,
               canConfirm: canConfirm,
-              labelSelected: _t('الموقع المحدد', 'Selected location'),
-              labelNone: _t('لم تحدد موقعاً بعد', 'No location selected yet'),
-              labelPoints: _t('عدد النقاط', 'Points'),
-              labelConfirm: _t('تأكيد', 'Confirm'),
-              labelUndo: _t('تراجع', 'Undo'),
-              labelClear: _t('مسح', 'Clear'),
+              onAddPoint: widget.multiPoint ? _addCenterPoint : null,
               onUndo: widget.multiPoint && _points.isNotEmpty
                   ? () => setState(() => _points.removeLast())
                   : null,
@@ -239,34 +319,10 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
                   ? () => setState(() => _points.clear())
                   : null,
               onConfirm: _confirm,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Marker _dotMarker(LatLng p, Color accent) {
-    return Marker(
-      point: p,
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withOpacity(.18)),
-          ),
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 8)],
+              labelConfirm: _t('تأكيد', 'Confirm'),
+              labelUndo: _t('تراجع', 'Undo'),
+              labelClear: _t('مسح', 'Clear'),
+              labelAdd: _t('أضف النقطة الحالية', 'Add current point'),
             ),
           ),
         ],
@@ -287,48 +343,20 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)],
         ),
         alignment: Alignment.center,
-        child: Text(
-          '$number',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
-        ),
+        child: Text('$number',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
       ),
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final String text;
-  const _InfoChip({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(.66),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.touch_app_rounded, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoundBtn extends StatelessWidget {
+// ── زر دائري للخريطة ────────────────────────────────────────
+class _MapBtn extends StatelessWidget {
   final IconData icon;
   final Color accent;
   final VoidCallback onTap;
-  const _RoundBtn({required this.icon, required this.accent, required this.onTap});
+  const _MapBtn({required this.icon, required this.accent, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -341,9 +369,10 @@ class _RoundBtn extends StatelessWidget {
         width: 46,
         height: 46,
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(.66),
+          color: Colors.black.withOpacity(.72),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: accent.withOpacity(.30)),
+          border: Border.all(color: accent.withOpacity(.25)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 8)],
         ),
         child: Icon(icon, color: Colors.white, size: 22),
       ),
@@ -351,39 +380,38 @@ class _RoundBtn extends StatelessWidget {
   }
 }
 
+// ── اللوحة السفلية ──────────────────────────────────────────
 class _BottomPanel extends StatelessWidget {
   final bool isDark;
   final Color accent;
   final bool multiPoint;
-  final LatLng? selected;
+  final LatLng center;
   final int pointsCount;
   final bool canConfirm;
-  final String labelSelected;
-  final String labelNone;
-  final String labelPoints;
-  final String labelConfirm;
-  final String labelUndo;
-  final String labelClear;
+  final VoidCallback? onAddPoint;
   final VoidCallback? onUndo;
   final VoidCallback? onClear;
   final VoidCallback onConfirm;
+  final String labelConfirm;
+  final String labelUndo;
+  final String labelClear;
+  final String labelAdd;
 
   const _BottomPanel({
     required this.isDark,
     required this.accent,
     required this.multiPoint,
-    required this.selected,
+    required this.center,
     required this.pointsCount,
     required this.canConfirm,
-    required this.labelSelected,
-    required this.labelNone,
-    required this.labelPoints,
-    required this.labelConfirm,
-    required this.labelUndo,
-    required this.labelClear,
+    required this.onAddPoint,
     required this.onUndo,
     required this.onClear,
     required this.onConfirm,
+    required this.labelConfirm,
+    required this.labelUndo,
+    required this.labelClear,
+    required this.labelAdd,
   });
 
   @override
@@ -392,26 +420,16 @@ class _BottomPanel extends StatelessWidget {
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
-    String infoText;
-    if (multiPoint) {
-      infoText = '$labelPoints: $pointsCount';
-    } else if (selected != null) {
-      infoText =
-          '$labelSelected:\n${selected!.latitude.toStringAsFixed(6)}, ${selected!.longitude.toStringAsFixed(6)}';
-    } else {
-      infoText = labelNone;
-    }
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? .35 : .12),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(isDark ? .4 : .12),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -419,46 +437,80 @@ class _BottomPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            infoText,
-            style: TextStyle(color: text, fontSize: 13.5, fontWeight: FontWeight.w800, height: 1.5),
+          // معلومات الموقع
+          Row(
+            children: [
+              Icon(Icons.location_on_rounded, color: accent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: multiPoint
+                    ? Text(
+                        'نقاط: $pointsCount',
+                        style: TextStyle(
+                            color: text, fontWeight: FontWeight.w800, fontSize: 14),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            center.latitude.toStringAsFixed(6),
+                            style: TextStyle(
+                                color: text, fontWeight: FontWeight.w900, fontSize: 13),
+                          ),
+                          Text(
+                            center.longitude.toStringAsFixed(6),
+                            style: TextStyle(color: muted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
+          // أزرار الإجراءات
           Row(
             children: [
               if (multiPoint) ...[
                 _SmallBtn(
                   label: labelUndo,
                   icon: Icons.undo_rounded,
-                  color: muted,
-                  textColor: text,
+                  muted: muted,
+                  text: text,
                   onTap: onUndo,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 _SmallBtn(
                   label: labelClear,
                   icon: Icons.delete_outline_rounded,
-                  color: muted,
-                  textColor: text,
+                  muted: muted,
+                  text: text,
                   onTap: onClear,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
+                _SmallBtn(
+                  label: '+',
+                  icon: Icons.add_location_alt_rounded,
+                  muted: accent,
+                  text: accent,
+                  onTap: onAddPoint,
+                ),
+                const SizedBox(width: 6),
               ],
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-                    disabledBackgroundColor: accent.withOpacity(.35),
+                    disabledBackgroundColor: accent.withOpacity(.3),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
                   onPressed: canConfirm ? onConfirm : null,
-                  icon: const Icon(Icons.check_rounded),
-                  label: Text(
-                    labelConfirm,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
+                  icon: const Icon(Icons.check_rounded, size: 20),
+                  label: Text(labelConfirm,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
                 ),
               ),
             ],
@@ -472,15 +524,15 @@ class _BottomPanel extends StatelessWidget {
 class _SmallBtn extends StatelessWidget {
   final String label;
   final IconData icon;
-  final Color color;
-  final Color textColor;
+  final Color muted;
+  final Color text;
   final VoidCallback? onTap;
 
   const _SmallBtn({
     required this.label,
     required this.icon,
-    required this.color,
-    required this.textColor,
+    required this.muted,
+    required this.text,
     required this.onTap,
   });
 
@@ -488,13 +540,13 @@ class _SmallBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return Opacity(
-      opacity: enabled ? 1.0 : 0.4,
+      opacity: enabled ? 1.0 : 0.35,
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textColor,
-          side: BorderSide(color: color.withOpacity(.5)),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          foregroundColor: text,
+          side: BorderSide(color: muted.withOpacity(.4)),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: enabled
             ? () {
@@ -502,8 +554,9 @@ class _SmallBtn extends StatelessWidget {
                 onTap!();
               }
             : null,
-        icon: Icon(icon, size: 18),
-        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+        icon: Icon(icon, size: 16),
+        label: Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
       ),
     );
   }

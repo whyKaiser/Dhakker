@@ -139,7 +139,7 @@ class _AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
-    final titleColor = DhakkerColors.gold;
+    const titleColor = DhakkerColors.gold;
     final lineColor = isDark ? DhakkerColors.gold.withOpacity(.06) : const Color(0xFFE6E8EC);
 
     return AppBar(
@@ -151,7 +151,7 @@ class _AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       title: Text(
         isAr ? cubit.screenAr[currentScreen] : cubit.screenEn[currentScreen],
-        style: TextStyle(
+        style: const TextStyle(
           color: titleColor,
           fontSize: 26,
           fontWeight: FontWeight.w900,
@@ -180,7 +180,7 @@ class _LangPill extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _LangPill({super.key, required this.label, required this.onTap});
+  const _LangPill({required this.label, required this.onTap});
 
   @override
   State<_LangPill> createState() => _LangPillState();
@@ -191,7 +191,7 @@ class _LangPillState extends State<_LangPill> {
 
   @override
   Widget build(BuildContext context) {
-    final text = DhakkerColors.gold;
+    const text = DhakkerColors.gold;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pillScale = 0.94),
@@ -213,7 +213,7 @@ class _LangPillState extends State<_LangPill> {
           ),
           child: Text(
             widget.label,
-            style: TextStyle(color: text, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: text, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -236,7 +236,7 @@ class _AdminBottomNav extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final navBg = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
-    final selected = DhakkerColors.gold;
+    const selected = DhakkerColors.gold;
 
     return BottomNavigationBar(
       currentIndex: currentIndex,

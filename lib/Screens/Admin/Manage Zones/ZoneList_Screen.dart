@@ -239,8 +239,8 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                       stream: query.snapshots(),
                       builder: (context, snap) {
                         if (snap.connectionState == ConnectionState.waiting) {
-                          return Column(
-                            children: const [
+                          return const Column(
+                            children: [
                               _ZoneSkeletonCard(),
                               _ZoneSkeletonCard(),
                               _ZoneSkeletonCard(),

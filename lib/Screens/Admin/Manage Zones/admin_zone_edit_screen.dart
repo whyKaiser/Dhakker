@@ -725,7 +725,7 @@ class _AppField extends StatelessWidget {
   final String hint;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
-  final int maxLines;
+  final int maxLines = 1;
 
   const _AppField({
     required this.controller,
@@ -733,7 +733,6 @@ class _AppField extends StatelessWidget {
     required this.hint,
     this.validator,
     this.keyboardType,
-    this.maxLines = 1,
   });
 
   @override

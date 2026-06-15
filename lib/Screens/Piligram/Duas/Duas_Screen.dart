@@ -1,16 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // للاهتزاز والتحكم بالحس التفاعلي
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../generated/l10n.dart';
 import '../home/models/supplication_model.dart';
 import '../home/models/zone_model.dart';
 import '../home/services/dua_playback_service.dart';
-import '../home/services/supplication_service.dart';
 import 'services/dua_search_service.dart';
 import 'services/voice_search_service.dart';
 import 'widgets/voice_command_dialog.dart';
+import 'manasik_guide.dart';
+import 'hajj_schedule.dart';
 
 class DuasScreen extends StatefulWidget {
   const DuasScreen({super.key});
@@ -19,20 +21,20 @@ class DuasScreen extends StatefulWidget {
   State<DuasScreen> createState() => _DuasScreenState();
 }
 
-class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateMixin {
+class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
+
+  // تبويبا "الدليل": الأدعية (0) والمناسك (1).
+  late final TabController _tabController;
 
   final DuaSearchService _searchService = const DuaSearchService();
   final VoiceSearchService _voiceSearchService = VoiceSearchService();
   final DuaPlaybackService _playbackService = DuaPlaybackService();
 
-  late final SupplicationService _supplicationService;
-
   bool _isLoading = true;
   bool _isPlaying = false;
 
   List<ZoneModel> _zones = [];
-  List<SupplicationModel> _allDuas = [];
   List<DuaSearchItem> _allItems = [];
   List<DuaSearchItem> _filteredItems = [];
 
@@ -45,13 +47,11 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
 
+    _tabController = TabController(length: 2, vsync: this);
+
     _listAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    );
-
-    _supplicationService = SupplicationService(
-      firestore: FirebaseFirestore.instance,
     );
 
     _playbackService.onPlayingStateChanged = (value) {
@@ -69,6 +69,7 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
     _searchController.dispose();
     _playbackService.dispose();
     _listAnimationController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -103,16 +104,11 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
     }
 
     final items = duas
-        .map(
-          (dua) => DuaSearchItem(
-        dua: dua,
-        zone: zoneMap[dua.zoneId],
-      ),
-    )
-        .toList();
+        .map((dua) => DuaSearchItem(dua: dua, zone: zoneMap[dua.zoneId]))
+        .toList()
+      ..sort((a, b) => (b.dua.usageCount).compareTo(a.dua.usageCount));
 
     _zones = zones;
-    _allDuas = duas;
     _allItems = items;
     _filteredItems = items;
 
@@ -276,46 +272,42 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
         bottom: false,
         child: Column(
           children: [
+            _DaleelHeader(
+              palette: palette,
+              controller: _tabController,
+              isAr: isAr,
+            ),
             Expanded(
-              child: RefreshIndicator(
-                color: palette.gold,
-                backgroundColor: palette.card,
-                onRefresh: _loadData,
-                child: ListView(
-                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
-                  children: [
-                    Align(
-                      alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Text(
-                        s.duasTitle,
-                        style: TextStyle(
-                          color: palette.gold,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: 'AlamirBold',
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // ── تبويب الأدعية ──
+                  RefreshIndicator(
+                    color: palette.gold,
+                    backgroundColor: palette.card,
+                    onRefresh: _loadData,
+                    child: ListView(
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
+                      children: [
+                        Text(
+                          s.duasSubtitle,
+                          textAlign: isAr ? TextAlign.right : TextAlign.left,
+                          style: TextStyle(
+                            color: palette.muted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            height: 1.6,
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      s.duasSubtitle,
-                      textAlign: isAr ? TextAlign.right : TextAlign.left,
-                      style: TextStyle(
-                        color: palette.muted,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _SearchBar(
-                      palette: palette,
-                      controller: _searchController,
-                      hint: s.duasSearchHint,
-                      onChanged: (_) => _applyFilters(),
-                      onMicTap: _startVoiceSearch,
-                    ),
+                        const SizedBox(height: 14),
+                        _SearchBar(
+                          palette: palette,
+                          controller: _searchController,
+                          hint: s.duasSearchHint,
+                          onChanged: (_) => _applyFilters(),
+                          onMicTap: _startVoiceSearch,
+                        ),
                     const SizedBox(height: 14),
                     _ZoneFilterBar(
                       palette: palette,
@@ -382,8 +374,10 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
                                 text: item.dua.textByLanguage(langCode),
                                 zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
                                 buttonText: s.duasPlayButton,
-                                onPlay: () async {
-                                  await _playDua(item.dua);
+                                onPlay: () async => await _playDua(item.dua),
+                                onShare: () {
+                                  Clipboard.setData(ClipboardData(text: item.dua.textByLanguage(langCode)));
+                                  Fluttertoast.showToast(msg: 'تم نسخ الدعاء', backgroundColor: const Color(0xFFD4AF37), textColor: Colors.black);
                                 },
                               ),
                             ),
@@ -392,6 +386,14 @@ class _DuasScreenState extends State<DuasScreen> with SingleTickerProviderStateM
                       ),
                   ],
                 ),
+              ),
+                  // ── تبويب المناسك ──
+                  _ManasikTab(
+                    palette: palette,
+                    isAr: isAr,
+                    langCode: langCode,
+                  ),
+                ],
               ),
             ),
             if (_isPlaying)
@@ -635,6 +637,7 @@ class _DuaResultCard extends StatefulWidget {
   final String zoneName;
   final String buttonText;
   final VoidCallback onPlay;
+  final VoidCallback? onShare;
 
   const _DuaResultCard({
     required this.palette,
@@ -643,6 +646,7 @@ class _DuaResultCard extends StatefulWidget {
     required this.zoneName,
     required this.buttonText,
     required this.onPlay,
+    this.onShare,
   });
 
   @override
@@ -676,10 +680,7 @@ class _DuaResultCardState extends State<_DuaResultCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            runSpacing: 10,
-            spacing: 10,
+          Row(
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -689,20 +690,15 @@ class _DuaResultCardState extends State<_DuaResultCard> {
                 ),
                 child: Text(
                   widget.zoneName,
-                  style: TextStyle(
-                    color: widget.palette.gold,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(color: widget.palette.gold, fontSize: 12.5, fontWeight: FontWeight.w900),
                 ),
               ),
-              Text(
-                widget.title,
-                style: TextStyle(
-                  color: widget.palette.text,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
+              const Spacer(),
+              Text(widget.title, style: TextStyle(color: widget.palette.text, fontSize: 16, fontWeight: FontWeight.w900)),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: widget.onShare,
+                child: Icon(Icons.copy_rounded, color: widget.palette.gold.withOpacity(.6), size: 19),
               ),
             ],
           ),
@@ -894,6 +890,479 @@ class _BottomPlaybackBar extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// رأس شاشة "الدليل": العنوان + شريط تبويبين (الأدعية | المناسك).
+class _DaleelHeader extends StatelessWidget {
+  final _DuasPalette palette;
+  final TabController controller;
+  final bool isAr;
+
+  const _DaleelHeader({
+    required this.palette,
+    required this.controller,
+    required this.isAr,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+            child: Text(
+              isAr ? 'الدليل' : 'Guide',
+              style: TextStyle(
+                color: palette.gold,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                fontFamily: 'AlamirBold',
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: palette.chipBg,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: TabBar(
+              controller: controller,
+              indicator: BoxDecoration(
+                color: palette.gold,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: const EdgeInsets.all(4),
+              dividerColor: Colors.transparent,
+              labelColor: const Color(0xFF14171C),
+              unselectedLabelColor: palette.textSoft,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+              tabs: [
+                Tab(text: isAr ? 'الأدعية' : 'Supplications'),
+                Tab(text: isAr ? 'المناسك' : 'Rituals'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// تبويب المناسك: قائمة بطاقات قابلة للتوسعة لكل منسك، مع تنبيه فقهي أسفلها.
+class _ManasikTab extends StatelessWidget {
+  final _DuasPalette palette;
+  final bool isAr;
+  final String langCode;
+
+  const _ManasikTab({
+    required this.palette,
+    required this.isAr,
+    required this.langCode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // العنصر 0 = جدول الحج الزمني، ثم المناسك، وآخرها التنويه.
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
+      itemCount: manasikRituals.length + 2,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _HajjScheduleCard(
+              palette: palette,
+              langCode: langCode,
+              isAr: isAr,
+            ),
+          );
+        }
+        if (index == manasikRituals.length + 1) {
+          return _disclaimer();
+        }
+        final ritualIndex = index - 1;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _ManasikCard(
+            palette: palette,
+            ritual: manasikRituals[ritualIndex],
+            langCode: langCode,
+            isAr: isAr,
+            number: ritualIndex + 1,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _disclaimer() {
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.chipBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline_rounded, color: palette.muted, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isAr
+                  ? 'هذا دليل تعليمي مبسّط. في المسائل المختلف فيها استشر عالمًا أو المرشد الميداني.'
+                  : 'This is a simplified educational guide. For disputed matters, consult a scholar or your on-site guide.',
+              style: TextStyle(
+                color: palette.muted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة جدول الحج الزمني: رأس ثابت + أيام الحج (٨–١٣)، كل يوم قابل للتوسعة.
+class _HajjScheduleCard extends StatefulWidget {
+  final _DuasPalette palette;
+  final String langCode;
+  final bool isAr;
+
+  const _HajjScheduleCard({
+    required this.palette,
+    required this.langCode,
+    required this.isAr,
+  });
+
+  @override
+  State<_HajjScheduleCard> createState() => _HajjScheduleCardState();
+}
+
+class _HajjScheduleCardState extends State<_HajjScheduleCard> {
+  int _openDay = -1; // -1 = لا شيء مفتوح
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.palette;
+    final lang = widget.langCode;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(18),
+        border: BorderDirectional(
+          end: BorderSide(color: p.gold.withOpacity(.78), width: 3.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+            child: Row(
+              children: [
+                Icon(Icons.event_note_rounded, color: p.gold, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.isAr ? 'الجدول الزمني للحج' : 'Hajj Timeline',
+                    style: TextStyle(
+                        color: p.gold, fontSize: 16, fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...List.generate(hajjSchedule.length, (i) {
+            final d = hajjSchedule[i];
+            final open = _openDay == i;
+            final tasks = d.tasks(lang);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Divider(color: p.gold.withOpacity(.08), height: 1),
+                InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _openDay = open ? -1 : i);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: p.gold.withOpacity(.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            d.day(lang),
+                            style: TextStyle(
+                                color: p.gold, fontSize: 11.5, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            d.title(lang),
+                            style: TextStyle(
+                                color: p.text, fontSize: 14, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        AnimatedRotation(
+                          turns: open ? 0.5 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(Icons.keyboard_arrow_down_rounded,
+                              color: p.gold, size: 22),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeInOutCubic,
+                  child: open
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: tasks
+                                .map((t) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 6),
+                                            child: Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: p.gold,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              t,
+                                              style: TextStyle(
+                                                  color: p.textSoft,
+                                                  fontSize: 13.5,
+                                                  height: 1.6,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            );
+          }),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة منسك واحد قابلة للتوسعة: العنوان والملخّص، وعند الفتح الخطوات والدعاء.
+class _ManasikCard extends StatefulWidget {
+  final _DuasPalette palette;
+  final ManasikRitual ritual;
+  final String langCode;
+  final bool isAr;
+  final int number;
+
+  const _ManasikCard({
+    required this.palette,
+    required this.ritual,
+    required this.langCode,
+    required this.isAr,
+    required this.number,
+  });
+
+  @override
+  State<_ManasikCard> createState() => _ManasikCardState();
+}
+
+class _ManasikCardState extends State<_ManasikCard> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.palette;
+    final r = widget.ritual;
+    final lang = widget.langCode;
+    final steps = r.steps(lang);
+    final dua = r.dua(lang);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: p.gold.withOpacity(.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // رأس البطاقة (قابل للضغط للفتح/الإغلاق).
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _open = !_open);
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: p.gold.withOpacity(.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${widget.number}',
+                      style: TextStyle(color: p.gold, fontWeight: FontWeight.w900, fontSize: 14),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                r.title(lang),
+                                style: TextStyle(color: p.text, fontSize: 16, fontWeight: FontWeight.w900),
+                              ),
+                            ),
+                            if (r.isHajjOnly) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: p.gold.withOpacity(.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  widget.isAr ? 'حج' : 'Hajj',
+                                  style: TextStyle(color: p.gold, fontSize: 10.5, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          r.summary(lang),
+                          style: TextStyle(color: p.muted, fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: _open ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 220),
+                    child: Icon(Icons.keyboard_arrow_down_rounded, color: p.gold, size: 24),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // المحتوى الموسّع.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInOutCubic,
+            child: _open
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(color: p.gold.withOpacity(.10), height: 18),
+                        ...List.generate(steps.length, (i) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${i + 1}. ',
+                                  style: TextStyle(color: p.gold, fontWeight: FontWeight.w900, fontSize: 14),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    steps[i],
+                                    style: TextStyle(color: p.text, fontSize: 14, height: 1.55, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        if (dua != null && dua.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: p.gold.withOpacity(.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: p.gold.withOpacity(.25)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.isAr ? 'الدعاء' : 'Supplication',
+                                  style: TextStyle(color: p.gold, fontSize: 12.5, fontWeight: FontWeight.w900),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  dua,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: p.text, fontSize: 15, height: 1.7, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
         ],
       ),

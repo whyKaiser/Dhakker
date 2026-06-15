@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../models/zone_model.dart';
@@ -74,10 +73,6 @@ class ZoneDetectionService {
           userLng: userLng,
           zone: zone,
         );
-
-        debugPrint(
-          'DHKKR_ZONE_CHECK => zone=${zone.zoneId}, type=${zone.type}, matched=$isMatch',
-        );
       } else {
         if (zone.centerLat != null && zone.centerLng != null && zone.radiusM != null) {
           final distance = Geolocator.distanceBetween(
@@ -88,14 +83,6 @@ class ZoneDetectionService {
           );
 
           isMatch = distance <= zone.radiusM!;
-
-          debugPrint(
-            'DHKKR_ZONE_CHECK => zone=${zone.zoneId}, type=${zone.type}, distance=$distance, radius=${zone.radiusM}, matched=$isMatch',
-          );
-        } else {
-          debugPrint(
-            'DHKKR_ZONE_CHECK => zone=${zone.zoneId}, type=${zone.type}, missing center or radius',
-          );
         }
       }
 
@@ -108,7 +95,6 @@ class ZoneDetectionService {
 
     matches.sort((a, b) => b.priority.compareTo(a.priority));
 
-    debugPrint('DHKKR_ZONE_CHECK => bestZone=${matches.first.zoneId}');
     return matches.first;
   }
 }

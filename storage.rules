@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// قواعد أمان Firebase Storage لملفات الأدعية الصوتية.
+//
+// القراءة: لأي مستخدم مسجّل (لتشغيل الصوت داخل التطبيق).
+// الكتابة: لأي مستخدم مسجّل، لكنها محصورة في مسار الأدعية فقط
+//          (audio/duas/*) بحدود حجم ونوع محتوى — لمنع رفع محتوى عشوائي
+//          أو استبدال ملفات في مسارات أخرى أو استنزاف الحساب.
+//
+// ملاحظة: قواعد Storage لا تقرأ دور المستخدم من Firestore، فلا يمكن قصر
+// الرفع على الأدمن هنا إلا عبر Custom Claims. لتشديده على الأدمن فقط لاحقاً:
+// أضف custom claim للأدمن واستبدل شرط الكتابة بـ
+// request.auth.token.admin == true.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ملفات الأدعية الصوتية فقط.
+    match /audio/duas/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 15 * 1024 * 1024          // أقل من 15MB
+        && request.resource.contentType.matches('audio/.*'); // صوت فقط
+    }
+
+    // أي مسار آخر: القراءة للمسجّلين، والكتابة ممنوعة (لا رفع عشوائي).
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

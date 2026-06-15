@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/Screens/Admin/Manage%20Zones/admin_zone_details_screen.dart';
-import 'package:dhakker/Screens/Components/components.dart';
+import 'package:dhakker/shared/data/hajj_zones_seed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../generated/l10n.dart';
@@ -58,7 +58,17 @@ class AdminDashboardScreen extends StatelessWidget {
                 title: isAr ? "المتواجدون في النطاقات الآن" : "Currently in Zones",
                 icon: Icons.mosque_rounded,
                 accent: DhakkerColors.gold,
-                stream: FirebaseFirestore.instance.collection('users').where('currentZone', isNotEqualTo: '').snapshots(),
+                stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                // تواجد حيّ فقط: نطاق غير فارغ + ختم زمني خلال آخر ٥ دقائق،
+                // وإلا تُحسب وثائق حجّاج أغلقوا التطبيق داخل النطاق قبل ساعات.
+                countWhere: (data) {
+                  final zone = (data['currentZone'] ?? '').toString();
+                  if (zone.isEmpty) return false;
+                  final at = data['currentZoneAt'];
+                  if (at is! Timestamp) return false;
+                  return DateTime.now().difference(at.toDate()) <=
+                      const Duration(minutes: 5);
+                },
               ),
 
               const SizedBox(height: 24),
@@ -161,8 +171,83 @@ class AdminDashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
               const _LatestSupplicationsPanel(),
+
+              const SizedBox(height: 28),
+              _SectionTitle(title: isAr ? 'إعداد مناطق الحج' : 'Hajj Zones Setup'),
+              const SizedBox(height: 12),
+              const _SeedZonesButton(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// زر تحميل مناطق الحج الافتراضية إلى Firestore
+class _SeedZonesButton extends StatefulWidget {
+  const _SeedZonesButton();
+
+  @override
+  State<_SeedZonesButton> createState() => _SeedZonesButtonState();
+}
+
+class _SeedZonesButtonState extends State<_SeedZonesButton> {
+  bool _loading = false;
+
+  Future<void> _seed() async {
+    setState(() => _loading = true);
+    try {
+      final result = await HajjZonesSeed.seedToFirestore();
+      if (!mounted) return;
+      final isAr = Localizations.localeOf(context).languageCode == 'ar';
+      final added = result['added'] ?? 0;
+      final skipped = result['skipped'] ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.green.shade700,
+          content: Text(
+            isAr
+                ? 'تم إضافة $added منطقة ✓  (تجاوزنا $skipped موجودة)'
+                : 'Added $added zones ✓  (skipped $skipped existing)',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade700,
+          content: Text('خطأ: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _loading ? null : _seed,
+        icon: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.download_rounded, color: Colors.white),
+        label: Text(
+          isAr ? 'تحميل مناطق الحج الافتراضية' : 'Initialize Hajj Zones',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: DhakkerColors.gold,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -210,12 +295,15 @@ class _CountCard extends StatelessWidget {
   final IconData icon;
   final Color accent;
   final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
+  // فلتر اختياري للعدّ على مستوى العميل (مثل استبعاد التواجد القديم).
+  final bool Function(Map<String, dynamic> data)? countWhere;
 
   const _CountCard({
     required this.title,
     required this.icon,
     required this.accent,
     required this.stream,
+    this.countWhere,
   });
 
   @override
@@ -246,7 +334,10 @@ class _CountCard extends StatelessWidget {
         stream: stream,
         builder: (context, snap) {
           final loading = snap.connectionState == ConnectionState.waiting;
-          final count = snap.data?.docs.length ?? 0;
+          final docs = snap.data?.docs ?? const [];
+          final count = countWhere == null
+              ? docs.length
+              : docs.where((d) => countWhere!(d.data())).length;
 
           return Row(
             children: [
@@ -758,16 +849,16 @@ class _SkeletonTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         color: base,
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const _SkeletonBar(width: 10, height: 10),
-          const SizedBox(width: 10),
+          _SkeletonBar(width: 10, height: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               children: [
-                const _SkeletonBar(height: 12, width: double.infinity),
-                const SizedBox(height: 8),
-                const _SkeletonBar(height: 10, width: double.infinity),
+                _SkeletonBar(height: 12, width: double.infinity),
+                SizedBox(height: 8),
+                _SkeletonBar(height: 10, width: double.infinity),
               ],
             ),
           ),

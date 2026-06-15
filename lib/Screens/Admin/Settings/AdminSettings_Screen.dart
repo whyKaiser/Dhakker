@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_switch/flutter_switch.dart';
@@ -8,11 +9,11 @@ import '../../../shared/network/local/cash_helper.dart';
 import '../../../theme/dhakker_theme.dart';
 import '../../../theme_controller.dart';
 import '../../auth/Splash_Screen.dart';
-import '../../auth/login_screen.dart';
 
 // --- السطر المصلح (تأكد أن اسم الملف مطابق لما عندك) ---
 import '../SOS/AdminSosMonitor_Screen.dart';
-import 'Admin_Dashboard_Screen.dart';
+import '../Alerts/admin_alerts_screen.dart';
+import '../Crowd/admin_crowd_screen.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -26,11 +27,120 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
   bool _isLoading = true;
   bool _darkMode = true;
+  String _sosPhone = ''; // رقم طوارئ SOS الحالي من config/sos
 
   @override
   void initState() {
     super.initState();
     _loadThemeState();
+    _loadSosPhone();
+  }
+
+  Future<void> _loadSosPhone() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('sos')
+          .get();
+      final phone = doc.data()?['whatsappPhone']?.toString() ?? '';
+      if (mounted) setState(() => _sosPhone = phone);
+    } catch (_) {/* تجاهل: يظل فارغاً */}
+  }
+
+  Future<void> _editSosPhone() async {
+    final controller = TextEditingController(text: _sosPhone);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAr = Directionality.of(context) == TextDirection.rtl;
+    final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
+    final textColor = isDark ? Colors.white : DhakkerColors.lightText;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                isAr ? 'رقم طوارئ SOS' : 'SOS Emergency Number',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isAr
+                    ? 'الرقم الذي يُرسل إليه موقع الحاج عند الاستغاثة (بصيغة دولية مثل +9665XXXXXXXX).'
+                    : 'The number that receives the pilgrim\'s location on SOS (international format, e.g. +9665XXXXXXXX).',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: DhakkerColors.muted, fontSize: 12.5, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.phone,
+                textDirection: TextDirection.ltr,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+                decoration: const InputDecoration(
+                  hintText: '+9665XXXXXXXX',
+                  prefixIcon: Icon(Icons.phone_in_talk_rounded, color: DhakkerColors.gold),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(isAr ? 'إلغاء' : 'Cancel',
+                          style: const TextStyle(color: DhakkerColors.muted, fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DhakkerColors.gold,
+                        foregroundColor: DhakkerColors.darkText,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                      child: Text(isAr ? 'حفظ' : 'Save',
+                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('config').doc('sos').set(
+        {'whatsappPhone': result},
+        SetOptions(merge: true),
+      );
+      if (!mounted) return;
+      setState(() => _sosPhone = result);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: const Color(0xFF2E7D32),
+        content: Text(isAr ? 'تم حفظ رقم الطوارئ' : 'Emergency number saved'),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: const Color(0xFFCC4B47),
+        content: Text(isAr ? 'تعذّر الحفظ، حاول مجدداً' : 'Could not save, try again'),
+      ));
+    }
   }
 
   Future<void> _loadThemeState() async {
@@ -71,7 +181,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) =>  SplashScreen(0)),
+      MaterialPageRoute(builder: (_) =>  const SplashScreen(0)),
           (route) => false,
     );
   }
@@ -171,7 +281,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                           shape: BoxShape.circle,
                           color: DhakkerColors.gold.withOpacity(.12),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.warning_amber_rounded,
                           color: DhakkerColors.gold,
                           size: 22,
@@ -206,9 +316,205 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Icon(
+                      const Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 15,
+                        color: DhakkerColors.gold,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // --- 2.1 كرت لوحة الازدحام اللحظية ---
+              _SettingCard(
+                cardColor: card,
+                shadowDark: isDark,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminCrowdScreen()),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: DhakkerColors.gold.withOpacity(.12),
+                        ),
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: DhakkerColors.gold,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Align(
+                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAr ? "الازدحام اللحظي" : "Live Crowd",
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                isAr ? "عدد الحجّاج في كل منطقة الآن" : "Pilgrims per zone right now",
+                                style: TextStyle(
+                                  color: muted.withOpacity(.95),
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 15,
+                        color: DhakkerColors.gold,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // --- 2.2 كرت بثّ التنبيهات للحجّاج ---
+              _SettingCard(
+                cardColor: card,
+                shadowDark: isDark,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminAlertsScreen()),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: DhakkerColors.gold.withOpacity(.12),
+                        ),
+                        child: const Icon(
+                          Icons.campaign_rounded,
+                          color: DhakkerColors.gold,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Align(
+                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAr ? "تنبيهات الحجّاج" : "Pilgrim Alerts",
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                isAr ? "إرسال تنبيهات تظهر لكل الحجّاج" : "Broadcast alerts to all pilgrims",
+                                style: TextStyle(
+                                  color: muted.withOpacity(.95),
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 15,
+                        color: DhakkerColors.gold,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // --- 2.5 كرت رقم طوارئ SOS ---
+              _SettingCard(
+                cardColor: card,
+                shadowDark: isDark,
+                child: InkWell(
+                  onTap: _editSosPhone,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: DhakkerColors.gold.withOpacity(.12),
+                        ),
+                        child: const Icon(
+                          Icons.phone_in_talk_rounded,
+                          color: DhakkerColors.gold,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Align(
+                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAr ? "رقم طوارئ SOS" : "SOS Emergency Number",
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _sosPhone.isEmpty
+                                    ? (isAr ? "غير محدّد — اضغط للتعيين" : "Not set — tap to set")
+                                    : _sosPhone,
+                                textDirection: TextDirection.ltr,
+                                style: TextStyle(
+                                  color: muted.withOpacity(.95),
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.edit_rounded,
+                        size: 16,
                         color: DhakkerColors.gold,
                       ),
                     ],
@@ -392,7 +698,7 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
-    final border = const Color(0xFFEF4444);
+    const border = Color(0xFFEF4444);
 
     return SizedBox(
       height: 56,

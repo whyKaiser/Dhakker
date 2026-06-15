@@ -1,4 +1,4 @@
-package com.example.dhakker;
+package com.dhakker.app;
 
 import io.flutter.embedding.android.FlutterActivity;
 

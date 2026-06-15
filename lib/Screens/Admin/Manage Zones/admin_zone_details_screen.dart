@@ -7,8 +7,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
-import '../Manage Supplications/AdminSupplicationsList_Screen.dart';
-
 class AdminZoneDetailsScreen extends StatefulWidget {
   final String zoneId;
 
@@ -539,7 +537,7 @@ class _ZoneMapCard extends StatelessWidget {
             child: hasValidMap
                 ? FlutterMap(
               options: MapOptions(
-                initialCenter: mapCenter!,
+                initialCenter: mapCenter,
                 initialZoom: _initialZoom(),
               ),
               children: [

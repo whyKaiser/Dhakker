@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dhakker/Screens/Piligram/Map/services/map_controller_service.dart';
 import 'package:dhakker/Screens/Piligram/Map/services/map_zone_renderer.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,7 +11,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:qr_flutter/qr_flutter.dart';
+
 import '../../../../generated/l10n.dart';
+import '../../../../services/group_service.dart';
+import '../../../../shared/network/local/cash_helper.dart';
 import '../home/models/zone_model.dart';
 import '../home/services/zone_detection_service.dart';
 import '../../../bloc/cubit.dart';
@@ -30,7 +33,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   late final MapControllerService _mapControllerService;
   late final AnimationController _pulseController;
-  late final Animation<double> _pulse;
 
   final ZoneDetectionService _zoneDetectionService = const ZoneDetectionService();
 
@@ -42,6 +44,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   bool _didFocusOnce = false;
 
   StreamSubscription<Position>? _positionSubscription;
+
+  // ----- حالة المجموعة -----
+  final GroupService _groupService = GroupService();
+  String? _groupId;
+  String _groupName = '';
+  String _groupCode = '';
+  List<GroupMember> _members = [];
+  StreamSubscription<List<GroupMember>>? _membersSub;
+  bool _sharing = false;
+  bool _groupBusy = false;
+  static const String _kShareKey = 'group_share_enabled';
 
   void _log(String message) {
     debugPrint('DHKKR_MAP => $message');
@@ -57,23 +70,254 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    _pulse = Tween<double>(begin: 0.92, end: 1.25).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutCubic),
-    );
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final cubit = AppCubit.get(context);
       cubit.initCompass();
-      cubit.initCrowdZoneListener();
+      // مؤشّر الازدحام للحاج معطّل مؤقتاً: قراءة مواقع كل المستخدمين تنتهك
+      // خصوصيتهم وتُمنع بقواعد الأمان الجديدة. سيُعاد لاحقاً بتجميع آمن لكل منطقة.
+      // cubit.initCrowdZoneListener();
       await _initMapFlow();
+      await _loadGroup();
     });
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
+    _membersSub?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  // ─────────────────────────── المجموعة ───────────────────────────
+
+  Future<void> _loadGroup() async {
+    final gid = await _groupService.myGroupId();
+    if (gid == null) {
+      if (mounted) setState(() => _groupId = null);
+      return;
+    }
+    final info = await _groupService.groupInfo(gid);
+    final sharePref = CashHelper.getCash(key: _kShareKey);
+    final sharing = sharePref is bool ? sharePref : false;
+
+    if (!mounted) return;
+    setState(() {
+      _groupId = gid;
+      _groupName = info?.name ?? 'مجموعتي';
+      _groupCode = info?.code ?? '';
+      _sharing = sharing;
+    });
+
+    _subscribeMembers(gid);
+    if (mounted) AppCubit.get(context).setGroupSharing(groupId: gid, enabled: sharing);
+  }
+
+  void _subscribeMembers(String gid) {
+    _membersSub?.cancel();
+    _membersSub = _groupService.streamMembers(gid).listen((list) {
+      if (mounted) setState(() => _members = list);
+    });
+  }
+
+  Future<void> _createGroup() async {
+    final name = await _promptText(
+      title: 'إنشاء مجموعة',
+      hint: 'اسم المجموعة (مثل: عائلة محمد)',
+      action: 'إنشاء',
+    );
+    if (name == null) return;
+    setState(() => _groupBusy = true);
+    try {
+      final res = await _groupService.createGroup(name);
+      await _loadGroup();
+      if (mounted) _showSnack('تم إنشاء المجموعة — الكود: ${res.code}');
+    } catch (e) {
+      if (mounted) _showSnack('تعذّر إنشاء المجموعة');
+    } finally {
+      if (mounted) setState(() => _groupBusy = false);
+    }
+  }
+
+  Future<void> _joinGroup() async {
+    final code = await _promptText(
+      title: 'الانضمام لمجموعة',
+      hint: 'أدخل الكود (مثل: HAJJ-4821)',
+      action: 'انضمام',
+    );
+    if (code == null || code.trim().isEmpty) return;
+    setState(() => _groupBusy = true);
+    try {
+      await _groupService.joinByCode(code);
+      await _loadGroup();
+      if (mounted) _showSnack('تم الانضمام للمجموعة');
+    } catch (e) {
+      if (mounted) _showSnack('لا توجد مجموعة بهذا الكود');
+    } finally {
+      if (mounted) setState(() => _groupBusy = false);
+    }
+  }
+
+  Future<void> _leaveGroup() async {
+    final gid = _groupId;
+    if (gid == null) return;
+    final ok = await _confirm(
+      title: 'مغادرة المجموعة',
+      message: 'هل تريد مغادرة المجموعة؟ لن يظهر موقعك لأفرادها بعد الآن.',
+      action: 'مغادرة',
+    );
+    if (ok != true) return;
+    await _groupService.leaveGroup(gid);
+    await CashHelper.saveCash(key: _kShareKey, value: false);
+    if (mounted) AppCubit.get(context).setGroupSharing(groupId: null, enabled: false);
+    _membersSub?.cancel();
+    if (mounted) {
+      setState(() {
+        _groupId = null;
+        _members = [];
+        _sharing = false;
+      });
+    }
+  }
+
+  Future<void> _toggleSharing(bool value) async {
+    if (value) {
+      // موافقة صريحة قبل بدء مشاركة الموقع.
+      final ok = await _confirm(
+        title: 'مشاركة الموقع',
+        message:
+            'سيُشارك موقعك الحالي مع أفراد مجموعتك ليطمئنوا عليك ويجدوك عند الضياع. '
+            'يُحدّث موقعك كل دقيقة تقريبًا، وتقدر توقف المشاركة في أي وقت.',
+        action: 'أوافق',
+      );
+      if (ok != true) return;
+    }
+    await CashHelper.saveCash(key: _kShareKey, value: value);
+    if (mounted) {
+      setState(() => _sharing = value);
+      AppCubit.get(context).setGroupSharing(groupId: _groupId, enabled: value);
+    }
+  }
+
+  void _showQr() {
+    if (_groupCode.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (_) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = _MapPalette.fromBrightness(isDark);
+        return Dialog(
+          backgroundColor: palette.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('كود المجموعة',
+                    style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: _groupCode,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  _groupCode,
+                  style: TextStyle(color: palette.textPrimary, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'شارك الكود أو دع غيرك يصوّر الرمز',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: palette.textMuted, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Future<String?> _promptText({
+    required String title,
+    required String hint,
+    required String action,
+  }) {
+    final controller = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = _MapPalette.fromBrightness(isDark);
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: palette.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(title, style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w900)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: palette.textPrimary),
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: palette.textMuted),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('إلغاء', style: TextStyle(color: palette.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(action, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _confirm({
+    required String title,
+    required String message,
+    required String action,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = _MapPalette.fromBrightness(isDark);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: palette.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Text(title, style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w900)),
+        content: Text(message, style: TextStyle(color: palette.textMuted, height: 1.6)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('إلغاء', style: TextStyle(color: palette.textMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(action, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _initMapFlow() async {
@@ -220,8 +464,15 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     final userMarker = _buildUserMarker(palette: palette, position: _currentPosition, heading: cubit.userHeading);
 
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final memberMarkers = _members
+        .where((m) => m.hasLocation && m.uid != myUid)
+        .map((m) => _buildMemberMarker(palette, m))
+        .toList();
+
     final allMarkers = <Marker>[
       ...labelMarkers,
+      ...memberMarkers,
       if (userMarker != null) userMarker,
     ];
 
@@ -324,17 +575,21 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   Align(
                     alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
                     child: Text(
-                      isAr ? "نظام تتبع الأشواط والقبلة اللحظي" : "Smart Rounds & Qibla Tracking",
+                      isAr ? "تتبُّع الأشواط واتجاه القبلة" : "Rounds & Qibla Tracking",
                       style: TextStyle(color: palette.active, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     isAr
-                        ? "يتحرك مؤشرك الآن بالتوافق مع اتجاه التفافك الفعلي لمعرفة القبلة الكعبة المشرفة، كما تتلون مناطق العبادة ديناميكياً لتوضح لك مستويات الازدحام البشري اللحظي لتجنب التدافع."
-                        : "Your indicator now rotates dynamically with your phone to show Qibla direction, and worship zones light up in real-time to display crowd density to avoid crowding.",
+                        ? "يدور مؤشّر القبلة تلقائيًا مع اتجاه جهازك ليدلّك على القبلة نحو الكعبة المشرفة, وتظهر مناطق المناسك على الخريطة فيُحتسب طوافك وسعيك تلقائيًا كلما تحرّكت بينها."
+                        : "The Qibla pointer rotates automatically with your phone to guide you toward the Holy Kaaba, while the ritual zones appear on the map so your Tawaf and Sa'i rounds are counted automatically as you move through them.",
                     style: TextStyle(color: palette.textMuted, fontSize: 14, fontWeight: FontWeight.w600, height: 1.6),
                   ),
+                  const SizedBox(height: 22),
+                  Container(height: 1, color: palette.textMuted.withOpacity(.16)),
+                  const SizedBox(height: 18),
+                  _buildGroupSection(palette, isAr),
                 ],
               ),
             ),
@@ -389,6 +644,313 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ],
           );
         },
+      ),
+    );
+  }
+
+  // نقطة فرد المجموعة على الخريطة: دائرة بالحرف الأول واسمه الأول تحتها.
+  Marker _buildMemberMarker(_MapPalette palette, GroupMember m) {
+    final trimmed = m.name.trim();
+    final initial = trimmed.isNotEmpty ? trimmed.substring(0, 1) : '؟';
+    final firstName = trimmed.isNotEmpty ? trimmed.split(' ').first : '';
+    return Marker(
+      point: LatLng(m.lat!, m.lng!),
+      width: 70,
+      height: 64,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: palette.gold,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: const TextStyle(color: Color(0xFF14171C), fontWeight: FontWeight.w900, fontSize: 14),
+            ),
+          ),
+          if (firstName.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(.6),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                firstName,
+                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _fmtDistance(GroupMember m) {
+    final p = _currentPosition;
+    if (p == null || !m.hasLocation) return '—';
+    final d = Geolocator.distanceBetween(p.latitude, p.longitude, m.lat!, m.lng!);
+    if (d < 1000) return '${d.round()} م';
+    return '${(d / 1000).toStringAsFixed(1)} كم';
+  }
+
+  // ─────────────────── واجهة قسم المجموعة ───────────────────
+
+  Widget _buildGroupSection(_MapPalette palette, bool isAr) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.groups_rounded, color: palette.gold, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                isAr ? 'مجموعتي' : 'My Group',
+                style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_groupId == null) _buildNoGroup(palette, isAr) else _buildGroupCard(palette, isAr),
+      ],
+    );
+  }
+
+  Widget _buildNoGroup(_MapPalette palette, bool isAr) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.border),
+      ),
+      child: Column(
+        children: [
+          Text(
+            isAr
+                ? 'أنشئ مجموعة لعائلتك أو انضم بكود، لتشوفوا مواقع بعض على الخريطة وتتجنّبوا الضياع.'
+                : 'Create a family group or join with a code to see each other on the map and avoid getting lost.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: palette.textMuted, fontSize: 13.5, height: 1.6, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _GroupButton(
+                  label: isAr ? 'إنشاء مجموعة' : 'Create',
+                  icon: Icons.add_rounded,
+                  filled: true,
+                  palette: palette,
+                  onTap: _groupBusy ? null : _createGroup,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _GroupButton(
+                  label: isAr ? 'انضمام بكود' : 'Join',
+                  icon: Icons.login_rounded,
+                  filled: false,
+                  palette: palette,
+                  onTap: _groupBusy ? null : _joinGroup,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupCard(_MapPalette palette, bool isAr) {
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final others = _members.where((m) => m.uid != myUid).toList()
+      ..sort((a, b) {
+        final p = _currentPosition;
+        if (p == null) return 0;
+        if (!a.hasLocation) return 1;
+        if (!b.hasLocation) return -1;
+        final da = Geolocator.distanceBetween(p.latitude, p.longitude, a.lat!, a.lng!);
+        final db = Geolocator.distanceBetween(p.latitude, p.longitude, b.lat!, b.lng!);
+        return da.compareTo(db);
+      });
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.gold.withOpacity(.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_groupName,
+                        style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 2),
+                    Text(_groupCode,
+                        style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _showQr,
+                icon: Icon(Icons.qr_code_2_rounded, color: palette.gold),
+                tooltip: isAr ? 'عرض الكود' : 'Show code',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // مفتاح مشاركة الموقع (بموافقة صريحة).
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: palette.bg.withOpacity(.4),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(_sharing ? Icons.location_on_rounded : Icons.location_off_rounded,
+                    color: _sharing ? palette.active : palette.textMuted, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isAr ? 'مشاركة موقعي مع المجموعة' : 'Share my location',
+                    style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Switch(
+                  value: _sharing,
+                  activeColor: palette.active,
+                  onChanged: _toggleSharing,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (others.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                isAr ? 'لا يوجد أفراد آخرون بعد — شارك الكود لينضمّوا.' : 'No other members yet — share the code.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: palette.textMuted, fontSize: 13),
+              ),
+            )
+          else
+            ...others.map((m) => _memberRow(palette, isAr, m)),
+          const SizedBox(height: 8),
+          Align(
+            alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _leaveGroup,
+              icon: const Icon(Icons.logout_rounded, color: Color(0xFFE0463F), size: 18),
+              label: Text(isAr ? 'مغادرة المجموعة' : 'Leave group',
+                  style: const TextStyle(color: Color(0xFFE0463F), fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _memberRow(_MapPalette palette, bool isAr, GroupMember m) {
+    final trimmed = m.name.trim();
+    final initial = trimmed.isNotEmpty ? trimmed.substring(0, 1) : '؟';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: palette.gold.withOpacity(.16), shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: Text(initial, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              trimmed.isEmpty ? (isAr ? 'حاج' : 'Pilgrim') : trimmed,
+              style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Text(
+            m.hasLocation ? _fmtDistance(m) : (isAr ? 'لم يشارك موقعه' : 'No location'),
+            style: TextStyle(
+              color: m.hasLocation ? palette.active : palette.textMuted,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool filled;
+  final _MapPalette palette;
+  final VoidCallback? onTap;
+
+  const _GroupButton({
+    required this.label,
+    required this.icon,
+    required this.filled,
+    required this.palette,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: filled ? palette.gold : Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: filled ? null : Border.all(color: palette.gold.withOpacity(.6), width: 1.3),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: filled ? const Color(0xFF14171C) : palette.gold),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: filled ? const Color(0xFF14171C) : palette.gold,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

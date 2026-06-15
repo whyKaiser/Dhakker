@@ -462,7 +462,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
     final gold = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
-    final gold2 = DhakkerColors.gold2;
+    const gold2 = DhakkerColors.gold2;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final fieldFill = isDark ? DhakkerColors.bg.withOpacity(.72) : Colors.white;
@@ -470,7 +470,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: bg,
-      appBar: _HomeTopBar(onLanguageTap: LocaleController.toggle),
+      appBar: const _HomeTopBar(onLanguageTap: LocaleController.toggle),
       body: Container(
         color: bg,
         child: SafeArea(

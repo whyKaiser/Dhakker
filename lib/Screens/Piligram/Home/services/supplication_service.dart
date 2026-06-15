@@ -27,8 +27,8 @@ class SupplicationService {
     // التعديل هنا: الترتيب تنازلياً بناءً على عداد التشغيل (usage_count)
     items.sort((a, b) {
       // جلب عدد مرات التشغيل (ووضع صفر كقيمة افتراضية إذا لم يكن موجوداً)
-      final aCount = a.usageCount ?? 0;
-      final bCount = b.usageCount ?? 0;
+      final aCount = a.usageCount;
+      final bCount = b.usageCount;
 
       return bCount.compareTo(aCount); // ترتيب تنازلي
     });

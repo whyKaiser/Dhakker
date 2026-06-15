@@ -13,6 +13,10 @@ class DuaPlaybackService {
   // أفضل صوت عربي متوفّر بالجهاز (نختاره مرة وحدة في init)
   Map<String, String>? _bestArabicVoice;
 
+  // آخر لغة وصوت طُبِّقا — نتجاوز setLanguage/setVoice لو ما تغيّرا
+  String? _currentLangCode;
+  Map<String, String>? _currentVoice;
+
   void Function(bool isPlaying)? onPlayingStateChanged;
 
   void _updatePlayingState(bool value) {
@@ -131,15 +135,22 @@ class DuaPlaybackService {
     }
 
     if (langCode == 'ar') {
-      await _tts.setLanguage('ar-SA');
-      // نطبّق أفضل صوت عربي اخترناه (إن وُجد) لنطق أوضح
-      if (_bestArabicVoice != null) {
+      if (_currentLangCode != 'ar') {
+        await _tts.setLanguage('ar-SA');
+        _currentLangCode = 'ar';
+      }
+      if (_bestArabicVoice != null && _currentVoice != _bestArabicVoice) {
         try {
           await _tts.setVoice(_bestArabicVoice!);
+          _currentVoice = _bestArabicVoice;
         } catch (_) {}
       }
     } else {
-      await _tts.setLanguage('en-US');
+      if (_currentLangCode != langCode) {
+        await _tts.setLanguage('en-US');
+        _currentLangCode = langCode;
+        _currentVoice = null;
+      }
     }
 
     await _tts.speak(text);

@@ -9,6 +9,11 @@ class AppRoundIncrementState extends AppStates {}
 
 class AppRoundResetState extends AppStates {}
 
+// حالات أشواط السعي (الصفا ↔ المروة)
+class AppSaiIncrementState extends AppStates {}
+
+class AppSaiResetState extends AppStates {}
+
 // الحالات الجديدة للبوصلة والازدحام الجغرافي
 class AppQiblaDirectionUpdateState extends AppStates {}
 

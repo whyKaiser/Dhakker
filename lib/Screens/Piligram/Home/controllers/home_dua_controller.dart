@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../services/notification_service.dart';
 import '../../../../shared/network/local/cash_helper.dart';
 import '../models/supplication_model.dart';
 import '../models/zone_model.dart';
@@ -37,10 +38,18 @@ class HomeDuaController extends ChangeNotifier {
   Position? currentPosition;
   ZoneModel? currentZone;
 
+  // يُستدعى عند كل تحديث موقع، لتغذية عدّاد الأشواط في الكيوبيت أيضاً
+  // (تغطية إضافية فوق خط الكيوبيت المستقل). حاجز الهيستيريسيس يمنع العدّ المزدوج.
+  void Function(Position position)? onPositionUpdate;
+
   // 1. تغيير الدعاء الواحد إلى قائمة لدعم التعدد
   List<SupplicationModel> currentDuasList = [];
 
   String? errorMessage;
+
+  // يمنع استدعاء notifyListeners بعد التخلّص من الكنترولر (يحدث عند إيقاف
+  // الصوت أثناء dispose) فلا يتعطّل التطبيق.
+  bool _disposed = false;
 
   List<ZoneModel> _zones = [];
   StreamSubscription<Position>? _positionSubscription;
@@ -57,42 +66,31 @@ class HomeDuaController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    _log('------------------------------');
-    _log('HomeDuaController init started');
-    _log('Current user uid: $userId');
-    _log('Current language: $langCode');
+    // نضمن انتهاء التحميل دائماً (finally) حتى لو فشل أي شيء — مثل تعذّر
+    // الاتصال بـ Firestore أول فتحة بشبكة ضعيفة — فلا تعلق الشاشة على "جاري التحميل".
+    try {
+      await playbackService.init();
 
-    await playbackService.init();
+      playbackService.onPlayingStateChanged = (value) {
+        isPlaying = value;
+        notifyListeners();
+      };
 
-    playbackService.onPlayingStateChanged = (value) {
-      isPlaying = value;
-      notifyListeners();
-    };
+      await _loadSettings();
+      await _loadLastHandledState();
+      await _loadZones();
 
-    await _loadSettings();
+      if (!autoLocationEnabled) {
+        return;
+      }
 
-    _log('autoLocationEnabled: $autoLocationEnabled');
-    _log('voiceNotificationsEnabled: $voiceNotificationsEnabled');
-
-    await _loadLastHandledState();
-
-    _log('lastTriggeredZoneId: $_lastTriggeredZoneId');
-    _log('lastTriggeredDuaId: $_lastTriggeredDuaId');
-    _log('lastTriggerTimestamp: $_lastTriggerTimestamp');
-
-    await _loadZones();
-
-    if (!autoLocationEnabled) {
-      _log('Auto location disabled from cache. Skipping tracking.');
+      await _startLocationTracking(langCode);
+    } catch (e) {
+      _log('فشل تهيئة الشاشة الرئيسية: $e');
+    } finally {
       isLoading = false;
       notifyListeners();
-      return;
     }
-
-    await _startLocationTracking(langCode);
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> _loadSettings() async {
@@ -162,15 +160,18 @@ class HomeDuaController extends ChangeNotifier {
   }
 
   Future<void> _loadZones() async {
-    final query = await firestore
-        .collection('zones')
-        .where('isActive', isEqualTo: true)
-        .get();
+    try {
+      final query = await firestore
+          .collection('zones')
+          .where('isActive', isEqualTo: true)
+          .get();
 
-    _zones = query.docs.map(ZoneModel.fromFirestore).toList();
-    _zones.sort((a, b) => b.priority.compareTo(a.priority));
-
-    _log('Loaded zones count: ${_zones.length}');
+      _zones = query.docs.map(ZoneModel.fromFirestore).toList();
+      _zones.sort((a, b) => b.priority.compareTo(a.priority));
+    } catch (e) {
+      // عند تعذّر الاتصال نُبقي المناطق المحمّلة سابقاً (إن وُجدت) ولا نكسر التهيئة.
+      _log('تعذّر تحميل المناطق: $e');
+    }
   }
 
   Future<void> _startLocationTracking(String langCode) async {
@@ -209,6 +210,7 @@ class HomeDuaController extends ChangeNotifier {
 
   Future<void> _handlePosition(Position position, String langCode) async {
     currentPosition = position;
+    onPositionUpdate?.call(position);
 
     final detectedZone = zoneDetectionService.detectBestZone(
       userLat: position.latitude,
@@ -272,6 +274,22 @@ class HomeDuaController extends ChangeNotifier {
 
     if (shouldAutoTrigger) {
       if (voiceNotificationsEnabled) {
+        // إشعار فوري بدخول المنطقة — يصل للحاج حتى لو كان على تبويب آخر داخل
+        // التطبيق (يبقى فعّالاً ما دام التطبيق يعمل ويستقبل تحديثات الموقع).
+        final isAr = langCode == 'ar';
+        final zoneName = detectedZone.displayName(langCode);
+        final duaTitle = selected.titleByLanguage(langCode).trim();
+        NotificationService.instance.showZoneEntry(
+          title: isAr ? 'دخلت: $zoneName' : 'Entered: $zoneName',
+          body: duaTitle.isNotEmpty
+              ? duaTitle
+              : (isAr ? 'اضغط لقراءة دعاء المكان' : "Tap to read this place's supplication"),
+        );
+
+        // تأخير بسيط يمنح الحاج لحظة يستقر فيها قبل أن يبدأ الدعاء
+        await Future.delayed(const Duration(milliseconds: 1500));
+        // نتحقق أن المستخدم لا يزال في نفس المنطقة بعد التأخير
+        if (currentZone?.zoneId != detectedZone.zoneId) return;
         await playbackService.play(
           dua: selected,
           langCode: langCode,
@@ -373,8 +391,54 @@ class HomeDuaController extends ChangeNotifier {
   bool get hasDua => currentDuasList.isNotEmpty;
   int get duasCount => currentDuasList.length; // متغير جديد لجلب عدد الأدعية
 
+  /// يصنّف نُسُك المنطقة الحالية: 'tawaf' (المطاف) أو 'sai' (الصفا/المروة/المسعى)
+  /// أو null لأي منطقة أخرى. تستخدمه الواجهة لإظهار العدّاد المناسب فقط.
+  String? get currentRitual {
+    final z = currentZone;
+    if (z == null) return null;
+
+    final id = z.zoneId;
+    final name = '${z.nameEn} ${z.nameAr}'.toLowerCase();
+
+    if (id == 'Z_MATAF' ||
+        name.contains('tawaf') ||
+        name.contains('mataf') ||
+        name.contains('طواف') ||
+        name.contains('مطاف')) {
+      return 'tawaf';
+    }
+
+    if (id == 'Z_SAFA' ||
+        id == 'Z_MARWA' ||
+        id == 'Z_MARWAH' ||
+        id == 'Z_MASAA' ||
+        name.contains('safa') ||
+        name.contains('marwa') ||
+        name.contains('masaa') ||
+        name.contains('mas3a') ||
+        name.contains('صفا') ||
+        name.contains('مروة') ||
+        name.contains('مروه') ||
+        name.contains('مسعى') ||
+        name.contains('سعي')) {
+      return 'sai';
+    }
+
+    return null;
+  }
+
+  // نتجاهل أي إشعار بعد التخلّص (يُستدعى أحياناً من callback إيقاف الصوت).
+  @override
+  void notifyListeners() {
+    if (_disposed) return;
+    super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
+    // نفصل callback الصوت قبل التخلّص حتى لا يحدّث الحالة على كنترولر متدمّر.
+    playbackService.onPlayingStateChanged = null;
     _positionSubscription?.cancel();
     playbackService.dispose();
     super.dispose();

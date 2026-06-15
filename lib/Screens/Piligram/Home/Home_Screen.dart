@@ -5,14 +5,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../bloc/cubit.dart';
 import '../../../bloc/states.dart';
 import '../../../generated/l10n.dart';
+import '../../../services/prayer_times_service.dart';
+import '../../../services/weather_service.dart';
 import 'controllers/home_dua_controller.dart';
 import 'services/dua_playback_service.dart';
 import 'services/supplication_service.dart';
 import 'services/zone_detection_service.dart';
+import '../widgets/alerts_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +34,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // متغير للتحكم في أنميشن ارتداد كبسولة العداد عند الضغط
   double _roundButtonScale = 1.0;
+  // نفس التأثير لكبسولة عدّاد السعي
+  double _saiButtonScale = 1.0;
+
+  String? _userName;
 
   @override
   void initState() {
@@ -50,6 +58,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       CurvedAnimation(parent: _pulseController, curve: const Interval(0.30, 1.0, curve: Curves.easeOut)),
     );
 
+    _loadUserName();
+
     _controller = HomeDuaController(
       firestore: FirebaseFirestore.instance,
       auth: FirebaseAuth.instance,
@@ -60,10 +70,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       playbackService: DuaPlaybackService(),
     );
 
+    // تغذية عدّاد الأشواط من ستريم موقع الشاشة الرئيسية أيضاً (تغطية إضافية).
+    _controller.onPositionUpdate = (pos) {
+      if (mounted) {
+        AppCubit.get(context).updateLocationAndCheckRounds(pos);
+      }
+    };
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final langCode = Localizations.localeOf(context).languageCode;
       await _controller.init(langCode);
     });
+  }
+
+  Future<void> _loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    String? name = user.displayName;
+    if (name == null || name.trim().isEmpty) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final data = doc.data();
+        name = (data?['fullName'] ?? data?['name'])?.toString();
+      } catch (_) {}
+    }
+    if (mounted && name != null && name.trim().isNotEmpty) {
+      setState(() => _userName = name!.split(' ').first);
+    }
   }
 
   @override
@@ -99,6 +135,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             final zoneName = _controller.displayedZoneName(langCode);
             final duaTitle = _controller.displayedDuaTitle(langCode, 0);
             final duaText = _controller.displayedDuaText(langCode, 0);
+            // نُسُك المنطقة الحالية: نُظهر عدّاد الطواف داخل المطاف، وعدّاد
+            // السعي داخل المسعى فقط، فتبقى الشاشة الرئيسية مرتّبة.
+            final ritual = _controller.currentRitual;
 
             String statusText() {
               if (_controller.isLoading) return s.homeStatusLoading;
@@ -114,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               return s.homeReadDua;
             }
 
-            return Container(
+            return _entranceWrap(Container(
               color: palette.screenBg,
               child: SafeArea(
                 bottom: false,
@@ -129,6 +168,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     child: Column(
                       children: [
                         const SizedBox(height: 14),
+                        // --- بطاقة ترحيب مخصّصة باسم المستخدم ---
+                        if (_userName != null)
+                          _WelcomeCard(name: _userName!, palette: palette, isAr: isAr),
+                        // --- شريط تنبيهات الإدارة (سحب يميناً لإخفائه) ---
+                        const AlertsBanner(),
+                        // --- مواقيت الصلاة + تحذير ضربة الشمس ---
+                        _TopInfoSection(palette: palette, isAr: isAr),
                         // --- تصميم الكعبة والنبضات ---
                         Center(
                           child: AnimatedBuilder(
@@ -157,6 +203,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
 
+                        // عدّاد الطواف يظهر فقط داخل منطقة المطاف.
+                        if (ritual == 'tawaf') ...[
                         const SizedBox(height: 24),
 
                         // --- كبسولة عداد الأشواط التفاعلية مع أنميشن ارتداد مرن (Scale Animation) ---
@@ -215,9 +263,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       color: const Color(0xFF14171C).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(15),
                                     ),
-                                    child: Text(
-                                      "${appCubit.roundCount} / 7",
-                                      style: const TextStyle(color: Color(0xFF14171C), fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 550),
+                                      transitionBuilder: (child, anim) {
+                                        final bounce = Tween<double>(begin: 0.0, end: 1.0).animate(
+                                          CurvedAnimation(parent: anim, curve: Curves.elasticOut),
+                                        );
+                                        final slide = Tween<Offset>(begin: const Offset(0, -0.8), end: Offset.zero).animate(
+                                          CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                                        );
+                                        return SlideTransition(
+                                          position: slide,
+                                          child: ScaleTransition(scale: bounce, child: child),
+                                        );
+                                      },
+                                      child: Text(
+                                        "${appCubit.roundCount} / 7",
+                                        key: ValueKey(appCubit.roundCount),
+                                        style: const TextStyle(color: Color(0xFF14171C), fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -225,6 +289,74 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             ),
                           ),
                         ),
+
+                        ],
+
+                        // عدّاد السعي يظهر فقط داخل منطقة السعي (الصفا/المروة/المسعى).
+                        if (ritual == 'sai') ...[
+                        const SizedBox(height: 24),
+
+                        // --- كبسولة عدّاد السعي (الصفا ↔ المروة) بحدّ ذهبي مفرّغ لتمييزها عن الطواف ---
+                        GestureDetector(
+                          onTapDown: (_) => setState(() => _saiButtonScale = 0.94),
+                          onTapUp: (_) => setState(() => _saiButtonScale = 1.0),
+                          onTapCancel: () => setState(() => _saiButtonScale = 1.0),
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            appCubit.incrementSai();
+                          },
+                          child: AnimatedScale(
+                            scale: _saiButtonScale,
+                            duration: const Duration(milliseconds: 120),
+                            curve: Curves.easeOutCubic,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: palette.gold.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(color: palette.gold.withOpacity(0.55), width: 1.4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isAr ? "شوط السعي" : "Sa'i Round",
+                                    style: TextStyle(color: palette.gold, fontSize: 14, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: palette.gold.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 550),
+                                      transitionBuilder: (child, anim) {
+                                        final bounce = Tween<double>(begin: 0.0, end: 1.0).animate(
+                                          CurvedAnimation(parent: anim, curve: Curves.elasticOut),
+                                        );
+                                        final slide = Tween<Offset>(begin: const Offset(0, -0.8), end: Offset.zero).animate(
+                                          CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                                        );
+                                        return SlideTransition(
+                                          position: slide,
+                                          child: ScaleTransition(scale: bounce, child: child),
+                                        );
+                                      },
+                                      child: Text(
+                                        "${appCubit.saiCount} / 7",
+                                        key: ValueKey(appCubit.saiCount),
+                                        style: TextStyle(color: palette.gold, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        ],
 
                         const SizedBox(height: 28),
                         Text(statusText(), textAlign: TextAlign.center, style: TextStyle(color: palette.muted, fontSize: 14, fontWeight: FontWeight.w700)),
@@ -329,12 +461,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
               ),
-            );
+            ));
           },
         );
       },
     );
   }
+}
+
+/// يلفّ محتوى الشاشة بأنميشن دخول ناعم (تلاشٍ + انزلاق خفيف للأعلى) يُشغَّل
+/// مرة عند ظهور الشاشة — يعطي إحساساً حيّاً بإلهام iOS. يستخدم TweenAnimationBuilder
+/// فلا يتكرّر مع إعادة بناء الحالة لأن حالته تبقى ثابتة في الشجرة.
+Widget _entranceWrap(Widget child) {
+  return TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0.0, end: 1.0),
+    duration: const Duration(milliseconds: 600),
+    curve: Curves.easeOutCubic,
+    builder: (context, t, c) => Opacity(
+      opacity: t.clamp(0.0, 1.0),
+      child: Transform.translate(offset: Offset(0, (1 - t) * 22), child: c),
+    ),
+    child: child,
+  );
 }
 
 class _DhakkerPalette {
@@ -574,6 +722,106 @@ class _DuaCard extends StatelessWidget {
   }
 }
 
+/// بطاقة ترحيب تظهر بتلاشٍ ناعم عند فتح الشاشة ثم تنزوي تلقائياً بعد ٤ ثوانٍ
+/// (تلاشٍ + انكماش) حتى لا تبقى ثابتة وتزاحم محتوى الشاشة.
+class _WelcomeCard extends StatefulWidget {
+  final String name;
+  final _DhakkerPalette palette;
+  final bool isAr;
+
+  const _WelcomeCard({required this.name, required this.palette, required this.isAr});
+
+  @override
+  State<_WelcomeCard> createState() => _WelcomeCardState();
+}
+
+class _WelcomeCardState extends State<_WelcomeCard> {
+  bool _visible = true;
+  Timer? _hideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _hideTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _visible = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (widget.isAr) {
+      if (h < 12) return 'صباح الخير';
+      if (h < 17) return 'مساء الخير';
+      return 'أهلاً وسهلاً';
+    } else {
+      if (h < 12) return 'Good morning';
+      if (h < 17) return 'Good afternoon';
+      return 'Welcome';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = widget.palette;
+    // الانكماش يخفي البطاقة ويستعيد مساحتها بسلاسة، والتلاشي يخفّف الظهور.
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOutCubic,
+      child: AnimatedOpacity(
+        opacity: _visible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        child: _visible
+            ? Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  color: palette.card,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: palette.gold.withOpacity(.15)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: palette.gold.withOpacity(.12),
+                      ),
+                      child: Icon(Icons.person_rounded, color: palette.gold, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _greeting(),
+                          style: TextStyle(color: palette.muted, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          widget.name,
+                          style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Icon(Icons.favorite_rounded, color: palette.gold.withOpacity(.5), size: 18),
+                  ],
+                ),
+              )
+            : const SizedBox(width: double.infinity),
+      ),
+    );
+  }
+}
+
 class _SecondaryActionCard extends StatelessWidget {
   final _DhakkerPalette palette;
   final IconData icon;
@@ -630,6 +878,213 @@ class _SecondaryActionCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// قسم أعلى الرئيسية: بطاقة مواقيت الصلاة (محسوبة محلياً بأم القرى) مع عدّ
+/// تنازلي للصلاة القادمة، وبانر تحذير ضربة الشمس عند ارتفاع الحرارة.
+class _TopInfoSection extends StatefulWidget {
+  final _DhakkerPalette palette;
+  final bool isAr;
+  const _TopInfoSection({required this.palette, required this.isAr});
+
+  @override
+  State<_TopInfoSection> createState() => _TopInfoSectionState();
+}
+
+class _TopInfoSectionState extends State<_TopInfoSection> {
+  final PrayerTimesService _prayerService = PrayerTimesService();
+  final WeatherService _weatherService = WeatherService();
+
+  PrayerTimesResult? _prayer;
+  HeatAdvice? _heat;
+  Timer? _ticker;
+  double? _lat;
+  double? _lng;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    // تحديث العدّ التنازلي والصلاة القادمة كل دقيقة.
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) => _recompute());
+  }
+
+  Future<void> _load() async {
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      _lat = pos?.latitude;
+      _lng = pos?.longitude;
+    } catch (_) {/* نستخدم مكة افتراضياً */}
+    _recompute();
+    // الطقس عبر الشبكة (قد يتأخّر أو يفشل بلا نت — فيُستخدم تقدير الوقت).
+    final advice = await _weatherService.currentAdvice(
+      lat: _lat ?? 21.4225,
+      lng: _lng ?? 39.8262,
+    );
+    if (mounted) setState(() => _heat = advice);
+  }
+
+  void _recompute() {
+    final result = _prayerService.compute(lat: _lat, lng: _lng);
+    if (mounted) setState(() => _prayer = result);
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  String _fmtTime(DateTime t) {
+    final m = t.minute.toString().padLeft(2, '0');
+    final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final period = t.hour < 12
+        ? (widget.isAr ? 'ص' : 'AM')
+        : (widget.isAr ? 'م' : 'PM');
+    return '$h12:$m $period';
+  }
+
+  String _fmtCountdown(Duration d) {
+    if (d.isNegative) d = Duration.zero;
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    if (h > 0) {
+      return widget.isAr ? 'بعد $hس $mد' : 'in ${h}h ${m}m';
+    }
+    return widget.isAr ? 'بعد $m دقيقة' : 'in $m min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _prayer;
+    return Column(
+      children: [
+        if (p != null) _prayerCard(p),
+        if (_heat != null && _heat!.level != HeatLevel.none) _heatBanner(_heat!),
+      ],
+    );
+  }
+
+  Widget _prayerCard(PrayerTimesResult p) {
+    final palette = widget.palette;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.gold.withOpacity(.15)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.access_time_rounded, color: palette.gold, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                widget.isAr
+                    ? '${p.next.nameAr} القادمة'
+                    : 'Next: ${p.next.nameEn}',
+                style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _fmtCountdown(p.untilNext),
+                style: TextStyle(
+                  color: palette.gold,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: palette.gold.withOpacity(.10)),
+          ),
+          Row(
+            children: p.all.map((pr) {
+              final isNext = pr.nameEn == p.next.nameEn;
+              return Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      pr.nameAr,
+                      style: TextStyle(
+                        color: isNext ? palette.gold : palette.muted,
+                        fontSize: 11,
+                        fontWeight: isNext ? FontWeight.w900 : FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _fmtTime(pr.time),
+                      textDirection: TextDirection.ltr,
+                      style: TextStyle(
+                        color: isNext ? palette.gold : palette.textSecondary,
+                        fontSize: 10.5,
+                        fontWeight: isNext ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heatBanner(HeatAdvice h) {
+    final danger = h.level == HeatLevel.danger;
+    final color = danger ? const Color(0xFFE0463F) : const Color(0xFFE08A2E);
+    final tempStr = h.temperature != null
+        ? '${h.temperature!.round()}° '
+        : '';
+    final String msg;
+    if (danger) {
+      msg = widget.isAr
+          ? '🔥 خطر ضربة شمس ($tempStr) — ابتعد عن الشمس واحمل مظلّة وأكثر من الماء'
+          : '🔥 Heat stroke risk ($tempStr) — avoid the sun, carry an umbrella, hydrate';
+    } else {
+      msg = widget.isAr
+          ? '⚠️ حر شديد ($tempStr) — أكثر من شرب الماء واستظل قدر الإمكان'
+          : '⚠️ Severe heat ($tempStr) — drink water often and seek shade';
+    }
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(.55), width: 1.3),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wb_sunny_rounded, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              msg,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

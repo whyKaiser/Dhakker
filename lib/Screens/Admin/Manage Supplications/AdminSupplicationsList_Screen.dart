@@ -301,8 +301,8 @@ class _AdminSupplicationsListScreenState
                     ),
                     const SizedBox(height: 16),
                     if (_zonesLoading)
-                      Column(
-                        children: const [
+                      const Column(
+                        children: [
                           _SupplicationSkeletonCard(),
                           _SupplicationSkeletonCard(),
                           _SupplicationSkeletonCard(),
@@ -313,8 +313,8 @@ class _AdminSupplicationsListScreenState
                         stream: supplicationsQuery.snapshots(),
                         builder: (context, snap) {
                           if (snap.connectionState == ConnectionState.waiting) {
-                            return Column(
-                              children: const [
+                            return const Column(
+                              children: [
                                 _SupplicationSkeletonCard(),
                                 _SupplicationSkeletonCard(),
                                 _SupplicationSkeletonCard(),
@@ -895,6 +895,7 @@ class _FilterDropdown extends StatelessWidget {
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChanged,
+          isExpanded: true, // يمنع طفح الاسم الطويل خارج الصف (RenderFlex overflow)
           dropdownColor: isDark ? DhakkerColors.card : Colors.white,
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: muted),
           style: TextStyle(
