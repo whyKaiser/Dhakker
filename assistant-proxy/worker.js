@@ -17,11 +17,28 @@
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
+// ترويسات CORS — تسمح لنسخة الويب (dhakker-160d0.web.app) بالاتصال بالوسيط
+// من المتصفّح. بدونها يحجب المتصفّح الطلب رغم نجاحه على الجوال.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400",
+};
+
 export default {
   async fetch(request, env) {
+    // طلب التحقّق المسبق (preflight) من المتصفّح.
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
     // نقبل POST فقط.
     if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
+      return new Response("Method Not Allowed", {
+        status: 405,
+        headers: CORS_HEADERS,
+      });
     }
 
     let body;
@@ -60,7 +77,7 @@ export default {
     const text = await upstream.text();
     return new Response(text, {
       status: upstream.status,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   },
 };
@@ -68,6 +85,6 @@ export default {
 function jsonError(message, status) {
   return new Response(JSON.stringify({ error: { message } }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }

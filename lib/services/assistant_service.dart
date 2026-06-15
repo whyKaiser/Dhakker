@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+
+import 'package:http/http.dart' as http;
 
 /// خدمة المساعد الذكي للحج والعمرة.
 ///
@@ -78,35 +79,31 @@ class AssistantService {
     // عند وجود Proxy نكلّمه بدل Groq مباشرة، ولا نرسل أي مفتاح من التطبيق.
     final endpoint = _useProxy ? _proxyUrl : _endpoint;
 
-    final client = HttpClient();
-    try {
-      final request = await client.postUrl(Uri.parse(endpoint));
-      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      if (!_useProxy) {
-        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $_apiKey');
-      }
-      request.add(utf8.encode(payload));
+    // package:http يعمل على الجوال والويب معاً (بخلاف dart:io الخاص بالجوال فقط).
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (!_useProxy) headers['Authorization'] = 'Bearer $_apiKey';
 
-      final response = await request.close();
-      final respBody = await response.transform(utf8.decoder).join();
+    final response = await http.post(
+      Uri.parse(endpoint),
+      headers: headers,
+      body: utf8.encode(payload),
+    );
 
-      if (response.statusCode != 200) {
-        throw Exception('Assistant API ${response.statusCode}: $respBody');
-      }
-
-      final data = jsonDecode(respBody) as Map<String, dynamic>;
-      final choices = data['choices'] as List?;
-      if (choices == null || choices.isEmpty) {
-        throw Exception('استجابة غير متوقعة من الخادم.');
-      }
-
-      final content =
-          (choices.first['message']['content'] as String? ?? '').trim();
-      _history.add({'role': 'assistant', 'content': content});
-      return content;
-    } finally {
-      client.close();
+    final respBody = utf8.decode(response.bodyBytes);
+    if (response.statusCode != 200) {
+      throw Exception('Assistant API ${response.statusCode}: $respBody');
     }
+
+    final data = jsonDecode(respBody) as Map<String, dynamic>;
+    final choices = data['choices'] as List?;
+    if (choices == null || choices.isEmpty) {
+      throw Exception('استجابة غير متوقعة من الخادم.');
+    }
+
+    final content =
+        (choices.first['message']['content'] as String? ?? '').trim();
+    _history.add({'role': 'assistant', 'content': content});
+    return content;
   }
 
   /// يمسح سجل المحادثة لبدء محادثة جديدة.

@@ -67,6 +67,7 @@ dependencies:
   # any: يدع flutter_localizations يختار نسخة intl المثبّتة (تختلف بين إصدارات
   # Flutter) — يمنع فشل حلّ التبعيات على Codemagic الذي يستخدم Flutter أحدث.
   intl: any
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
