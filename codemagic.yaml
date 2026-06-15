@@ -29,7 +29,16 @@ workflows:
         script: |
           flutter build ios --release --no-codesign \
             --dart-define=ASSISTANT_PROXY_URL=https://dhakker-proxy.songokualshareef.workers.dev
+      - name: Package unsigned .ipa (for Sideloadly / AltStore)
+        script: |
+          # نغلّف Runner.app داخل مجلد Payload ثم نضغطه كـ .ipa غير موقّع.
+          # أدوات مثل Sideloadly توقّعه بحساب Apple ID مجاني (صالح 7 أيام).
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r Dhakker.ipa Payload >/dev/null
     artifacts:
+      - build/ios/iphoneos/Dhakker.ipa
       - build/ios/iphoneos/*.app
 
   # ───────────────────────────────────────────────────────────────
