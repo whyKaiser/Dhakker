@@ -12,6 +12,7 @@ import '../../../bloc/states.dart';
 import '../../../generated/l10n.dart';
 import '../../../locale_controller.dart';
 import '../../../shared/network/local/cash_helper.dart';
+import '../Qibla/qibla_screen.dart';
 
 class AppHomeLayout extends StatefulWidget {
   const AppHomeLayout({super.key});
@@ -792,14 +793,16 @@ class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
           child: Row(
             children: [
               _SosButton(palette: palette, onTap: onSosTap),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              _QiblaIconButton(palette: palette),
+              const SizedBox(width: 6),
               _GpsStatusButton(
                 palette: palette,
                 isActive: isGpsReady,
                 isLoading: isLoading,
                 onTap: onGpsTap,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _LangPill(
                 palette: palette,
                 label: isAr ? s.langEnglish : s.langArabic,
@@ -902,12 +905,12 @@ class _SosButtonState extends State<_SosButton> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOutCubic,
         child: Container(
-          width: 52,
-          height: 52,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: red.withOpacity(.14),
-            border: Border.all(color: red.withOpacity(.95), width: 2.2),
+            border: Border.all(color: red.withOpacity(.95), width: 2.0),
             boxShadow: [
               BoxShadow(
                 color: red.withOpacity(.20),
@@ -976,14 +979,14 @@ class _GpsStatusButtonState extends State<_GpsStatusButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          width: 52,
-          height: 52,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: fillColor,
             border: Border.all(
               color: ringColor.withOpacity(.95),
-              width: 2.2,
+              width: 2.0,
             ),
             boxShadow: [
               BoxShadow(
@@ -1049,10 +1052,10 @@ class _LangPillState extends State<_LangPill> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOutCubic,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
             color: widget.palette.bg,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: widget.palette.gold.withOpacity(.65),
               width: 1.4,
@@ -1260,6 +1263,34 @@ class _DialogSecondaryButton extends StatefulWidget {
 
   @override
   State<_DialogSecondaryButton> createState() => _DialogSecondaryButtonState();
+}
+
+// زر البوصلة في الشريط العلوي
+class _QiblaIconButton extends StatelessWidget {
+  final dynamic palette;
+  const _QiblaIconButton({required this.palette});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const QiblaScreen()),
+      ),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: palette.card,
+          border: Border.all(color: palette.gold.withOpacity(.35)),
+        ),
+        child: const Center(
+          child: Text('🧭', style: TextStyle(fontSize: 17)),
+        ),
+      ),
+    );
+  }
 }
 
 class _DialogSecondaryButtonState extends State<_DialogSecondaryButton> {

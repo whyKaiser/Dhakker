@@ -89,4 +89,46 @@ class SupplicationModel {
     if (languageCodes.isEmpty) return true;
     return languageCodes.contains(langCode);
   }
+
+  Map<String, dynamic> toJson() => {
+        'duaId': duaId,
+        'zoneId': zoneId,
+        'title': title,
+        'text': text,
+        'audioMode': audioMode,
+        'audioUrl': audioUrl,
+        'languageCodes': languageCodes,
+        'isActive': isActive,
+        'usage_count': usageCount,
+      };
+
+  factory SupplicationModel.fromJson(Map<String, dynamic> data) {
+    Map<String, String> safeMap(dynamic raw) {
+      if (raw is Map) {
+        return Map<String, String>.from(
+          raw.map((k, v) => MapEntry(k.toString(), v.toString())),
+        );
+      }
+      return {};
+    }
+
+    final langs = <String>[];
+    final rawLangs = data['languageCodes'];
+    if (rawLangs is List) {
+      for (final item in rawLangs) { langs.add(item.toString()); }
+    }
+
+    return SupplicationModel(
+      duaId: (data['duaId'] ?? '').toString(),
+      zoneId: (data['zoneId'] ?? '').toString(),
+      title: safeMap(data['title']),
+      text: safeMap(data['text']),
+      audioMode: (data['audioMode'] ?? 'tts').toString(),
+      audioUrl: (data['audioUrl'] ?? '').toString(),
+      languageCodes: langs,
+      isActive: data['isActive'] ?? true,
+      updatedAt: null,
+      usageCount: (data['usage_count'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

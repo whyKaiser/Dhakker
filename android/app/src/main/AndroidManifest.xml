@@ -9,6 +9,14 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <!-- إشعارات تنبيه دخول المنطقة (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- موقع الخلفية لعدّ الأشواط أثناء إغلاق الشاشة (Android 10+) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <!-- خدمة الموقع في الواجهة الأمامية (Android 9+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- نوع خدمة الموقع (Android 14+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <!-- منع وضع النوم عند انتظار تحديثات الموقع -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:label="Dhakker"

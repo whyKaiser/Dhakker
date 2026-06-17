@@ -35,7 +35,7 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 6000),
     )..repeat();
     _loadZoneNames();
   }
@@ -394,9 +394,9 @@ class _CrowdCard extends StatelessWidget {
 }
 
 // ───────────────────────────────────────────────────────────────
-// خريطة تخطيطية حيّة للمسجد الحرام مع توهّج حراري نابض لكل منطقة
+// خريطة 3D تفاعلية — تدوير + تكبير + نقر على المناطق
 // ───────────────────────────────────────────────────────────────
-class _HaramMap extends StatelessWidget {
+class _HaramMap extends StatefulWidget {
   final Map<String, int> counts;
   final bool isDark;
   final Map<String, String> zoneNames;
@@ -410,39 +410,200 @@ class _HaramMap extends StatelessWidget {
   });
 
   @override
+  State<_HaramMap> createState() => _HaramMapState();
+}
+
+class _HaramMapState extends State<_HaramMap> {
+  double _azimuth   = math.pi * 0.25; // زاوية الدوران الأفقي
+  double _elevation = math.pi * 0.30; // زاوية الميل العمودي
+  double _scale     = 1.0;
+
+  double _baseAzimuth   = 0;
+  double _baseElevation = 0;
+  double _baseScale     = 1;
+  Offset _baseFocal     = Offset.zero;
+
+  String? _selectedId;
+
+  // hit-zones تُكتب من الـ painter أثناء الرسم
+  final List<_ZoneHit> _hitZones = [];
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _baseAzimuth   = _azimuth;
+    _baseElevation = _elevation;
+    _baseScale     = _scale;
+    _baseFocal     = d.focalPoint;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    setState(() {
+      _scale = (_baseScale * d.scale).clamp(0.4, 4.0);
+      final dx = d.focalPoint.dx - _baseFocal.dx;
+      final dy = d.focalPoint.dy - _baseFocal.dy;
+      _azimuth   = _baseAzimuth   - dx * 0.007 / _scale;
+      _elevation = (_baseElevation + dy * 0.005 / _scale)
+          .clamp(0.08, math.pi / 2 - 0.08);
+    });
+  }
+
+  void _onTapUp(TapUpDetails d) {
+    final tap = d.localPosition;
+    for (final z in _hitZones.reversed) {
+      if (_pointInPoly(tap, z.topPoly)) {
+        setState(() => _selectedId = _selectedId == z.id ? null : z.id);
+        return;
+      }
+    }
+    setState(() => _selectedId = null);
+  }
+
+  bool _pointInPoly(Offset p, List<Offset> poly) {
+    bool inside = false;
+    final n = poly.length;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+      final xi = poly[i].dx, yi = poly[i].dy;
+      final xj = poly[j].dx, yj = poly[j].dy;
+      if (((yi > p.dy) != (yj > p.dy)) &&
+          (p.dx < (xj - xi) * (p.dy - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  Color _densityColor(int c) {
+    if (c > 50) return const Color(0xFFE0463F);
+    if (c > 20) return const Color(0xFFE0A23C);
+    return const Color(0xFF38C793);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final sel = _selectedId;
+    final selCount = sel != null ? (widget.counts[sel] ?? 0) : 0;
+    final selName  = sel != null
+        ? (widget.zoneNames[sel] ?? _Iso3DPainter.zoneLabelFor(sel))
+        : '';
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          // ─── الخريطة ────────────────────────────────────────────
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: AnimatedBuilder(
-                animation: pulse,
-                builder: (_, __) {
-                  return CustomPaint(
-                    painter: _HaramPainter(
-                      counts: counts,
-                      isDark: isDark,
-                      phase: pulse.value,
+              child: GestureDetector(
+                onScaleStart: _onScaleStart,
+                onScaleUpdate: _onScaleUpdate,
+                onTapUp: _onTapUp,
+                child: AnimatedBuilder(
+                  animation: widget.pulse,
+                  builder: (_, __) => CustomPaint(
+                    painter: _Iso3DPainter(
+                      counts:      widget.counts,
+                      isDark:      widget.isDark,
+                      phase:       widget.pulse.value,
+                      azimuth:     _azimuth,
+                      elevation:   _elevation,
+                      scale:       _scale,
+                      selectedId:  _selectedId,
+                      hitZones:    _hitZones,
                     ),
                     child: const SizedBox.expand(),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // مفتاح الألوان
+
+          // ─── بطاقة المنطقة المحددة ───────────────────────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            child: sel == null
+                ? const SizedBox.shrink()
+                : Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: widget.isDark
+                          ? const Color(0xFF141720)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _densityColor(selCount).withOpacity(.5),
+                        width: 1.4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _densityColor(selCount).withOpacity(.15),
+                          blurRadius: 18,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _densityColor(selCount),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            selName,
+                            style: TextStyle(
+                              color: widget.isDark
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'AlamirBold',
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '$selCount حاجّ',
+                          style: TextStyle(
+                            color: _densityColor(selCount),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+
+          // ─── مفتاح الألوان + تلميح التحكم ───────────────────────
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _legend('هادئ', const Color(0xFF38C793)),
-              const SizedBox(width: 16),
-              _legend('متوسط', const Color(0xFFE0A23C)),
-              const SizedBox(width: 16),
-              _legend('مزدحم جداً', const Color(0xFFE0463F)),
+              _legend('هادئ',   const Color(0xFF38C793)),
+              const SizedBox(width: 14),
+              _legend('متوسط',  const Color(0xFFE0A23C)),
+              const SizedBox(width: 14),
+              _legend('مزدحم', const Color(0xFFE0463F)),
+              const Spacer(),
+              Icon(Icons.swipe_rounded,
+                  size: 14,
+                  color: widget.isDark
+                      ? Colors.white30
+                      : Colors.black26),
+              const SizedBox(width: 4),
+              Text('اسحب للدوران',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: widget.isDark
+                        ? Colors.white30
+                        : Colors.black38,
+                  )),
             ],
           ),
         ],
@@ -450,27 +611,405 @@ class _HaramMap extends StatelessWidget {
     );
   }
 
-  Widget _legend(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Text(label,
-            style: TextStyle(
-                color: isDark ? Colors.white70 : Colors.black54, fontSize: 11)),
-      ],
-    );
-  }
+  Widget _legend(String label, Color color) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+              width: 9,
+              height: 9,
+              decoration:
+                  BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: widget.isDark ? Colors.white70 : Colors.black54,
+                  fontSize: 10.5)),
+        ],
+      );
 }
 
+// ───────────────────────────────────────────────────────────────
+// Iso3DPainter — رسم 3D قابل للدوران مع hit-testing
+// ───────────────────────────────────────────────────────────────
+class _ZoneHit {
+  final String id;
+  final List<Offset> topPoly;
+  const _ZoneHit(this.id, this.topPoly);
+}
+
+class _Iso3DPainter extends CustomPainter {
+  final Map<String, int> counts;
+  final bool isDark;
+  final double phase;
+  final double azimuth;
+  final double elevation;
+  final double scale;
+  final String? selectedId;
+  final List<_ZoneHit> hitZones;
+
+  static String zoneLabelFor(String id) {
+    const m = {
+      'Z_MASAA':  'المسعى',
+      'Z_MARWAH': 'المروة',
+      'Z_SAFA':   'الصفا',
+      'Z_MATAF':  'المطاف',
+      'Z_MAQAM':  'مقام إبراهيم',
+      'Z_ZAMZAM': 'بئر زمزم',
+      'Z_GATE_1': 'الباب الأول',
+      'Z_GATE_2': 'الباب الثاني',
+    };
+    return m[id] ?? id;
+  }
+
+  const _Iso3DPainter({
+    required this.counts,
+    required this.isDark,
+    required this.phase,
+    required this.azimuth,
+    required this.elevation,
+    required this.scale,
+    required this.selectedId,
+    required this.hitZones,
+  });
+
+  static const double _gridCX = 2.5; // مركز الشبكة
+  static const double _gridCY = 2.5;
+
+  double get _pulse => (math.sin(phase * 2 * math.pi) + 1) / 2;
+
+  /// إسقاط نقطة 3D بزاوية دوران وميل ديناميكيَّين
+  Offset _proj(double gx, double gy, double gz, Offset origin, double cs) {
+    final dx = gx - _gridCX;
+    final dy = gy - _gridCY;
+    final cosA = math.cos(azimuth);
+    final sinA = math.sin(azimuth);
+    final sinE = math.sin(elevation);
+    final cosE = math.cos(elevation);
+    final rx = dx * cosA - dy * sinA;
+    final ry = dx * sinA + dy * cosA;
+    return Offset(
+      origin.dx + rx * cs,
+      origin.dy + ry * cs * sinE - gz * cs * cosE * 0.9,
+    );
+  }
+
+  Color _densityColor(int c, {String id = ''}) {
+    if (c > 50) return const Color(0xFFE0463F);
+    if (c > 20) return const Color(0xFFE0A23C);
+    if (c > 0)  return const Color(0xFF38C793);
+    // ألوان مميّزة لكل منطقة حتى عند الفراغ
+    switch (id) {
+      case 'Z_MATAF':  return const Color(0xFF1C3A5E); // أزرق داكن — مطاف
+      case 'Z_MASAA':  return const Color(0xFF2E3A1E); // أخضر داكن — مسعى
+      case 'Z_SAFA':   return const Color(0xFF3A2A1E); // بني — صفا
+      case 'Z_MARWAH': return const Color(0xFF3A2A1E); // بني — مروة
+      case 'Z_MAQAM':  return const Color(0xFF3A321E); // ذهبي داكن — مقام
+      case 'Z_ZAMZAM': return const Color(0xFF1E2E3A); // أزرق رمادي — زمزم
+      case 'Z_GATE_1':
+      case 'Z_GATE_2': return const Color(0xFF2A2240); // بنفسجي — باب
+      default:         return const Color(0xFF2A2D35);
+    }
+  }
+
+  double _pillarH(int c) {
+    if (c == 0) return 0.15;
+    if (c > 50) return 3.5 + _pulse * 0.4;
+    if (c > 20) return 2.2 + _pulse * 0.3;
+    return 1.0 + _pulse * 0.2;
+  }
+
+  Color _shade(Color c, double f) => Color.fromARGB(
+        c.alpha,
+        (c.red * f).clamp(0, 255).toInt(),
+        (c.green * f).clamp(0, 255).toInt(),
+        (c.blue * f).clamp(0, 255).toInt(),
+      );
+
+  /// يرسم مكعباً ويعيد نقاط السقف الأربع لـ hit-testing
+  List<Offset> _drawBox(
+    Canvas canvas,
+    Offset origin,
+    double cs,
+    double gx,
+    double gy,
+    double gw,
+    double gd,
+    double gh,
+    Color base, {
+    bool glow = false,
+    bool selected = false,
+    String? label,
+  }) {
+    Offset p(double x, double y, double z) => _proj(x, y, z, origin, cs);
+
+    final t0 = p(gx,      gy,      gh);
+    final t1 = p(gx + gw, gy,      gh);
+    final t2 = p(gx + gw, gy + gd, gh);
+    final t3 = p(gx,      gy + gd, gh);
+    final b1 = p(gx + gw, gy,      0);
+    final b2 = p(gx + gw, gy + gd, 0);
+    final b3 = p(gx,      gy + gd, 0);
+
+    // هالة توهّج
+    if (glow || selected) {
+      final ctr = Offset(
+        (t0.dx + t1.dx + t2.dx + t3.dx) / 4,
+        (t0.dy + t1.dy + t2.dy + t3.dy) / 4,
+      );
+      final r = cs * (selected ? 1.8 : 1.2 + _pulse * 0.5);
+      final gCol = selected ? const Color(0xFFD4AF37) : base;
+      canvas.drawCircle(
+        ctr,
+        r,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            gCol.withOpacity(selected ? 0.7 : 0.5 + _pulse * 0.3),
+            gCol.withOpacity(0),
+          ]).createShader(Rect.fromCircle(center: ctr, radius: r))
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      );
+    }
+
+    // جانب أيسر
+    canvas.drawPath(
+        Path()..addPolygon([t3, t2, b2, b3], true),
+        Paint()..color = _shade(base, 0.45));
+    // جانب أيمن
+    canvas.drawPath(
+        Path()..addPolygon([t1, t2, b2, b1], true),
+        Paint()..color = _shade(base, 0.65));
+    // السقف
+    final topPath = Path()..addPolygon([t0, t1, t2, t3], true);
+    canvas.drawPath(topPath, Paint()..color = _shade(base, 1.0));
+    // حدّ ذهبي على المنطقة المحددة
+    if (selected) {
+      canvas.drawPath(
+        topPath,
+        Paint()
+          ..color = const Color(0xFFD4AF37)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2,
+      );
+    } else {
+      canvas.drawPath(
+        topPath,
+        Paint()
+          ..color = Colors.white.withOpacity(.10)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .7,
+      );
+    }
+
+    // نص العدد أو الاسم
+    if (label != null && label.isNotEmpty) {
+      final tc = Offset(
+        (t0.dx + t1.dx + t2.dx + t3.dx) / 4,
+        (t0.dy + t1.dy + t2.dy + t3.dy) / 4,
+      );
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+          ),
+        ),
+        textDirection: TextDirection.rtl,
+      )..layout();
+      tp.paint(canvas, tc - Offset(tp.width / 2, tp.height / 2));
+    }
+
+    return [t0, t1, t2, t3];
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cs = w * 0.13 * scale; // حجم الخلية ديناميكي
+    final origin = Offset(w * 0.5, h * 0.55);
+
+    // خلفية
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, w, h), const Radius.circular(20)),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0A0C10), Color(0xFF060709)],
+        ).createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
+
+    // شبكة الأرضية
+    final gridP = Paint()
+      ..color = Colors.white.withOpacity(.04)
+      ..strokeWidth = 0.7;
+    for (int gx = -3; gx <= 7; gx++) {
+      canvas.drawLine(
+        _proj(gx.toDouble(), -1, 0, origin, cs),
+        _proj(gx.toDouble(),  7, 0, origin, cs),
+        gridP,
+      );
+    }
+    for (int gy = -1; gy <= 7; gy++) {
+      canvas.drawLine(
+        _proj(-3, gy.toDouble(), 0, origin, cs),
+        _proj( 7, gy.toDouble(), 0, origin, cs),
+        gridP,
+      );
+    }
+
+    // المناطق
+    const zoneDefs = [
+      _ZoneDef('Z_MASAA',  -1, 1, 1.0, 4.0, 'المسعى'),
+      _ZoneDef('Z_MARWAH', -1, 0, 1.0, 1.0, 'المروة'),
+      _ZoneDef('Z_SAFA',   -1, 5, 1.0, 1.0, 'الصفا'),
+      _ZoneDef('Z_MATAF',   1, 1, 1.0, 4.0, 'مطاف'),
+      _ZoneDef('Z_MATAF',   4, 1, 1.0, 4.0, 'مطاف'),
+      _ZoneDef('Z_MATAF',   1, 1, 4.0, 1.0, 'مطاف'),
+      _ZoneDef('Z_MATAF',   1, 4, 4.0, 1.0, 'مطاف'),
+      _ZoneDef('Z_MAQAM',   3, 2, 0.8, 0.8, 'مقام'),
+      _ZoneDef('Z_ZAMZAM',  3, 3, 0.8, 0.8, 'زمزم'),
+      _ZoneDef('Z_GATE_1',  5, 0, 1.2, 1.2, 'باب 1'),
+      _ZoneDef('Z_GATE_2',  5, 5, 1.2, 1.2, 'باب 2'),
+    ];
+
+    // ترتيب painter's algorithm حسب العمق
+    final sorted = zoneDefs.toList()
+      ..sort((a, b) {
+        final cosA = math.cos(azimuth);
+        final sinA = math.sin(azimuth);
+        double depth(double x, double y) =>
+            (x - _gridCX) * sinA + (y - _gridCY) * cosA;
+        return depth(b.gx + b.spanW / 2, b.gy + b.spanD / 2)
+            .compareTo(depth(a.gx + a.spanW / 2, a.gy + a.spanD / 2));
+      });
+
+    // أعد بناء hitZones في كل رسم
+    hitZones.clear();
+
+    for (final z in sorted) {
+      final c = counts[z.id] ?? 0;
+      final color = _densityColor(c, id: z.id);
+      final pilH = _pillarH(c);
+      final isSel = selectedId == z.id;
+      final topPoly = _drawBox(
+        canvas, origin, cs,
+        z.gx, z.gy, z.spanW, z.spanD, pilH,
+        color,
+        glow: c > 20,
+        selected: isSel,
+        label: c > 0 ? '$c' : z.label,
+      );
+      // أضف أو حدّث hit zone (لكل id مرة واحدة فقط)
+      if (!hitZones.any((h) => h.id == z.id)) {
+        hitZones.add(_ZoneHit(z.id, topPoly));
+      }
+    }
+
+    // الكعبة
+    _drawBox(canvas, origin, cs, 2, 2, 1.8, 1.8, 2.5,
+        const Color(0xFF1A1A1A), label: '🕋');
+
+    // حدّ ذهبي على سقف الكعبة
+    final kTop = Path()..addPolygon([
+      _proj(2,   2,   2.5, origin, cs),
+      _proj(3.8, 2,   2.5, origin, cs),
+      _proj(3.8, 3.8, 2.5, origin, cs),
+      _proj(2,   3.8, 2.5, origin, cs),
+    ], true);
+    canvas.drawPath(
+      kTop,
+      Paint()
+        ..color = const Color(0xFFD4AF37).withOpacity(0.65)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8,
+    );
+
+    // ─── قوس الطواف الدوّار ─────────────────────────────────────────────
+    // مركز الكعبة تقريباً (2.9, 2.9 هو منتصف المربع 2..3.8)
+    final kCenter = _proj(2.9, 2.9, 2.5, origin, cs);
+    final tawafR = cs * 1.55; // نصف قطر الحلقة حول الكعبة
+
+    // هالة ذهبية
+    canvas.drawCircle(
+      kCenter,
+      tawafR + _pulse * cs * 0.15,
+      Paint()
+        ..shader = RadialGradient(colors: [
+          const Color(0xFFD4AF37).withOpacity(0.18 + _pulse * 0.10),
+          const Color(0xFFD4AF37).withOpacity(0),
+        ]).createShader(Rect.fromCircle(center: kCenter, radius: tawafR + cs * 0.3))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+    );
+
+    // قوس دوّار (عكس عقارب الساعة)
+    final sweepRect = Rect.fromCircle(center: kCenter, radius: tawafR);
+    final sweepAngle = -phase * 2 * math.pi; // دوران سالب = عكس العقارب
+    canvas.drawArc(
+      sweepRect,
+      sweepAngle,
+      math.pi * 1.1,
+      false,
+      Paint()
+        ..shader = SweepGradient(
+          startAngle: sweepAngle,
+          endAngle: sweepAngle + math.pi * 1.1,
+          colors: [
+            const Color(0xFFD4AF37).withOpacity(0),
+            const Color(0xFFD4AF37).withOpacity(0.7),
+          ],
+        ).createShader(sweepRect)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // ─── نقاط الحجاج المتحركة حول الكعبة ───────────────────────────────
+    const pilgramCount = 12;
+    for (int i = 0; i < pilgramCount; i++) {
+      final frac = i / pilgramCount;
+      // زاوية كل حاج — يتحرك عكس العقارب
+      final angle = sweepAngle + frac * 2 * math.pi;
+      final dotX = kCenter.dx + tawafR * math.cos(angle);
+      final dotY = kCenter.dy + tawafR * math.sin(angle);
+      // تباين في الحجم والسطوع لإحساس العمق
+      final brightness = (math.sin(angle + phase * math.pi) + 1) / 2;
+      final dotR = 2.2 + brightness * 1.4;
+      canvas.drawCircle(
+        Offset(dotX, dotY),
+        dotR,
+        Paint()..color = Colors.white.withOpacity(0.55 + brightness * 0.35),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Iso3DPainter old) =>
+      old.counts    != counts    ||
+      old.phase     != phase     ||
+      old.azimuth   != azimuth   ||
+      old.elevation != elevation ||
+      old.scale     != scale     ||
+      old.selectedId != selectedId;
+}
+
+// بيانات تعريف منطقة
+class _ZoneDef {
+  final String id;
+  final double gx, gy, spanW, spanD;
+  final String label;
+  const _ZoneDef(this.id, this.gx, this.gy, this.spanW, this.spanD, this.label);
+}
+
+// _HaramPainter removed — replaced by _Iso3DPainter
 class _HaramPainter extends CustomPainter {
   final Map<String, int> counts;
   final bool isDark;
-  final double phase; // 0..1 لدورة النبض
+  final double phase;
 
   const _HaramPainter({
     required this.counts,
@@ -478,7 +1017,6 @@ class _HaramPainter extends CustomPainter {
     required this.phase,
   });
 
-  // قيمة نبض ناعمة 0..1
   double get _t => (math.sin(phase * 2 * math.pi) + 1) / 2;
 
   Color _zoneBaseColor(int c) {

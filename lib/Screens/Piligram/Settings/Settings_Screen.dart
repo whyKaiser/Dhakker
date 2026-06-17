@@ -1,16 +1,22 @@
+import 'dart:convert';
 import 'package:dhakker/Screens/auth/Splash_Screen.dart';
 import 'package:dhakker/theme_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // استدعاء حزمة الاهتزاز الحسّي بالملي
+import 'package:flutter/services.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../generated/l10n.dart';
 import '../../../shared/network/local/cash_helper.dart';
 import '../About/about_screen.dart';
 import '../../../bloc/cubit.dart';
 import '../../../bloc/states.dart';
+import '../../../services/notification_service.dart';
+import '../../../services/prayer_reminder_service.dart';
+import '../../../services/hajj_schedule_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -23,14 +29,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   static const String _voiceKey = 'voice_notifications_enabled';
   static const String _autoLocationKey = 'auto_location_enabled';
   static const String _darkModeKey = 'dark_mode_enabled';
+  static const String _medKey = 'medication_reminders';
+  static const String _prayerKey = 'prayer_reminder_enabled';
 
   bool _voiceNotifications = true;
   bool _autoLocation = true;
   bool _darkMode = true;
+  bool _prayerReminder = false;
   bool _isLoading = true;
   bool _isBusy = false;
 
-  // وحدة تحكم لأنميشن الدخول المتتابع لعناصر القائمة
+  DateTime? _hajjDay8Date;
+
+  // تذكيرات الأدوية: قائمة من {'hour','minute','label'}
+  List<Map<String, dynamic>> _medReminders = [];
+
   late AnimationController _listAnimationController;
 
   User? get _user => FirebaseAuth.instance.currentUser;
@@ -57,8 +70,19 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final darkModeValue = CashHelper.getCash(key: _darkModeKey);
 
     final resolvedDarkMode = darkModeValue is bool ? darkModeValue : true;
-
     ThemeController.setTheme(resolvedDarkMode);
+
+    // تحميل تذكيرات الأدوية من SharedPreferences.
+    final prefs = await SharedPreferences.getInstance();
+    final medRaw = prefs.getString(_medKey);
+    List<Map<String, dynamic>> meds = [];
+    if (medRaw != null) {
+      try {
+        meds = (jsonDecode(medRaw) as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      } catch (_) {}
+    }
 
     if (!mounted) return;
 
@@ -66,11 +90,68 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       _voiceNotifications = voiceValue is bool ? voiceValue : true;
       _autoLocation = autoLocationValue is bool ? autoLocationValue : true;
       _darkMode = resolvedDarkMode;
+      _medReminders = meds;
       _isLoading = false;
     });
 
-    // تشغيل أنميشن الدخول المتتابع للعناصر فور انتهاء التحميل
+    NotificationService.instance.startMedicationCheck(_medReminders);
+
+    // تحميل إعداد تذكير الصلاة
+    final prayerEnabled = prefs.getBool(_prayerKey) ?? false;
+    // تحميل تاريخ يوم 8 ذي الحجة
+    final day8 = await HajjScheduleService.instance.loadDay8Date();
+
+    setState(() {
+      _prayerReminder = prayerEnabled;
+      _hajjDay8Date = day8;
+    });
+
+    if (prayerEnabled) {
+      PrayerReminderService.instance.start(lat: 21.3891, lng: 39.8579);
+    }
+    HajjScheduleService.instance.start();
     _listAnimationController.forward();
+  }
+
+  Future<void> _saveMedReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_medKey, jsonEncode(_medReminders));
+    NotificationService.instance.startMedicationCheck(_medReminders);
+  }
+
+  Future<void> _addMedReminder(BuildContext ctx, bool isAr) async {
+    if (_medReminders.length >= 3) return;
+    final picked = await showTimePicker(
+      context: ctx,
+      initialTime: TimeOfDay.now(),
+      helpText: isAr ? 'اختر وقت الدواء' : 'Pick medication time',
+    );
+    if (picked == null || !mounted) return;
+    // اسم اختياري.
+    String label = '';
+    await showDialog<void>(
+      context: ctx,
+      builder: (c) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: Text(isAr ? 'اسم الدواء (اختياري)' : 'Medication name (optional)'),
+          content: TextField(controller: ctrl, decoration: InputDecoration(hintText: isAr ? 'مثل: ضغط، سكري...' : 'e.g. Blood pressure...')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'تخطّ' : 'Skip')),
+            TextButton(onPressed: () { label = ctrl.text.trim(); Navigator.pop(c); }, child: Text(isAr ? 'حفظ' : 'Save')),
+          ],
+        );
+      },
+    );
+    setState(() {
+      _medReminders.add({'hour': picked.hour, 'minute': picked.minute, 'label': label});
+    });
+    await _saveMedReminders();
+  }
+
+  void _removeMedReminder(int index) {
+    setState(() => _medReminders.removeAt(index));
+    _saveMedReminders();
   }
 
   Future<void> _toggleVoiceNotifications(bool value) async {
@@ -430,7 +511,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               cubit.sendWhatsAppSOS();
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          _ActionTile(
+            title: isAr ? "طوارئ الحج — 920000814" : "Hajj Emergency — 920000814",
+            subtitle: isAr ? "اتصال مباشر بخدمة طوارئ الحج والعمرة" : "Direct call to Hajj & Umrah emergency",
+            icon: Icons.phone_rounded,
+            palette: palette,
+            isDanger: true,
+            onTap: () async {
+              HapticFeedback.vibrate();
+              final uri = Uri.parse('tel:920000814');
+              if (await canLaunchUrl(uri)) await launchUrl(uri);
+            },
+          ),
+          const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "إعادة ضبط الأشواط" : "Reset Rounds",
             subtitle: isAr ? "تصفير عداد الأشواط الحالي لبدء طواف جديد" : "Reset the round counter",
@@ -442,7 +536,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               _showSnackBar(isAr ? "تم تصفير عدّاد الأشواط بنجاح" : "Rounds reset successfully");
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "إعادة ضبط السعي" : "Reset Sa'i",
             subtitle: isAr ? "تصفير عداد أشواط السعي لبدء سعي جديد" : "Reset the Sa'i counter",
@@ -454,7 +548,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               _showSnackBar(isAr ? "تم تصفير عدّاد السعي بنجاح" : "Sa'i reset successfully");
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _SettingTile(
             title: s.settingsSound,
             subtitle: s.settingsSoundSubtitle,
@@ -463,7 +557,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             isAr: isAr,
             palette: palette,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _SettingTile(
             title: s.settingsAutoLocation,
             subtitle: s.settingsAutoLocationSubtitle,
@@ -472,7 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             isAr: isAr,
             palette: palette,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _SettingTile(
             title: s.settingsNightMode,
             subtitle: s.settingsNightModeSubtitle,
@@ -481,7 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             isAr: isAr,
             palette: palette,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _ActionTile(
             title: s.settingsResetPassword,
             subtitle: _user?.email ?? s.settingsNoEmail,
@@ -489,7 +583,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             palette: palette,
             onTap: _isBusy ? null : _showResetPasswordDialog,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "عن التطبيق والخصوصية" : "About & Privacy",
             subtitle: isAr ? "معلومات التطبيق وكيف نحمي بياناتك" : "App info & how we protect your data",
@@ -502,7 +596,62 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               );
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          // ─── تذكير الصلاة ────────────────────────────────────────────────
+          _SettingTile(
+            title: isAr ? "تذكير الصلاة" : "Prayer Reminders",
+            subtitle: isAr ? "إشعار عند دخول وقت كل صلاة" : "Notification at each prayer time",
+            palette: palette,
+            isAr: isAr,
+            value: _prayerReminder,
+            onChanged: (v) async {
+              setState(() => _prayerReminder = v);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool(_prayerKey, v);
+              if (v) {
+                PrayerReminderService.instance.start(lat: 21.3891, lng: 39.8579);
+              } else {
+                PrayerReminderService.instance.stop();
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          // ─── جدول مناسك الحج ─────────────────────────────────────────────
+          _ActionTile(
+            title: isAr ? "جدول مناسك الحج" : "Hajj Ritual Schedule",
+            subtitle: isAr
+                ? (_hajjDay8Date == null
+                    ? "اضغط لضبط تاريخ يوم التروية (8 ذي الحجة)"
+                    : "يوم التروية: ${_hajjDay8Date!.day}/${_hajjDay8Date!.month}/${_hajjDay8Date!.year}")
+                : (_hajjDay8Date == null
+                    ? "Tap to set Day of Tarwiyah (Dhul-Hijjah 8)"
+                    : "Day 8: ${_hajjDay8Date!.day}/${_hajjDay8Date!.month}/${_hajjDay8Date!.year}"),
+            icon: Icons.calendar_month_rounded,
+            palette: palette,
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _hajjDay8Date ?? DateTime.now(),
+                firstDate: DateTime(2025),
+                lastDate: DateTime(2030),
+                helpText: isAr ? 'اختر تاريخ اليوم الثامن من ذي الحجة' : 'Select Dhul-Hijjah 8',
+              );
+              if (picked == null || !mounted) return;
+              await HajjScheduleService.instance.saveDay8Date(picked);
+              setState(() => _hajjDay8Date = picked);
+                HajjScheduleService.instance.start();
+            },
+          ),
+          const SizedBox(height: 10),
+          // ─── قسم تذكيرات الأدوية ─────────────────────────────────────────
+          _MedRemindersSection(
+            reminders: _medReminders,
+            isAr: isAr,
+            palette: palette,
+            onAdd: () => _addMedReminder(context, isAr),
+            onRemove: _removeMedReminder,
+          ),
+          const SizedBox(height: 10),
           _ActionTile(
             title: s.settingsLogout,
             subtitle: s.settingsLogoutSubtitle,
@@ -669,18 +818,18 @@ class _SettingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
         color: palette.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: palette.border.withOpacity(.95),
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.shadow.withOpacity(.12),
-            blurRadius: 20,
-            offset: const Offset(0, 14),
+            color: palette.shadow.withOpacity(.10),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -696,33 +845,33 @@ class _SettingTile extends StatelessWidget {
                     title,
                     style: TextStyle(
                       color: palette.textPrimary,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: TextStyle(
                       color: palette.textSecondary,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      height: 1.5,
+                      height: 1.4,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 14),
           FlutterSwitch(
             value: value,
             onToggle: onChanged,
-            height: 36,
-            width: 72,
-            toggleSize: 30,
+            height: 30,
+            width: 60,
+            toggleSize: 25,
             borderRadius: 40,
-            padding: 4,
+            padding: 3,
             activeColor: palette.gold,
             inactiveColor: palette.muted.withOpacity(.35),
             toggleColor: Colors.white,
@@ -788,26 +937,26 @@ class _ActionTileState extends State<_ActionTile> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOutCubic,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           decoration: BoxDecoration(
             color: widget.palette.card,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: (widget.isDanger ? widget.palette.danger : widget.palette.border).withOpacity(.95),
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.palette.shadow.withOpacity(.10),
-                blurRadius: 18,
-                offset: const Offset(0, 12),
+                color: widget.palette.shadow.withOpacity(.08),
+                blurRadius: 12,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: accent.withOpacity(.12),
@@ -815,30 +964,30 @@ class _ActionTileState extends State<_ActionTile> {
                 child: Icon(
                   widget.icon,
                   color: accent,
-                  size: 24,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.title, // تم حذف البارامتر المسمّى الخطأ
+                      widget.title,
                       style: TextStyle(
                         color: widget.palette.textPrimary,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
                     Text(
-                      widget.subtitle, // تم حذف البارامتر المسمّى الخطأ
+                      widget.subtitle,
                       style: TextStyle(
                         color: widget.palette.textSecondary,
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        height: 1.5,
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -940,6 +1089,99 @@ class _SettingsDialogButtonState extends State<_SettingsDialogButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── قسم تذكيرات الأدوية ────────────────────────────────────────────────────
+
+class _MedRemindersSection extends StatelessWidget {
+  final List<Map<String, dynamic>> reminders;
+  final bool isAr;
+  final _SettingsPalette palette;
+  final VoidCallback onAdd;
+  final void Function(int) onRemove;
+
+  const _MedRemindersSection({
+    required this.reminders,
+    required this.isAr,
+    required this.palette,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  String _fmt(Map<String, dynamic> r) {
+    final h = r['hour'] as int;
+    final m = (r['minute'] as int).toString().padLeft(2, '0');
+    final h12 = h % 12 == 0 ? 12 : h % 12;
+    final period = h < 12 ? (isAr ? 'ص' : 'AM') : (isAr ? 'م' : 'PM');
+    final label = (r['label'] as String?)?.trim() ?? '';
+    return '$h12:$m $period${label.isNotEmpty ? ' — $label' : ''}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.border.withOpacity(.95)),
+        boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.08), blurRadius: 12, offset: const Offset(0, 7))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+                child: Icon(Icons.medication_rounded, color: palette.gold, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isAr ? 'تذكيرات الأدوية' : 'Medication Reminders',
+                        style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(isAr ? 'إشعار عند حلول موعد الدواء (حتى 3 مواعيد)' : 'Notification at medication time (up to 3)',
+                        style: TextStyle(color: palette.textSecondary, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4)),
+                  ],
+                ),
+              ),
+              if (reminders.length < 3)
+                GestureDetector(
+                  onTap: onAdd,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+                    child: Icon(Icons.add_rounded, color: palette.gold, size: 20),
+                  ),
+                ),
+            ],
+          ),
+          if (reminders.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...reminders.asMap().entries.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.alarm_rounded, color: palette.gold.withOpacity(.7), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_fmt(e.value), style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w700))),
+                  GestureDetector(
+                    onTap: () => onRemove(e.key),
+                    child: Icon(Icons.close_rounded, color: palette.muted, size: 18),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ],
       ),
     );
   }

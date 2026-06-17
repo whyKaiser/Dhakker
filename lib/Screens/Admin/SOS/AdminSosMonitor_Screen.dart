@@ -115,6 +115,39 @@ Future<void> _resolve(BuildContext context, String docId, bool isAr) async {
   }
 }
 
+Future<void> _delete(BuildContext context, String docId, bool isAr) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(isAr ? 'حذف البلاغ؟' : 'Delete request?'),
+      content: Text(isAr
+          ? 'سيُحذف البلاغ نهائياً ولا يمكن استعادته.'
+          : 'This will permanently delete the request.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(isAr ? 'إلغاء' : 'Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(isAr ? 'حذف' : 'Delete',
+              style: const TextStyle(color: Color(0xFFEF4444))),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  try {
+    await FirebaseFirestore.instance.collection('sos_requests').doc(docId).delete();
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isAr ? 'تعذّر الحذف' : 'Delete failed')),
+      );
+    }
+  }
+}
+
 class _SosCard extends StatelessWidget {
   final String docId;
   final Map<String, dynamic> data;
@@ -235,6 +268,18 @@ class _SosCard extends StatelessWidget {
                     color: const Color(0xFF22C55E),
                     filled: true,
                     onTap: () => _resolve(context, docId, isAr),
+                  ),
+                ),
+              ],
+              if (isResolved) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ActionBtn(
+                    label: isAr ? 'حذف' : 'Delete',
+                    icon: Icons.delete_outline_rounded,
+                    color: const Color(0xFFEF4444),
+                    filled: false,
+                    onTap: () => _delete(context, docId, isAr),
                   ),
                 ),
               ],

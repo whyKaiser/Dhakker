@@ -100,8 +100,36 @@ class _AssistantScreenState extends State<AssistantScreen> {
   void initState() {
     super.initState();
     _initSpeech();
-    _tts.awaitSpeakCompletion(true);
-    _tts.setSpeechRate(0.45);
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await _tts.awaitSpeakCompletion(true);
+    await _tts.setSpeechRate(0.42);
+    await _tts.setPitch(1.0);
+    // نحاول اختيار أفضل صوت عربي متاح على الجهاز (Google > غيره).
+    try {
+      final voices = await _tts.getVoices as List?;
+      if (voices != null) {
+        final arVoices = voices
+            .whereType<Map>()
+            .where((v) {
+              final locale = (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
+              return locale.startsWith('ar');
+            })
+            .toList();
+        // نفضّل Google TTS ثم أي صوت عربي آخر.
+        final best = arVoices.firstWhere(
+          (v) => (v['name'] ?? '').toString().toLowerCase().contains('google'),
+          orElse: () => arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
+        );
+        if (best.isNotEmpty == true && best['name'] != null) {
+          await _tts.setVoice({'name': best['name'], 'locale': best['locale'] ?? best['language'] ?? 'ar-SA'});
+        }
+      }
+    } catch (_) {
+      // فشل اختيار الصوت — يعود للافتراضي.
+    }
   }
 
   Future<void> _initSpeech() async {
@@ -266,6 +294,57 @@ class _AssistantScreenState extends State<AssistantScreen> {
     setState(() => _messages.clear());
   }
 
+  List<String> _suggestionsFor(String locale) {
+    switch (locale) {
+      case 'ar_SA':
+        return [
+          'ماذا أفعل بعد الطواف؟',
+          'اشرح لي دعاء الإحرام',
+          'أنا كبير في السن، كيف أؤدي السعي؟',
+          'ما حكم الطواف بغير وضوء؟',
+          'متى يكون رمي الجمرات؟',
+        ];
+      case 'en_US':
+        return [
+          'What do I do after Tawaf?',
+          'Explain the Ihram supplication',
+          'How do I perform Sa\'i if I am elderly?',
+          'When do I stone the Jamarat?',
+          'What is the correct Talbiyah?',
+        ];
+      case 'ur_PK':
+        return [
+          'طواف کے بعد کیا کریں؟',
+          'احرام کی دعا بتائیں',
+          'سعی کیسے کریں؟',
+        ];
+      case 'tr_TR':
+        return [
+          'Tavaftan sonra ne yapmalıyım?',
+          'İhram duasını açıklar mısın?',
+          'Cemrelere ne zaman taş atılır?',
+        ];
+      case 'id_ID':
+        return [
+          'Apa yang harus dilakukan setelah tawaf?',
+          'Jelaskan doa ihram',
+          'Kapan waktu melempar jumrah?',
+        ];
+      case 'fr_FR':
+        return [
+          'Que faire après le Tawaf ?',
+          'Expliquez la supplication de l\'Ihram',
+          'Comment effectuer le Sa\'i ?',
+        ];
+      default:
+        return [
+          'What do I do after Tawaf?',
+          'Explain the Ihram supplication',
+          'How do I perform Sa\'i?',
+        ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -361,11 +440,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Widget _welcome() {
-    const examples = [
-      'وش أسوي بعد الطواف؟',
-      'اشرح لي دعاء الإحرام',
-      'أنا كبير في السن، كيف أؤدي السعي؟',
-    ];
+    final examples = _suggestionsFor(_lang.sttLocale);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [

@@ -92,6 +92,13 @@ service cloud.firestore {
       }
     }
 
+    // broadcasts: إشعارات جماعية من الأدمن. الحجاج يقرأون فقط، الأدمن ينشئ/يحذف.
+    match /broadcasts/{msgId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
+      // لا update — الرسالة تُرسَل مرة واحدة ولا تُعدَّل
+    }
+
     // الافتراضي: منع كل ما سوى ذلك صراحةً.
     match /{document=**} {
       allow read, write: if false;

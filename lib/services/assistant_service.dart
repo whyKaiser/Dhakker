@@ -83,11 +83,16 @@ class AssistantService {
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (!_useProxy) headers['Authorization'] = 'Bearer $_apiKey';
 
-    final response = await http.post(
-      Uri.parse(endpoint),
-      headers: headers,
-      body: utf8.encode(payload),
-    );
+    http.Response response;
+    try {
+      response = await http
+          .post(Uri.parse(endpoint), headers: headers, body: utf8.encode(payload))
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      // شبكة منقطعة — رد offline
+      _history.removeLast(); // نسحب رسالة المستخدم لأنها لم تُرسَل
+      return _offlineReply(trimmed);
+    }
 
     final respBody = utf8.decode(response.bodyBytes);
     if (response.statusCode != 200) {
@@ -108,4 +113,80 @@ class AssistantService {
 
   /// يمسح سجل المحادثة لبدء محادثة جديدة.
   void clearHistory() => _history.clear();
+
+  // ─── ردود بدون إنترنت ────────────────────────────────────────────────────────
+  // قاموس بسيط: أسئلة شائعة → ردود جاهزة. يُفعَّل عند انقطاع الشبكة.
+  String _offlineReply(String msg) {
+    final q = msg.toLowerCase();
+
+    // الطواف
+    if (q.contains('طواف') || q.contains('tawaf') || q.contains('circumambulat')) {
+      return 'الطواف سبعة أشواط حول الكعبة المشرفة عكس اتجاه عقارب الساعة، '
+          'يبدأ وينتهي بمحاذاة الحجر الأسود. الاضطباع والرمل في الأشواط الثلاثة الأولى '
+          'مستحبان للرجال في طواف القدوم فقط.';
+    }
+
+    // السعي
+    if (q.contains('سعي') || q.contains('sai') || q.contains('safa') ||
+        q.contains('marwa') || q.contains('صفا') || q.contains('مروة')) {
+      return 'السعي سبعة أشواط بين الصفا والمروة، يبدأ من الصفا وينتهي عند المروة. '
+          'الهرولة للرجال في الجزء المضاء بالأخضر. ركن من أركان الحج والعمرة.';
+    }
+
+    // الإحرام
+    if (q.contains('إحرام') || q.contains('احرام') || q.contains('ihram') ||
+        q.contains('ميقات') || q.contains('miqat')) {
+      return 'الإحرام: النية + لبس ثوبي الإحرام (للرجال) عند الميقات، والتلبية '
+          '(لبيك اللهم لبيك). محظوراته: قص الشعر والأظافر، الطيب، الصيد، عقد النكاح، '
+          'وغطاء الرأس للرجل.';
+    }
+
+    // الجمرات / رمي
+    if (q.contains('جمر') || q.contains('رمي') || q.contains('jamarat') ||
+        q.contains('stoning') || q.contains('pebble')) {
+      return 'رمي الجمرات: سبع حصيات لكل جمرة، تُرمى من اليوم العاشر. '
+          'جمرة العقبة (الكبرى) وحدها يوم النحر، ثم الثلاث (صغرى ثم وسطى ثم كبرى) '
+          'أيام التشريق بعد الزوال.';
+    }
+
+    // عرفة
+    if (q.contains('عرفة') || q.contains('عرفات') || q.contains('arafat') ||
+        q.contains('arafah')) {
+      return 'الوقوف بعرفة ركن الحج الأعظم: «الحج عرفة». وقته من زوال اليوم التاسع '
+          'حتى فجر العاشر. الخروج منه بعد غروب الشمس إلى مزدلفة.';
+    }
+
+    // الهدي / الذبح / الأضحية
+    if (q.contains('هدي') || q.contains('ذبح') || q.contains('نحر') ||
+        q.contains('sacrifice') || q.contains('slaughter')) {
+      return 'الهدي واجب على المتمتع والقارن. يُذبح يوم العيد (العاشر) أو أيام التشريق. '
+          'إن عجز عنه صام ثلاثة أيام في الحج وسبعة إذا رجع.';
+    }
+
+    // دعاء / تلبية
+    if (q.contains('دعاء') || q.contains('تلبية') || q.contains('talbiyah') ||
+        q.contains('supplication') || q.contains('prayer')) {
+      return 'التلبية: «لبيك اللهم لبيك، لبيك لا شريك لك لبيك، إن الحمد والنعمة لك '
+          'والملك، لا شريك لك». تُقال من الإحرام حتى رمي جمرة العقبة.';
+    }
+
+    // طواف الوداع
+    if (q.contains('وداع') || q.contains('farewell') || q.contains('ifadah') ||
+        q.contains('إفاضة')) {
+      return 'طواف الإفاضة ركن لا يصح الحج بدونه، ويُؤدَّى يوم النحر أو بعده. '
+          'طواف الوداع واجب على من أراد السفر — آخر عمل في الحج.';
+    }
+
+    // الإنترنت / offline
+    if (q.contains('انترنت') || q.contains('شبكة') || q.contains('offline') ||
+        q.contains('internet')) {
+      return 'أنا في وضع عدم الاتصال الآن. يمكنني الإجابة عن أسئلة المناسك الأساسية '
+          'من ذاكرتي. للأسئلة التفصيلية راجع المرشد أو العالم في مخيمك.';
+    }
+
+    // الرد الافتراضي
+    return '⚠️ لا يوجد اتصال بالإنترنت الآن.\n'
+        'يمكنني الإجابة عن الأسئلة الأساسية للمناسك (طواف / سعي / إحرام / جمرات / عرفة). '
+        'حاول إعادة صياغة سؤالك.';
+  }
 }

@@ -18,6 +18,10 @@ import '../Screens/Assistant/assistant_screen.dart';
 import '../shared/network/local/cash_helper.dart';
 import '../shared/location/location_smoother.dart';
 import '../services/group_service.dart';
+import '../services/notification_service.dart';
+import '../services/heat_monitor_service.dart';
+import '../services/hajj_schedule_service.dart';
+import '../services/broadcast_listener_service.dart';
 
 class AppCubit extends Cubit<AppStates> {
   AppCubit() : super(AppInitialState()) {
@@ -109,6 +113,8 @@ class AppCubit extends Cubit<AppStates> {
 
   // فلتر تنعيم الموقع لتقليل اهتزاز GPS قبل احتساب الأشواط/السعي.
   final KalmanLatLong _locationFilter = KalmanLatLong(qMetresPerSecond: 3);
+
+  bool _heatMonitorStarted = false;
 
   double userHeading = 0.0;
   StreamSubscription? _compassSubscription;
@@ -366,6 +372,20 @@ class AppCubit extends Cubit<AppStates> {
     // فتعمل حتى بعيداً عن مناطق العدّ ولا ترهق البطارية أو القاعدة.
     _maybeShareGroupLocation(position.latitude, position.longitude);
 
+    // أول قراءة GPS — ابدأ مراقبة الحرارة بالموقع الحقيقي للحاج
+    if (!_heatMonitorStarted) {
+      _heatMonitorStarted = true;
+      HeatMonitorService.instance.start(
+        lat: position.latitude,
+        lng: position.longitude,
+      );
+      // حمّل جدول الحج من الذاكرة وابدأ التذكيرات
+      HajjScheduleService.instance.loadDay8Date().then((_) {
+        HajjScheduleService.instance.start();
+      });
+      BroadcastListenerService.instance.start();
+    }
+
     // نتجاهل القراءة الخام ضعيفة الدقة قبل أن تلوّث الفلتر والعدّ.
     if (position.accuracy > _roundAccuracyLimitM) return;
 
@@ -441,6 +461,14 @@ class AppCubit extends Cubit<AppStates> {
     if (roundCount < 7) {
       roundCount++;
       CashHelper.saveCash(key: _kRoundCountKey, value: roundCount);
+      // بدء تذكير الماء مع أول شوط.
+      if (roundCount == 1) {
+        NotificationService.instance.startWaterReminder();
+      }
+      // إيقاف التذكير بعد اكتمال الطواف.
+      if (roundCount >= 7) {
+        NotificationService.instance.stopWaterReminder();
+      }
       emit(AppRoundIncrementState());
     }
   }
@@ -448,10 +476,10 @@ class AppCubit extends Cubit<AppStates> {
   void resetRounds() {
     roundCount = 0;
     hasExitedThreshold = true;
-    // تصفير حالة كشف الدوران بالبوصلة أيضاً لبدء طواف جديد نظيف.
     _accumulatedRotation = 0.0;
     _lastHeading = null;
     _lastLapMs = 0;
+    NotificationService.instance.stopWaterReminder();
     CashHelper.saveCash(key: _kRoundCountKey, value: 0);
     CashHelper.saveCash(key: _kHasExitedKey, value: true);
     emit(AppRoundResetState());
@@ -551,6 +579,12 @@ class AppCubit extends Cubit<AppStates> {
     if (saiCount < 7) {
       saiCount++;
       CashHelper.saveCash(key: _kSaiCountKey, value: saiCount);
+      if (saiCount == 1) {
+        NotificationService.instance.startWaterReminder();
+      }
+      if (saiCount >= 7) {
+        NotificationService.instance.stopWaterReminder();
+      }
       emit(AppSaiIncrementState());
     }
   }
@@ -559,6 +593,7 @@ class AppCubit extends Cubit<AppStates> {
     saiCount = 0;
     _lastSaiEnd = null;
     _stepBaseline = _currentSteps; // نبدأ قياس الخطى من جديد لسعي جديد
+    NotificationService.instance.stopWaterReminder();
     CashHelper.saveCash(key: _kSaiCountKey, value: 0);
     CashHelper.removeCash(key: _kSaiLastEndKey);
     emit(AppSaiResetState());

@@ -70,6 +70,44 @@ class AdminDashboardScreen extends StatelessWidget {
                       const Duration(minutes: 5);
                 },
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _CountCard(
+                      title: isAr ? "نشطون آخر ساعة" : "Active (1h)",
+                      icon: Icons.online_prediction_rounded,
+                      accent: const Color(0xFF38C793),
+                      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                      countWhere: (data) {
+                        final at = data['currentZoneAt'];
+                        if (at is! Timestamp) return false;
+                        return DateTime.now().difference(at.toDate()) <=
+                            const Duration(hours: 1);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _CountCard(
+                      title: isAr ? "SOS محلولة" : "SOS Resolved",
+                      icon: Icons.check_circle_rounded,
+                      accent: const Color(0xFF22C55E),
+                      stream: FirebaseFirestore.instance
+                          .collection('sos_requests')
+                          .where('status', isEqualTo: 'resolved')
+                          .snapshots(),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // --- إشعار جماعي ---
+              _SectionTitle(title: isAr ? "إشعار جماعي للحجاج" : "Broadcast Notification"),
+              const SizedBox(height: 12),
+              _BroadcastButton(isAr: isAr, isDark: isDark),
 
               const SizedBox(height: 24),
 
@@ -1009,6 +1047,150 @@ class _HapticScaleWrapperState extends State<_HapticScaleWrapper> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOutCubic,
         child: widget.child,
+      ),
+    );
+  }
+}
+
+// ─── إشعار جماعي ─────────────────────────────────────────────────────────────
+class _BroadcastButton extends StatefulWidget {
+  final bool isAr;
+  final bool isDark;
+  const _BroadcastButton({required this.isAr, required this.isDark});
+
+  @override
+  State<_BroadcastButton> createState() => _BroadcastButtonState();
+}
+
+class _BroadcastButtonState extends State<_BroadcastButton> {
+  final _ctrl = TextEditingController();
+  bool _sending = false;
+
+  Future<void> _send() async {
+    final msg = _ctrl.text.trim();
+    if (msg.isEmpty) return;
+    setState(() => _sending = true);
+    try {
+      await FirebaseFirestore.instance.collection('broadcasts').add({
+        'message': msg,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sentBy': 'admin',
+      });
+      _ctrl.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(widget.isAr ? 'تم الإرسال بنجاح' : 'Sent successfully'),
+          backgroundColor: const Color(0xFF22C55E),
+        ));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(widget.isAr ? 'فشل الإرسال' : 'Send failed'),
+          backgroundColor: const Color(0xFFEF4444),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final card = widget.isDark ? DhakkerColors.card : DhakkerColors.lightCard;
+    final textColor = widget.isDark ? Colors.white : DhakkerColors.lightText;
+    final muted = widget.isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: DhakkerColors.gold.withOpacity(.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(widget.isDark ? .25 : .06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.campaign_rounded,
+                  color: DhakkerColors.gold, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                widget.isAr
+                    ? 'اكتب رسالة لجميع الحجاج'
+                    : 'Write a message to all pilgrims',
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            maxLines: 3,
+            textDirection: widget.isAr ? TextDirection.rtl : TextDirection.ltr,
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: widget.isAr
+                  ? 'مثال: يُرجى التوجّه نحو الباب الشمالي...'
+                  : 'e.g. Please proceed to the north gate...',
+              hintStyle: TextStyle(color: muted.withOpacity(.6), fontSize: 13),
+              filled: true,
+              fillColor: widget.isDark
+                  ? Colors.white.withOpacity(.05)
+                  : Colors.black.withOpacity(.04),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.all(14),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _sending ? null : _send,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DhakkerColors.gold,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              icon: _sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Icon(Icons.send_rounded, size: 20),
+              label: Text(
+                widget.isAr ? 'إرسال للجميع' : 'Send to All',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

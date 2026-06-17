@@ -38,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double _saiButtonScale = 1.0;
 
   String? _userName;
+  bool _showWelcome = false;
 
   @override
   void initState() {
@@ -59,6 +60,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
 
     _loadUserName();
+    // أظهر بطاقة الترحيب 5 ثوانٍ فقط
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _showWelcome = true);
+    });
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _showWelcome = false);
+    });
 
     _controller = HomeDuaController(
       firestore: FirebaseFirestore.instance,
@@ -168,9 +176,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     child: Column(
                       children: [
                         const SizedBox(height: 14),
-                        // --- بطاقة ترحيب مخصّصة باسم المستخدم ---
-                        if (_userName != null)
-                          _WelcomeCard(name: _userName!, palette: palette, isAr: isAr),
+                        // --- بطاقة ترحيب تظهر 5 ثوانٍ فقط عند الدخول ---
+                        if (_userName != null && _showWelcome)
+                          _WelcomeCard(
+                            name: _userName!,
+                            palette: palette,
+                            isAr: isAr,
+                          ),
                         // --- شريط تنبيهات الإدارة (سحب يميناً لإخفائه) ---
                         const AlertsBanner(),
                         // --- مواقيت الصلاة + تحذير ضربة الشمس ---
@@ -724,38 +736,20 @@ class _DuaCard extends StatelessWidget {
 
 /// بطاقة ترحيب تظهر بتلاشٍ ناعم عند فتح الشاشة ثم تنزوي تلقائياً بعد ٤ ثوانٍ
 /// (تلاشٍ + انكماش) حتى لا تبقى ثابتة وتزاحم محتوى الشاشة.
-class _WelcomeCard extends StatefulWidget {
+class _WelcomeCard extends StatelessWidget {
   final String name;
   final _DhakkerPalette palette;
   final bool isAr;
 
-  const _WelcomeCard({required this.name, required this.palette, required this.isAr});
-
-  @override
-  State<_WelcomeCard> createState() => _WelcomeCardState();
-}
-
-class _WelcomeCardState extends State<_WelcomeCard> {
-  bool _visible = true;
-  Timer? _hideTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _hideTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _visible = false);
-    });
-  }
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    super.dispose();
-  }
+  const _WelcomeCard({
+    required this.name,
+    required this.palette,
+    required this.isAr,
+  });
 
   String _greeting() {
     final h = DateTime.now().hour;
-    if (widget.isAr) {
+    if (isAr) {
       if (h < 12) return 'صباح الخير';
       if (h < 17) return 'مساء الخير';
       return 'أهلاً وسهلاً';
@@ -768,55 +762,33 @@ class _WelcomeCardState extends State<_WelcomeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = widget.palette;
-    // الانكماش يخفي البطاقة ويستعيد مساحتها بسلاسة، والتلاشي يخفّف الظهور.
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeInOutCubic,
-      child: AnimatedOpacity(
-        opacity: _visible ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-        child: _visible
-            ? Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                decoration: BoxDecoration(
-                  color: palette.card,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: palette.gold.withOpacity(.15)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: palette.gold.withOpacity(.12),
-                      ),
-                      child: Icon(Icons.person_rounded, color: palette.gold, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _greeting(),
-                          style: TextStyle(color: palette.muted, fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          widget.name,
-                          style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w900),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Icon(Icons.favorite_rounded, color: palette.gold.withOpacity(.5), size: 18),
-                  ],
-                ),
-              )
-            : const SizedBox(width: double.infinity),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.gold.withOpacity(.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+            child: Icon(Icons.person_rounded, color: palette.gold, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_greeting(), style: TextStyle(color: palette.muted, fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(name, style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const Spacer(),
+          Icon(Icons.favorite_rounded, color: palette.gold.withOpacity(.6), size: 18),
+        ],
       ),
     );
   }
@@ -972,70 +944,68 @@ class _TopInfoSectionState extends State<_TopInfoSection> {
     final palette = widget.palette;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: palette.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: palette.gold.withOpacity(.15)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // سطر 1: الصلاة القادمة + العدّ التنازلي
           Row(
             children: [
-              Icon(Icons.access_time_rounded, color: palette.gold, size: 20),
-              const SizedBox(width: 8),
+              Icon(Icons.access_time_rounded, color: palette.gold, size: 14),
+              const SizedBox(width: 5),
               Text(
-                widget.isAr
-                    ? '${p.next.nameAr} القادمة'
-                    : 'Next: ${p.next.nameEn}',
+                widget.isAr ? p.next.nameAr : p.next.nameEn,
                 style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                  color: palette.gold,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 4),
               Text(
                 _fmtCountdown(p.untilNext),
                 style: TextStyle(
-                  color: palette.gold,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
+                  color: palette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: palette.gold.withOpacity(.10)),
-          ),
+          const SizedBox(height: 6),
+          // سطر 2: جميع الأوقات موزّعة بالتساوي
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: p.all.map((pr) {
               final isNext = pr.nameEn == p.next.nameEn;
-              return Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      pr.nameAr,
-                      style: TextStyle(
-                        color: isNext ? palette.gold : palette.muted,
-                        fontSize: 11,
-                        fontWeight: isNext ? FontWeight.w900 : FontWeight.w600,
-                      ),
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    pr.nameAr,
+                    style: TextStyle(
+                      color: isNext ? palette.gold : palette.muted,
+                      fontSize: 10,
+                      fontWeight: isNext ? FontWeight.w900 : FontWeight.w600,
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      _fmtTime(pr.time),
-                      textDirection: TextDirection.ltr,
-                      style: TextStyle(
-                        color: isNext ? palette.gold : palette.textSecondary,
-                        fontSize: 10.5,
-                        fontWeight: isNext ? FontWeight.w800 : FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _fmtTime(pr.time),
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(
+                      color: isNext ? palette.gold : palette.textSecondary,
+                      fontSize: 10,
+                      fontWeight: isNext ? FontWeight.w800 : FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             }).toList(),
           ),

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:http/http.dart' as http;
 
 /// مستوى تحذير الحرارة.
 enum HeatLevel { none, caution, danger }
@@ -29,20 +29,15 @@ class WeatherService {
     required double lng,
   }) async {
     final url = '$_base?latitude=$lat&longitude=$lng&current=temperature_2m';
-    final client = HttpClient();
     try {
-      final req = await client.getUrl(Uri.parse(url));
-      final resp = await req.close();
+      final resp = await http.get(Uri.parse(url));
       if (resp.statusCode != 200) return null;
-      final body = await resp.transform(utf8.decoder).join();
-      final data = jsonDecode(body) as Map<String, dynamic>;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
       final current = data['current'] as Map<String, dynamic>?;
       final temp = current?['temperature_2m'];
       return temp is num ? temp.toDouble() : null;
     } catch (_) {
       return null;
-    } finally {
-      client.close();
     }
   }
 
