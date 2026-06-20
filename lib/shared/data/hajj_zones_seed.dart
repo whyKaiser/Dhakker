@@ -70,27 +70,8 @@ class HajjZonesSeed {
     },
     // ─────────────────────────────────────────────
     // المسعى — Sa'i (Safa & Marwa)
+    // ملاحظة: الصفا والمروة مُضافتان يدوياً كـ polygon في Firestore
     // ─────────────────────────────────────────────
-    {
-      'nameAr': 'الصفا',
-      'nameEn': 'Al-Safa',
-      'type': 'circle',
-      'center': {'lat': 21.423425, 'lng': 39.826996},
-      'radiusM': 35.0,
-      'priority': 9,
-      'isActive': true,
-      'updatedAt': FieldValue.serverTimestamp(),
-    },
-    {
-      'nameAr': 'المروة',
-      'nameEn': 'Al-Marwa',
-      'type': 'circle',
-      'center': {'lat': 21.424512, 'lng': 39.826411},
-      'radiusM': 35.0,
-      'priority': 9,
-      'isActive': true,
-      'updatedAt': FieldValue.serverTimestamp(),
-    },
     {
       'nameAr': 'المسعى (ممر السعي)',
       'nameEn': "Mas'a – Sa'i Corridor",
