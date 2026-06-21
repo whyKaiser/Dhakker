@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 // استيراد الملف الجديد الذي قمنا بتوليده
 import 'firebase_options.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'Screens/auth/Splash_Screen.dart';
 import 'Screens/auth/onboarding_screen.dart';
@@ -37,6 +38,8 @@ Future<void> main() async {
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
+
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   } catch (e) {
     debugPrint("خطأ في تهيئة الفايربيس: $e");
   }

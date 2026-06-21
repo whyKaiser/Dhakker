@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:animations/animations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/Screens/Admin/Manage%20Zones/admin_zone_details_screen.dart';
 import 'package:dhakker/shared/data/hajj_zones_seed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
 import '../Manage Supplications/admin_supplication_details_screen.dart';
@@ -28,6 +32,17 @@ class AdminDashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- زر تصدير CSV ---
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: Text(isAr ? 'تصدير CSV' : 'Export CSV'),
+                  onPressed: () => _exportCsv(context, isAr),
+                ),
+              ),
+              const SizedBox(height: 4),
+
               // --- 1. إحصائيات المنظومة الذكية (SOS & Crowd) ---
               _SectionTitle(title: isAr ? "إحصائيات المنظومة الذكية" : "Smart System Analytics"),
               const SizedBox(height: 12),
@@ -289,6 +304,49 @@ class _SeedZonesButtonState extends State<_SeedZonesButton> {
         ),
       ),
     );
+  }
+}
+
+Future<void> _exportCsv(BuildContext context, bool isAr) async {
+  try {
+    final db = FirebaseFirestore.instance;
+    final usersSnap = await db.collection('users').get();
+    final sosSnap = await db.collection('sos_requests').get();
+
+    final rows = <String>['اسم المستخدم,البريد,المنطقة الحالية,آخر تحديث'];
+    for (final d in usersSnap.docs) {
+      final data = d.data();
+      rows.add([
+        (data['displayName'] ?? '').toString().replaceAll(',', ' '),
+        (data['email'] ?? '').toString(),
+        (data['currentZone'] ?? '').toString(),
+        (data['currentZoneAt'] as Timestamp?)?.toDate().toIso8601String() ?? '',
+      ].join(','));
+    }
+
+    rows.add('');
+    rows.add('نداءات SOS');
+    rows.add('المستخدم,الحالة,الوقت');
+    for (final d in sosSnap.docs) {
+      final data = d.data();
+      rows.add([
+        (data['userId'] ?? '').toString(),
+        (data['status'] ?? '').toString(),
+        (data['createdAt'] as Timestamp?)?.toDate().toIso8601String() ?? '',
+      ].join(','));
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/dhakker_report_${DateTime.now().millisecondsSinceEpoch}.csv');
+    await file.writeAsString('﻿${rows.join('\n')}', encoding: utf8);
+
+    await Share.shareXFiles([XFile(file.path)], text: isAr ? 'تقرير ذكّر' : 'Dhakker Report');
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isAr ? 'فشل التصدير: $e' : 'Export failed: $e')),
+      );
+    }
   }
 }
 

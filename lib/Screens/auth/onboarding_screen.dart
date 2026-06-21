@@ -15,6 +15,11 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _ctrl = PageController();
   int _page = 0;
+  final _nameCtrl = TextEditingController();
+  String _tripType = 'hajj'; // 'hajj' or 'umrah'
+
+  // total pages = info pages + 1 setup page
+  static const int _setupPageIndex = 4;
 
   static const _pages = [
     _OPage(
@@ -41,7 +46,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _next() {
     HapticFeedback.lightImpact();
-    if (_page < _pages.length - 1) {
+    final totalPages = _pages.length + 1; // +1 for setup page
+    if (_page < totalPages - 1) {
       _ctrl.nextPage(duration: const Duration(milliseconds: 380), curve: Curves.easeInOutCubic);
     } else {
       _finish();
@@ -49,6 +55,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
+    if (_page == _setupPageIndex) {
+      await CashHelper.saveCash(key: 'pilgrim_name', value: _nameCtrl.text.trim());
+      await CashHelper.saveCash(key: 'trip_type', value: _tripType);
+    }
     await CashHelper.saveCash(key: 'onboarding_done', value: true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -59,6 +69,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _nameCtrl.dispose();
     super.dispose();
   }
 
@@ -70,7 +81,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
-    final isLast = _page == _pages.length - 1;
+    final totalPages = _pages.length + 1;
+    final isLast = _page == totalPages - 1;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -90,19 +102,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: PageView.builder(
                   controller: _ctrl,
                   onPageChanged: (i) => setState(() => _page = i),
-                  itemCount: _pages.length,
-                  itemBuilder: (_, i) => _PageView(
-                    page: _pages[i],
-                    gold: gold,
-                    textColor: textColor,
-                    muted: muted,
-                  ),
+                  itemCount: _pages.length + 1,
+                  itemBuilder: (_, i) {
+                    if (i < _pages.length) {
+                      return _PageView(page: _pages[i], gold: gold, textColor: textColor, muted: muted);
+                    }
+                    return _SetupPage(
+                      gold: gold,
+                      textColor: textColor,
+                      muted: muted,
+                      isDark: isDark,
+                      nameCtrl: _nameCtrl,
+                      tripType: _tripType,
+                      onTripTypeChanged: (v) => setState(() => _tripType = v),
+                    );
+                  },
                 ),
               ),
               // مؤشرات الصفحات
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pages.length, (i) {
+                children: List.generate(_pages.length + 1, (i) {
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 280),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -229,4 +249,116 @@ class _OPage {
   final String title;
   final String subtitle;
   const _OPage({required this.icon, required this.title, required this.subtitle});
+}
+
+class _SetupPage extends StatelessWidget {
+  final Color gold;
+  final Color textColor;
+  final Color muted;
+  final bool isDark;
+  final TextEditingController nameCtrl;
+  final String tripType;
+  final ValueChanged<String> onTripTypeChanged;
+
+  const _SetupPage({
+    required this.gold,
+    required this.textColor,
+    required this.muted,
+    required this.isDark,
+    required this.nameCtrl,
+    required this.tripType,
+    required this.onTripTypeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = isDark ? const Color(0xFF1E2329) : Colors.white;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 90, height: 90,
+            margin: const EdgeInsets.only(bottom: 24),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: [gold.withOpacity(.22), gold.withOpacity(.08)]),
+              border: Border.all(color: gold.withOpacity(.4), width: 1.5),
+            ),
+            child: Icon(Icons.waving_hand_rounded, color: gold, size: 44),
+          ),
+          Text('أخبرنا عنك', textAlign: TextAlign.center,
+              style: TextStyle(color: textColor, fontSize: 26, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold')),
+          const SizedBox(height: 8),
+          Text('حتى نُهيّئ التجربة لك', textAlign: TextAlign.center,
+              style: TextStyle(color: muted, fontSize: 15)),
+          const SizedBox(height: 32),
+          // حقل الاسم
+          TextField(
+            controller: nameCtrl,
+            textAlign: TextAlign.right,
+            style: TextStyle(color: textColor, fontSize: 16),
+            decoration: InputDecoration(
+              hintText: 'اسمك (اختياري)',
+              hintStyle: TextStyle(color: muted),
+              filled: true,
+              fillColor: cardColor,
+              prefixIcon: Icon(Icons.person_outline_rounded, color: gold),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // نوع الرحلة
+          Text('نوع رحلتك', style: TextStyle(color: muted, fontSize: 14), textAlign: TextAlign.right),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _TripTypeBtn(label: 'حج', icon: Icons.mosque_rounded, selected: tripType == 'hajj',
+                  gold: gold, cardColor: cardColor, textColor: textColor, onTap: () => onTripTypeChanged('hajj'))),
+              const SizedBox(width: 12),
+              Expanded(child: _TripTypeBtn(label: 'عمرة', icon: Icons.loop_rounded, selected: tripType == 'umrah',
+                  gold: gold, cardColor: cardColor, textColor: textColor, onTap: () => onTripTypeChanged('umrah'))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TripTypeBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color gold;
+  final Color cardColor;
+  final Color textColor;
+  final VoidCallback onTap;
+  const _TripTypeBtn({required this.label, required this.icon, required this.selected,
+      required this.gold, required this.cardColor, required this.textColor, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: selected ? gold.withOpacity(.15) : cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? gold : gold.withOpacity(.2), width: selected ? 2 : 1),
+        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? gold : textColor.withOpacity(.5), size: 28),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: selected ? gold : textColor, fontWeight: FontWeight.w700, fontSize: 16)),
+        ]),
+      ),
+    );
+  }
 }
