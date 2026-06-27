@@ -32,14 +32,16 @@ class AdminDashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- زر تصدير CSV ---
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: Text(isAr ? 'تصدير CSV' : 'Export CSV'),
-                  onPressed: () => _exportCsv(context, isAr),
-                ),
+              // --- أزرار الأدمن ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: Text(isAr ? 'تصدير CSV' : 'Export CSV'),
+                    onPressed: () => _exportCsv(context, isAr),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
 

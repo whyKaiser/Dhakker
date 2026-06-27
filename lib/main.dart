@@ -4,6 +4,7 @@ import 'package:dhakker/theme_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,6 +41,10 @@ Future<void> main() async {
     );
 
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
   } catch (e) {
     debugPrint("خطأ في تهيئة الفايربيس: $e");
   }
