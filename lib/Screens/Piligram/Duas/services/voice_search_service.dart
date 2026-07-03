@@ -22,8 +22,10 @@ class VoiceSearchService {
   }) async {
     await _speech.listen(
       localeId: localeId,
-      listenMode: stt.ListenMode.search,
-      partialResults: true,
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.search,
+        partialResults: true,
+      ),
       onSoundLevelChange: onSoundLevelChange,
       onResult: (result) {
         onResult(result.recognizedWords, result.finalResult);

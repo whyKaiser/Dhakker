@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../Screens/Admin/Dashboard/AdminDashboard_Screen.dart';
-import '../Screens/Admin/Manage Supplications/AdminSupplicationsList_Screen.dart';
-import '../Screens/Admin/Manage Zones/ZoneList_Screen.dart';
-import '../Screens/Admin/Settings/AdminSettings_Screen.dart';
+import '../Screens/Admin/Dashboard/admin_dashboard_screen.dart';
+import '../Screens/Admin/Manage Supplications/admin_supplications_list_screen.dart';
+import '../Screens/Admin/Manage Zones/zone_list_screen.dart';
+import '../Screens/Admin/Settings/admin_settings_screen.dart';
 import 'admin_states.dart';
 
 

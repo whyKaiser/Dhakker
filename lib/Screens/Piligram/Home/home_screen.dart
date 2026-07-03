@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -237,7 +236,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             });
                           },
                           onTap: () {
-                            HapticFeedback.mediumImpact();
+                            // الاهتزاز يصدر من الكيوبت نفسه (نقطة العدّ الموحّدة
+                            // للمصادر الثلاثة: زر/GPS/بوصلة) فلا نكرره هنا.
                             appCubit.incrementRound();
                           },
                           child: AnimatedScale(
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           onTapUp: (_) => setState(() => _saiButtonScale = 1.0),
                           onTapCancel: () => setState(() => _saiButtonScale = 1.0),
                           onTap: () {
-                            HapticFeedback.mediumImpact();
+                            // الاهتزاز من الكيوبت (نقطة العدّ الموحّدة) — لا تكرار هنا.
                             appCubit.incrementSai();
                           },
                           child: AnimatedScale(

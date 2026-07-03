@@ -54,7 +54,7 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         onTapUp: (_) {
           setState(() => _fabScale = 1.0);
           HapticFeedback.lightImpact();
-          GoToScreen(context: context, screen: const AdminZoneAddScreen());
+          goToScreen(context: context, screen: const AdminZoneAddScreen());
         },
         onTapCancel: () => setState(() => _fabScale = 1.0),
         child: AnimatedScale(
@@ -289,10 +289,10 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                                 docId: doc.id,
                                 data: data,
                                 onView: () {
-                                  GoToScreen(context: context, screen: AdminZoneDetailsScreen(zoneId: doc.id));
+                                  goToScreen(context: context, screen: AdminZoneDetailsScreen(zoneId: doc.id));
                                 },
                                 onEdit: () {
-                                  GoToScreen(context: context, screen: AdminZoneEditScreen(zoneId: doc.id));
+                                  goToScreen(context: context, screen: AdminZoneEditScreen(zoneId: doc.id));
                                 },
                                 onDelete: () async {
                                   await _deleteZone(context, doc.id, data);
@@ -408,7 +408,8 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
     try {
       await FirebaseFirestore.instance.collection('zones').doc(docId).delete();
 
-      if (!mounted) return;
+      // نفحص صلاحية نفس الـ context المستخدم بعد الـ await (لا mounted العام).
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(s.adminZonesDeleteSuccess),
@@ -416,7 +417,7 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         ),
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(s.adminZonesDeleteError),

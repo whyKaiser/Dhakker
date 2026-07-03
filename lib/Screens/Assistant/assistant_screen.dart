@@ -211,8 +211,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
     setState(() => _listening = true);
     await _speech.listen(
       localeId: _lang.sttLocale,
-      listenMode: stt.ListenMode.dictation,
-      partialResults: true,
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.dictation,
+        partialResults: true,
+      ),
       onResult: (r) {
         _input.text = r.recognizedWords;
         if (r.finalResult && r.recognizedWords.trim().isNotEmpty) {

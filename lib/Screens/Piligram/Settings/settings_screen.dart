@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:dhakker/Screens/auth/Splash_Screen.dart';
+import 'package:dhakker/Screens/auth/splash_screen.dart';
 import 'package:dhakker/theme_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       initialTime: TimeOfDay.now(),
       helpText: isAr ? 'اختر وقت الدواء' : 'Pick medication time',
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !ctx.mounted) return;
     // اسم اختياري.
     String label = '';
     await showDialog<void>(
@@ -327,10 +327,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       if (!mounted) return;
       _showSnackBar(s.settingsResetPasswordFailed);
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isBusy = false;
-      });
+      // لا return داخل finally (يبتلع الاستثناءات) — شرط عادي يكفي.
+      if (mounted) {
+        setState(() {
+          _isBusy = false;
+        });
+      }
     }
   }
 
@@ -470,10 +472,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       if (!mounted) return;
       _showSnackBar(s.settingsLogoutFailed);
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isBusy = false;
-      });
+      // لا return داخل finally (يبتلع الاستثناءات) — شرط عادي يكفي.
+      if (mounted) {
+        setState(() {
+          _isBusy = false;
+        });
+      }
     }
   }
 

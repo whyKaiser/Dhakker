@@ -56,10 +56,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   bool _groupBusy = false;
   static const String _kShareKey = 'group_share_enabled';
 
-  void _log(String message) {
-    debugPrint('DHKKR_MAP => $message');
-  }
-
   @override
   void initState() {
     super.initState();
@@ -73,9 +69,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final cubit = AppCubit.get(context);
       cubit.initCompass();
-      // مؤشّر الازدحام للحاج معطّل مؤقتاً: قراءة مواقع كل المستخدمين تنتهك
-      // خصوصيتهم وتُمنع بقواعد الأمان الجديدة. سيُعاد لاحقاً بتجميع آمن لكل منطقة.
-      // cubit.initCrowdZoneListener();
+      // مؤشّر الازدحام للحاج غير مفعّل: قراءة مواقع كل المستخدمين تنتهك
+      // خصوصيتهم وتُمنع بقواعد الأمان. لو أُريد لاحقاً: تجميع آمن في وثيقة
+      // zone_stats يكتبها الأدمن وتُقرأ هنا.
       await _initMapFlow();
       await _loadGroup();
     });

@@ -188,7 +188,8 @@ class _AdminSupplicationsListScreenState
           .doc(docId)
           .delete();
 
-      if (!mounted) return;
+      // نفحص صلاحية نفس الـ context المستخدم بعد الـ await (لا mounted العام).
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(s.adminSupplicationsDeleteSuccess),
@@ -196,7 +197,7 @@ class _AdminSupplicationsListScreenState
         ),
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(s.adminSupplicationsDeleteError),

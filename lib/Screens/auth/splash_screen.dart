@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:dhakker/Screens/Admin/layout/admin_home_layout.dart';
-import 'package:dhakker/Screens/Piligram/layout/Home_Layout.dart';
+import 'package:dhakker/Screens/Piligram/layout/home_layout.dart';
 import 'package:flutter/material.dart';
 // استيراد حزمة الموقع لطلب الصلاحية برمجياً من الآيفون
 import 'package:geolocator/geolocator.dart';
@@ -33,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen>
         permission = await Geolocator.requestPermission();
       }
     } catch (e) {
-      print("خطأ أثناء طلب صلاحية الموقع: $e");
+      debugPrint("خطأ أثناء طلب صلاحية الموقع: $e");
     }
   }
 

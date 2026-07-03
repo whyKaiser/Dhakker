@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dhakker/services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:ui';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,7 +13,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
-import 'Screens/auth/Splash_Screen.dart';
+import 'Screens/auth/splash_screen.dart';
 import 'Screens/auth/onboarding_screen.dart';
 import 'admin_bloc/admin_cubit.dart';
 import 'bloc/cubit.dart';
@@ -145,6 +144,9 @@ class _MyAppState extends State<MyApp> {
                 theme: dhakkerLightTheme(),
                 darkTheme: dhakkerDarkTheme(),
                 themeMode: mode,
+                // تحوّل ناعم بين الفاتح والداكن بدل القفزة اللحظية (إحساس iOS).
+                themeAnimationDuration: const Duration(milliseconds: 400),
+                themeAnimationCurve: Curves.easeOutCubic,
                 locale: loc,
                 supportedLocales: S.delegate.supportedLocales,
                 localizationsDelegates: const [

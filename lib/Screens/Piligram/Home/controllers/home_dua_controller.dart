@@ -59,6 +59,7 @@ class HomeDuaController extends ChangeNotifier {
   DateTime? _lastTriggerTimestamp;
   bool _isCurrentZoneHandled = false;
   String? _lastWrittenZoneId; // آخر نطاق كتبناه في حساب المستخدم (لحساب الكثافة الحقيقي)
+  String? _lastFetchedZoneId; // آخر نطاق جلبنا أدعيته — يمنع إعادة الجلب كل تحديث موقع
 
   String _zoneKey(String key) => '${key}_$userId';
 
@@ -224,6 +225,7 @@ class HomeDuaController extends ChangeNotifier {
       currentZone = null;
       currentDuasList = []; // تصفير القائمة
       _isCurrentZoneHandled = false;
+      _lastFetchedZoneId = null; // العودة للنطاق لاحقاً = جلب جديد للأدعية
       await _clearLastHandledState();
       await _writeUserCurrentZone(''); // تحديث التواجد: خارج كل النطاقات
       notifyListeners();
@@ -236,12 +238,14 @@ class HomeDuaController extends ChangeNotifier {
     // تحديث حالة التواجد في حساب المستخدم (للكثافة وألوان الخريطة الحقيقية)
     await _writeUserCurrentZone(detectedZone.zoneId);
 
-    // 2. جلب كل الأدعية الخاصة بالمنطقة وحفظها في القائمة
-    final supplications = await supplicationService.getSupplicationsByZone(
-      detectedZone.zoneId,
-    );
-
-    currentDuasList = supplications;
+    // 2. جلب أدعية المنطقة عند تغيّرها فقط — لا عند كل تحديث موقع داخل نفس
+    // المنطقة (يصل كل بضعة أمتار)، فذلك يهدر قراءات Firestore بلا فائدة.
+    if (_lastFetchedZoneId != detectedZone.zoneId) {
+      currentDuasList = await supplicationService.getSupplicationsByZone(
+        detectedZone.zoneId,
+      );
+      _lastFetchedZoneId = detectedZone.zoneId;
+    }
 
     if (currentDuasList.isEmpty) {
       _isCurrentZoneHandled = false;

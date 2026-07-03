@@ -8,10 +8,10 @@ import '../../../locale_controller.dart';
 import '../../../shared/network/local/cash_helper.dart';
 import '../../../theme/dhakker_theme.dart';
 import '../../../theme_controller.dart';
-import '../../auth/Splash_Screen.dart';
+import '../../auth/splash_screen.dart';
 
 // --- السطر المصلح (تأكد أن اسم الملف مطابق لما عندك) ---
-import '../SOS/AdminSosMonitor_Screen.dart';
+import '../SOS/admin_sos_monitor_screen.dart';
 import '../Alerts/admin_alerts_screen.dart';
 import '../Crowd/admin_crowd_screen.dart';
 

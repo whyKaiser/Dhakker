@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 import '../../generated/l10n.dart';
 import '../../locale_controller.dart';
 import '../../theme/dhakker_theme.dart';
-import '../Piligram/layout/Home_Layout.dart';
-import 'Register_Screen.dart';
+import '../Piligram/layout/home_layout.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

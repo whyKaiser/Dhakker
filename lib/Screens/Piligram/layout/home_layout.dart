@@ -595,7 +595,14 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
               ),
               body: Column(
                 children: [
-                  if (_offline) _OfflineBanner(palette: palette, isAr: isAr),
+                  // ظهور/اختفاء شريط الأوفلاين بانزلاق ناعم بدل القفزة اللحظية.
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    child: _offline
+                        ? _OfflineBanner(palette: palette, isAr: isAr)
+                        : const SizedBox(width: double.infinity, height: 0),
+                  ),
                   Expanded(
                     child: Stack(
                       children: [
@@ -635,6 +642,7 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
                 palette: palette,
                 currentIndex: cubit.currentScreen,
                 onTap: (index) {
+                  HapticFeedback.lightImpact(); // نقرة iOS خفيفة عند تبديل التبويب
                   _pageController.animateToPage(
                     index,
                     duration: const Duration(milliseconds: 350),
@@ -1138,42 +1146,48 @@ class _FixedBottomNav extends StatelessWidget {
           ),
           items: [
             BottomNavigationBarItem(
-              icon: const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Icon(Icons.home_rounded),
-              ),
+              icon: _NavIcon(Icons.home_rounded, selected: currentIndex == 0),
               label: s.navHome,
             ),
             BottomNavigationBarItem(
-              icon: const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Icon(Icons.map_rounded),
-              ),
+              icon: _NavIcon(Icons.map_rounded, selected: currentIndex == 1),
               label: s.navMap,
             ),
             BottomNavigationBarItem(
-              icon: const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Icon(Icons.menu_book_rounded),
-              ),
+              icon: _NavIcon(Icons.menu_book_rounded, selected: currentIndex == 2),
               label: isAr ? 'الدليل' : 'Guide',
             ),
             BottomNavigationBarItem(
-              icon: const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Icon(Icons.auto_awesome_rounded),
-              ),
+              icon: _NavIcon(Icons.auto_awesome_rounded, selected: currentIndex == 3),
               label: isAr ? 'المساعد' : 'Assistant',
             ),
             BottomNavigationBarItem(
-              icon: const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Icon(Icons.settings_rounded),
-              ),
+              icon: _NavIcon(Icons.settings_rounded, selected: currentIndex == 4),
               label: s.navSettings,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// أيقونة تبويب تنبض بارتداد ناعم (easeOutBack) عند اختيارها — لمسة iOS حيّة
+/// بلا أي تكلفة أداء لأن الأنيميشن يعمل فقط لحظة تغيّر الاختيار.
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final bool selected;
+  const _NavIcon(this.icon, {required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: AnimatedScale(
+        scale: selected ? 1.18 : 1.0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutBack,
+        child: Icon(icon),
       ),
     );
   }

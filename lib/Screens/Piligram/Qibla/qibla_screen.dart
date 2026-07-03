@@ -38,7 +38,9 @@ class _QiblaScreenState extends State<QiblaScreen>
   Future<void> _init() async {
     try {
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final coords = Coordinates(pos.latitude, pos.longitude);
       final qibla = Qibla(coords);

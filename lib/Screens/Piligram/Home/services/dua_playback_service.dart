@@ -124,7 +124,13 @@ class DuaPlaybackService {
 
     if (hasFile) {
       _updatePlayingState(true);
-      await _audioPlayer.play(UrlSource(dua.audioUrl.trim()));
+      try {
+        await _audioPlayer.play(UrlSource(dua.audioUrl.trim()));
+      } catch (e) {
+        // فشل تحميل/تشغيل الرابط (شبكة ضعيفة أو ملف تالف) — نعيد الحالة
+        // حتى لا يعلق الزر على "يشغّل" للأبد.
+        _updatePlayingState(false);
+      }
       return;
     }
 

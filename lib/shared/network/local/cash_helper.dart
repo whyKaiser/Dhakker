@@ -1,47 +1,36 @@
-
-
-
-
 import 'package:shared_preferences/shared_preferences.dart';
 
-class CashHelper
-{
+class CashHelper {
   static SharedPreferences? preferences;
 
-  static initPreference() async
-  {
-    preferences=await SharedPreferences.getInstance();
+  static initPreference() async {
+    preferences = await SharedPreferences.getInstance();
   }
 
-  static  Future<bool?> saveCash({
+  static Future<bool?> saveCash({
     required String key,
     required dynamic value,
-  })async
-  {
-    if(value is int) {
+  }) async {
+    if (value is int) {
       return await preferences?.setInt(key, value);
-    } else if(value is String)
+    } else if (value is String) {
       return await preferences?.setString(key, value);
-    else  if(value is bool)
+    } else if (value is bool) {
       return await preferences?.setBool(key, value);
-    else
-    {
+    } else {
       return await preferences?.setDouble(key, value);
     }
   }
 
-  static  dynamic getCash({
+  static dynamic getCash({
     required String key,
-  })
-  {
+  }) {
     return preferences?.get(key);
   }
 
-
   static Future<bool> removeCash({
     required String key,
-  }) async
-  {
-    return await  preferences!.remove(key);
+  }) async {
+    return await preferences!.remove(key);
   }
 }

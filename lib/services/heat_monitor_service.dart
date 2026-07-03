@@ -12,19 +12,25 @@ class HeatMonitorService {
   Timer? _timer;
   HeatLevel _lastLevel = HeatLevel.none;
   bool _isAr = true;
+  double? _lat;
+  double? _lng;
 
   void start({required double lat, required double lng, bool isAr = true}) {
     _isAr = isAr;
+    _lat = lat;
+    _lng = lng;
     _timer?.cancel();
     // فحص فوري عند البدء
-    _check(lat, lng);
-    _timer = Timer.periodic(const Duration(minutes: 30), (_) => _check(lat, lng));
+    _check();
+    _timer = Timer.periodic(const Duration(minutes: 30), (_) => _check());
   }
 
+  /// يحدّث الإحداثيات فقط — الفحص الدوري القادم يستخدم أحدث موقع تلقائياً.
+  /// لا فحص فوري ولا إعادة تشغيل للمؤقت، حتى لا نُغرق خدمة الطقس بالطلبات
+  /// مع كل نبضة GPS (تصل كل بضعة أمتار أثناء المشي).
   void updateLocation(double lat, double lng) {
-    _timer?.cancel();
-    _check(lat, lng);
-    _timer = Timer.periodic(const Duration(minutes: 30), (_) => _check(lat, lng));
+    _lat = lat;
+    _lng = lng;
   }
 
   void stop() {
@@ -33,7 +39,10 @@ class HeatMonitorService {
     _lastLevel = HeatLevel.none;
   }
 
-  Future<void> _check(double lat, double lng) async {
+  Future<void> _check() async {
+    final lat = _lat;
+    final lng = _lng;
+    if (lat == null || lng == null) return;
     try {
       final advice = await _ws.currentAdvice(lat: lat, lng: lng);
       if (advice.level == HeatLevel.danger && _lastLevel != HeatLevel.danger) {

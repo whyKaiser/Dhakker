@@ -54,10 +54,16 @@ class GroupService {
   CollectionReference<Map<String, dynamic>> get _groups =>
       _db.collection('groups');
 
-  /// يولّد كود انضمام قصير سهل القراءة مثل: HAJJ-4821
-  String _generateCode() {
-    final n = Random().nextInt(9000) + 1000; // 1000..9999
-    return 'HAJJ-$n';
+  /// يولّد كود انضمام قصير سهل القراءة مثل HAJJ-4821 مع ضمان عدم تصادمه
+  /// مع مجموعة قائمة (فضاء الأكواد 9000 فقط، والتصادم يعني انضمام حاج
+  /// لمجموعة غريبة). بعد عدة تصادمات نوسّع لخمس خانات كخطة أخيرة.
+  Future<String> _generateUniqueCode() async {
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final code = 'HAJJ-${Random().nextInt(9000) + 1000}'; // 1000..9999
+      final dup = await _groups.where('code', isEqualTo: code).limit(1).get();
+      if (dup.docs.isEmpty) return code;
+    }
+    return 'HAJJ-${Random().nextInt(90000) + 10000}'; // 10000..99999
   }
 
   /// ينشئ مجموعة جديدة ويُضيف المنشئ كعضو، ويعيد (groupId, code).
@@ -65,7 +71,7 @@ class GroupService {
     final uid = _uid;
     if (uid.isEmpty) throw Exception('غير مسجّل الدخول');
 
-    final code = _generateCode();
+    final code = await _generateUniqueCode();
     final ref = _groups.doc();
     await ref.set({
       'name': name.trim().isEmpty ? 'مجموعتي' : name.trim(),

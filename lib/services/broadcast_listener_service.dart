@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,7 +13,9 @@ class BroadcastListenerService {
 
   static const String _lastSeenKey = 'broadcast_last_seen_ts';
 
-  Stream<QuerySnapshot<Map<String, dynamic>>>? _stream;
+  // نحفظ الاشتراك نفسه (لا الـ Stream) حتى نستطيع إلغاءه فعلياً في stop —
+  // بدونه يبقى المستمع حيّاً للأبد وتتكرر الإشعارات عند إعادة البدء.
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
   bool _started = false;
 
   Future<void> start({bool isAr = true}) async {
@@ -22,13 +26,13 @@ class BroadcastListenerService {
     final lastSeenMs = prefs.getInt(_lastSeenKey) ?? 0;
     final lastSeen = DateTime.fromMillisecondsSinceEpoch(lastSeenMs);
 
-    _stream = FirebaseFirestore.instance
+    await _subscription?.cancel();
+    _subscription = FirebaseFirestore.instance
         .collection('broadcasts')
         .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSeen))
         .orderBy('timestamp', descending: false)
-        .snapshots();
-
-    _stream!.listen((snap) async {
+        .snapshots()
+        .listen((snap) async {
       for (final doc in snap.docs) {
         final data = doc.data();
         final msg = (data['message'] ?? '').toString().trim();
@@ -53,6 +57,7 @@ class BroadcastListenerService {
 
   void stop() {
     _started = false;
-    _stream = null;
+    _subscription?.cancel();
+    _subscription = null;
   }
 }

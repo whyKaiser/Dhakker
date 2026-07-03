@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dhakker/bloc/states.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,13 +12,14 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'package:dhakker/Screens/Piligram/Home/Home_Screen.dart';
-import 'package:dhakker/Screens/Piligram/Map/Map_Screen.dart';
-import '../Screens/Piligram/Duas/Duas_Screen.dart';
-import '../Screens/Piligram/Settings/Settings_Screen.dart';
+import 'package:dhakker/Screens/Piligram/Home/home_screen.dart';
+import 'package:dhakker/Screens/Piligram/Map/map_screen.dart';
+import '../Screens/Piligram/Duas/duas_screen.dart';
+import '../Screens/Piligram/Settings/settings_screen.dart';
 import '../Screens/Assistant/assistant_screen.dart';
 import '../shared/network/local/cash_helper.dart';
 import '../shared/location/location_smoother.dart';
+import '../locale_controller.dart';
 import '../services/group_service.dart';
 import '../services/notification_service.dart';
 import '../services/heat_monitor_service.dart';
@@ -62,10 +65,12 @@ class AppCubit extends Cubit<AppStates> {
   int saiCount = 0;
 
   // مراكز الصفا والمروة الافتراضية (تُستبدل بقيم Firestore عند توفّرها).
-  double safaLat = 21.416151;
-  double safaLng = 39.826540;
-  double marwaLat = 21.418040;
-  double marwaLng = 39.826030;
+  // مطابقة لإحداثيات النطاقات الحقيقية في قاعدة البيانات — لو فشل التحميل
+  // (أول تشغيل بدون إنترنت) يبقى العدّ صحيحاً ولا يحتسب أشواطاً وهمية.
+  double safaLat = 21.42193;
+  double safaLng = 39.82754;
+  double marwaLat = 21.42529;
+  double marwaLng = 39.82709;
 
   // آخر طرف سجّلنا الوصول إليه: 'safa' أو 'marwa' أو null قبل البداية.
   String? _lastSaiEnd;
@@ -141,6 +146,9 @@ class AppCubit extends Cubit<AppStates> {
 
   double _accumulatedRotation = 0.0; // مجموع الدوران منذ آخر شوط (بالدرجات)
   double? _lastHeading; // آخر زاوية بوصلة لحساب الفرق
+  // أول مرور بنقطة البداية = بداية الشوط الأول لا شوطاً مكتملاً؛ هذا العلم
+  // يمنع احتساب +1 لمجرد الاقتراب الأول من النقطة قبل إكمال أي دورة.
+  bool _tawafArmed = false;
   bool _nearTawaf = false; // هل آخر موقع GPS قريب من المطاف؟
   bool _nearSai = false; // هل آخر موقع GPS قريب من الصفا/المروة؟
   // وضع الدقة القصوى لـ GPS: يُفعَّل فقط قرب مناطق العدّ (طواف/سعي) لتوفير
@@ -279,7 +287,13 @@ class AppCubit extends Cubit<AppStates> {
 
     _accumulatedRotation += delta;
 
-    if (_accumulatedRotation.abs() >= _tawafLapDegrees) {
+    // الطواف عكس عقارب الساعة فقط، فالتقدّم الصحيح يجعل المجموع سالباً.
+    // مجموع موجب بلغ الحد = لفّ باتجاه الساعة (ليس طوافاً) — نصفّره بلا عدّ.
+    if (_accumulatedRotation >= _tawafLapDegrees) {
+      _accumulatedRotation = 0.0;
+      return;
+    }
+    if (_accumulatedRotation <= -_tawafLapDegrees) {
       _registerTawafLap();
       _accumulatedRotation = 0.0;
     }
@@ -316,6 +330,31 @@ class AppCubit extends Cubit<AppStates> {
     await _startPositionStream();
   }
 
+  /// يبني إعدادات الموقع للمنصة: على أندرويد نطلب خدمة أمامية
+  /// (foreground service) بإشعار دائم حتى يستمر عدّ الأشواط والشاشة مطفأة
+  /// أو الجوال في الجيب — بدونها يقتل النظام خط GPS عند إطفاء الشاشة.
+  LocationSettings _buildLocationSettings({
+    required LocationAccuracy accuracy,
+    required int distanceFilter,
+  }) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final isAr = LocaleController.locale.value.languageCode == 'ar';
+      return AndroidSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
+        foregroundNotificationConfig: ForegroundNotificationConfig(
+          notificationTitle:
+              isAr ? 'ذِكّر — عدّ الأشواط يعمل' : 'Dhakker — lap counting active',
+          notificationText: isAr
+              ? 'نتابع موقعك لعدّ الطواف والسعي حتى مع إطفاء الشاشة'
+              : "Tracking your location to count Tawaf/Sa'i even with the screen off",
+          enableWakeLock: true,
+        ),
+      );
+    }
+    return LocationSettings(accuracy: accuracy, distanceFilter: distanceFilter);
+  }
+
   /// يبدأ (أو يعيد بدء) خط الموقع بإعدادات تتكيّف مع القرب من مناطق العدّ
   /// وحالة الحركة معاً، لتوفير البطارية:
   /// • قرب الطواف/السعي: دقة قصوى (bestForNavigation) لعدّ دقيق.
@@ -326,21 +365,21 @@ class AppCubit extends Cubit<AppStates> {
     final LocationSettings settings;
     if (_highAccuracyMode) {
       settings = _isWalking
-          ? const LocationSettings(
+          ? _buildLocationSettings(
               accuracy: LocationAccuracy.bestForNavigation,
               distanceFilter: 3,
             )
-          : const LocationSettings(
+          : _buildLocationSettings(
               accuracy: LocationAccuracy.high,
               distanceFilter: 8,
             );
     } else {
       settings = _isWalking
-          ? const LocationSettings(
+          ? _buildLocationSettings(
               accuracy: LocationAccuracy.high,
               distanceFilter: 15,
             )
-          : const LocationSettings(
+          : _buildLocationSettings(
               accuracy: LocationAccuracy.high,
               distanceFilter: 30,
             );
@@ -373,17 +412,26 @@ class AppCubit extends Cubit<AppStates> {
     _maybeShareGroupLocation(position.latitude, position.longitude);
 
     // أول قراءة GPS — ابدأ مراقبة الحرارة بالموقع الحقيقي للحاج
+    final isAr = LocaleController.locale.value.languageCode == 'ar';
     if (!_heatMonitorStarted) {
       _heatMonitorStarted = true;
       HeatMonitorService.instance.start(
         lat: position.latitude,
         lng: position.longitude,
+        isAr: isAr,
       );
       // حمّل جدول الحج من الذاكرة وابدأ التذكيرات
       HajjScheduleService.instance.loadDay8Date().then((_) {
         HajjScheduleService.instance.start();
       });
-      BroadcastListenerService.instance.start();
+      BroadcastListenerService.instance.start(isAr: isAr);
+    } else {
+      // نمرّر أحدث موقع لمراقب الحرارة حتى لا يظل الفحص معلّقاً على أول قراءة
+      // (الحاج ينتقل مكة ↔ عرفات ↔ مزدلفة والطقس يختلف بينها).
+      HeatMonitorService.instance.updateLocation(
+        position.latitude,
+        position.longitude,
+      );
     }
 
     // نتجاهل القراءة الخام ضعيفة الدقة قبل أن تلوّث الفلتر والعدّ.
@@ -442,7 +490,11 @@ class AppCubit extends Cubit<AppStates> {
     final distance = Geolocator.distanceBetween(lat, lng, startLat, startLng);
 
     if (distance < 8 && hasExitedThreshold) {
-      _registerTawafLap(); // عبر الحارس الموحّد لتفادي العدّ المزدوج مع البوصلة
+      if (_tawafArmed) {
+        _registerTawafLap(); // عبر الحارس الموحّد لتفادي العدّ المزدوج مع البوصلة
+      } else {
+        _tawafArmed = true; // أول مرور بالنقطة: تهيئة فقط، الدورة لم تكتمل بعد
+      }
       hasExitedThreshold = false;
       CashHelper.saveCash(key: _kHasExitedKey, value: false);
     }
@@ -460,10 +512,19 @@ class AppCubit extends Cubit<AppStates> {
   void incrementRound() {
     if (roundCount < 7) {
       roundCount++;
+      // اهتزاز ملموس مع كل شوط (حتى والجوال في الجيب أثناء العدّ التلقائي)،
+      // واهتزاز أقوى عند اكتمال السابع — الحاج يحسّ بالعدّ دون النظر للشاشة.
+      if (roundCount >= 7) {
+        HapticFeedback.heavyImpact();
+      } else {
+        HapticFeedback.mediumImpact();
+      }
       CashHelper.saveCash(key: _kRoundCountKey, value: roundCount);
-      // بدء تذكير الماء مع أول شوط.
+      // بدء تذكير الماء مع أول شوط — بلغة الواجهة الحالية.
       if (roundCount == 1) {
-        NotificationService.instance.startWaterReminder();
+        NotificationService.instance.startWaterReminder(
+          isAr: LocaleController.locale.value.languageCode == 'ar',
+        );
       }
       // إيقاف التذكير بعد اكتمال الطواف.
       if (roundCount >= 7) {
@@ -476,6 +537,7 @@ class AppCubit extends Cubit<AppStates> {
   void resetRounds() {
     roundCount = 0;
     hasExitedThreshold = true;
+    _tawafArmed = false;
     _accumulatedRotation = 0.0;
     _lastHeading = null;
     _lastLapMs = 0;
@@ -578,9 +640,17 @@ class AppCubit extends Cubit<AppStates> {
   void incrementSai() {
     if (saiCount < 7) {
       saiCount++;
+      // نفس نمط اهتزاز الطواف: ملموس لكل شوط وقوي عند اكتمال السعي.
+      if (saiCount >= 7) {
+        HapticFeedback.heavyImpact();
+      } else {
+        HapticFeedback.mediumImpact();
+      }
       CashHelper.saveCash(key: _kSaiCountKey, value: saiCount);
       if (saiCount == 1) {
-        NotificationService.instance.startWaterReminder();
+        NotificationService.instance.startWaterReminder(
+          isAr: LocaleController.locale.value.languageCode == 'ar',
+        );
       }
       if (saiCount >= 7) {
         NotificationService.instance.stopWaterReminder();
@@ -653,22 +723,10 @@ class AppCubit extends Cubit<AppStates> {
   // ==========================================
   // --- منطق مؤشر الازدحام اللحظي للمناطق ---
   // ==========================================
+  // ملاحظة: قواعد Firestore تمنع الحاج من قراءة وثائق المستخدمين الآخرين
+  // (خصوصية)، لذا لا يوجد مستمع ازدحام في واجهة الحاج — تبقى الخريطة بالألوان
+  // الافتراضية. شاشة الازدحام الحقيقية للأدمن فقط (admin_crowd_screen).
   Map<String, int> zoneUserCount = {};
-
-  void initCrowdZoneListener() {
-    FirebaseFirestore.instance.collection('users').snapshots().listen((event) {
-      final Map<String, int> tempCount = {};
-      for (var doc in event.docs) {
-        final data = doc.data();
-        if (data.containsKey('currentZone')) {
-          final zoneId = data['currentZone'].toString();
-          tempCount[zoneId] = (tempCount[zoneId] ?? 0) + 1;
-        }
-      }
-      zoneUserCount = tempCount;
-      emit(AppMapCrowdDensityUpdateState());
-    });
-  }
 
   Color getZoneColor(String zoneId, Color defaultGold) {
     final count = zoneUserCount[zoneId] ?? 0;
@@ -780,9 +838,18 @@ class AppCubit extends Cubit<AppStates> {
 
   List<Map<String, dynamic>> sosRequests = [];
 
+  // نحفظ اشتراكات الأدمن ونلغي القديمة قبل كل إعادة استماع، حتى لا تتراكم
+  // المستمعات (وتتضاعف القراءات) مع كل فتح لشاشات لوحة التحكم.
+  StreamSubscription? _adminStatsSubscription;
+  StreamSubscription? _sosRequestsSubscription;
+
   void getAdminStats() {
     emit(AppAdminLoadingStatsState());
-    FirebaseFirestore.instance.collection('users').snapshots().listen((event) {
+    _adminStatsSubscription?.cancel();
+    _adminStatsSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .snapshots()
+        .listen((event) {
       adminStats['totalUsers'] = event.docs.length;
       try {
         adminStats['haramCrowd'] = event.docs.where((doc) {
@@ -793,13 +860,14 @@ class AppCubit extends Cubit<AppStates> {
         debugPrint("Error counting crowd: $e");
       }
       emit(AppAdminGetStatsSuccessState());
-    }).onError((error) {
+    }, onError: (error) {
       emit(AppAdminGetStatsErrorState(error.toString()));
     });
   }
 
   void getSOSRequests() {
-    FirebaseFirestore.instance
+    _sosRequestsSubscription?.cancel();
+    _sosRequestsSubscription = FirebaseFirestore.instance
         .collection('sos_requests')
         .orderBy('timestamp', descending: true)
         .snapshots()
@@ -807,7 +875,7 @@ class AppCubit extends Cubit<AppStates> {
       sosRequests = event.docs.map((doc) => doc.data()).toList();
       adminStats['sosActive'] = sosRequests.length;
       emit(AppAdminGetSOSRequestsSuccessState());
-    }).onError((error) {
+    }, onError: (error) {
       emit(AppAdminGetSOSRequestsErrorState(error.toString()));
     });
   }
@@ -818,6 +886,8 @@ class AppCubit extends Cubit<AppStates> {
     _roundSubscription?.cancel();
     _stepSubscription?.cancel();
     _pedestrianSubscription?.cancel();
+    _adminStatsSubscription?.cancel();
+    _sosRequestsSubscription?.cancel();
     return super.close();
   }
 }
