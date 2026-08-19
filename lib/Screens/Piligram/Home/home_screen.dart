@@ -11,7 +11,9 @@ import '../../../bloc/states.dart';
 import '../../../generated/l10n.dart';
 import '../../../services/prayer_times_service.dart';
 import '../../../services/weather_service.dart';
+import '../Duas/widgets/content_kind_card.dart';
 import 'controllers/home_dua_controller.dart';
+import 'models/supplication_model.dart';
 import 'services/dua_playback_service.dart';
 import 'services/supplication_service.dart';
 import 'services/zone_detection_service.dart';
@@ -381,6 +383,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           palette: palette,
                           title: duaTitle ?? s.homeRecommendedNow,
                           dua: duaText ?? s.homeNoDuaMessage,
+                          kind: _controller.displayedDuaKind(0),
                           buttonText: primaryButtonText(),
                           canPlay: _controller.hasDua,
                           isPlaying: _controller.isPlaying,
@@ -398,7 +401,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           Align(
                             alignment: AlignmentDirectional.centerStart,
                             child: Text(
-                              isAr ? 'أدعية أخرى مخصصة لهذا المكان:' : 'Other supplications for this place:',
+                              // لا نقول «مخصصة لهذا المكان»: التخصيص يُنسب
+                              // للمصدر، وهو يظهر في وسم كل بطاقة على حدة.
+                              isAr ? 'أدعية أخرى تناسب هذا الموضع:' : 'More supplications you may say here:',
                               style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
                             ),
                           ),
@@ -430,6 +435,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       decoration: BoxDecoration(color: palette.chipBg, borderRadius: BorderRadius.circular(10)),
                                       child: Text(otherTitle, style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.bold)),
                                     ),
+                                    if (_controller.displayedDuaKind(realIndex) != null) ...[
+                                      const SizedBox(height: 8),
+                                      ContentKindBadge(kind: _controller.displayedDuaKind(realIndex)!),
+                                    ],
                                     const SizedBox(height: 10),
                                     Text(otherText, style: TextStyle(color: palette.textPrimary, fontSize: 16, height: 1.6, fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 12),
@@ -457,6 +466,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               );
                             },
                           ),
+                        ],
+
+                        // --- الإرشادات: قسم منفصل تمامًا عن الأدعية ---
+                        // نصوص مثل «لا يصح الطواف من داخل الحِجْر» أحكام
+                        // وتوجيهات، لا تُعرض تحت عنوان «دعاء» ولا تُشغَّل.
+                        if (_controller.guidanceItems.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              isAr ? 'إرشادات هذا الموضع (ليست أدعية):' : 'Guidance for this place (not supplications):',
+                              style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          for (final item in _controller.guidanceItems)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: GuidanceCard(
+                                title: item.titleByLanguage(langCode),
+                                body: item.textByLanguage(langCode),
+                                cardColor: palette.card,
+                                textColor: palette.textPrimary,
+                              ),
+                            ),
                         ],
 
                         const SizedBox(height: 16),
@@ -591,6 +625,10 @@ class _DuaCard extends StatelessWidget {
   final String playingText;
   final VoidCallback? onDone;
 
+  /// تصنيف المحتوى — يُعرض كوسم ظاهر حتى لا يُفهم الدعاء العام على أنه
+  /// مخصوص بهذا الموضع. null عندما لا يوجد دعاء معروض أصلاً.
+  final SupplicationContentKind? kind;
+
   const _DuaCard({
     required this.palette,
     required this.title,
@@ -600,6 +638,7 @@ class _DuaCard extends StatelessWidget {
     required this.isPlaying,
     required this.playingText,
     required this.onDone,
+    this.kind,
   });
 
   @override
@@ -645,6 +684,13 @@ class _DuaCard extends StatelessWidget {
               ),
             ),
           ),
+          if (kind != null) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: ContentKindBadge(kind: kind!),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             dua,

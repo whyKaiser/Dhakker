@@ -19,6 +19,14 @@ class ZonePoint {
 
 class ZoneModel {
   final String zoneId;
+
+  /// معرّف ثابت مقروء (slug) مثل `mataf` / `hajar_aswad`.
+  ///
+  /// نستعمله لربط النصوص بالمواضع بدل الاسم العربي القابل للتعديل من لوحة
+  /// الإدارة: تغيير `nameAr` يجب ألا يفصل الدعاء عن موضعه. يبقى `zoneId`
+  /// المفتاح الأساسي في Firestore، و`zoneKey` هو الرابط الدلالي المستقر.
+  final String zoneKey;
+
   final String nameAr;
   final String nameEn;
   final String type;
@@ -32,6 +40,7 @@ class ZoneModel {
 
   const ZoneModel({
     required this.zoneId,
+    this.zoneKey = '',
     required this.nameAr,
     required this.nameEn,
     required this.type,
@@ -88,6 +97,7 @@ class ZoneModel {
 
     return ZoneModel(
       zoneId: (data['zoneId'] ?? doc.id).toString(),
+      zoneKey: (data['zoneKey'] ?? '').toString().trim(),
       nameAr: (data['nameAr'] ?? '').toString(),
       nameEn: (data['nameEn'] ?? '').toString(),
       type: (data['type'] ?? 'circle').toString(),
