@@ -81,9 +81,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # `npm ci` (not `npm install`) — installs exactly the committed
+      # package-lock.json and fails loudly if package.json and the lockfile
+      # ever drift apart, so CI stays deterministic.
       - name: Install rules-test dependencies
         working-directory: test_firestore_rules
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       # `firebase emulators:exec` boots the emulator, runs the suite, and
       # tears it down — no long-lived emulator and no real project involved.
       - name: Run Firestore rules tests

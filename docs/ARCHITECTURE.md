@@ -510,12 +510,21 @@ not sufficient verification.
 **Firestore rules** — 21/21 passing against the real Firebase emulator:
 
 ```
-npm --prefix test_firestore_rules install
+npm --prefix test_firestore_rules ci
 npm --prefix test_firestore_rules test
 ```
 
 `firebase emulators:exec` boots the emulator, runs the suite, and tears it
-down; no real project is touched. This also runs as its own CI job. The suite
+down; no real project is touched. This also runs as its own CI job, which
+installs with `npm ci` from the committed `package-lock.json`.
+
+Dependency versions are **pinned exactly and must stay mutually compatible**:
+`@firebase/rules-unit-testing@5.0.1` declares a peer of `firebase@^12.0.0`.
+An incompatible pair (e.g. rules-unit-testing 3.0.4, whose peer is
+`firebase@^10`, alongside firebase 11) fails `npm ci` with `ERESOLVE`. Fix
+that by choosing a compatible pair — 4.0.1 pairs with firebase 11.x, 3.0.4
+with 10.x — never with `--force` or `--legacy-peer-deps`, which would install
+a combination the packages do not claim to support. The suite
 covers authenticated-vs-anonymous reads, admin-only create/delete, the
 usage_count-only pilgrim update path, every individual verification field
 being unwritable by ordinary users, and the rule that not even an admin may
