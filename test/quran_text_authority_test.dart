@@ -122,6 +122,96 @@ void main() {
     });
   });
 
+  group('against the pinned official KFGQPC data', () {
+    // The comparison is re-derived here from the official file committed at
+    // third_party/kfgqpc/hafsData_v2-0.json, not merely from the manifest —
+    // so the manifest cannot drift away from the authority it claims.
+    const dataPath = 'third_party/kfgqpc/hafsData_v2-0.json';
+
+    final official = (jsonDecode(File(dataPath).readAsStringSync()) as List)
+        .cast<Map<String, dynamic>>();
+    final byRef = {
+      for (final r in official) '${r['sura_no']}:${r['aya_no']}': r,
+    };
+
+    // The official aya_text ends with the āyah-number glyph, a character in
+    // the Arabic Presentation Forms block. It is normally preceded by
+    // U+00A0 — but not always: 2:286 uses a plain space, and read.me records
+    // a v2.0 fix to that very āyah. So strip the glyph and then trailing
+    // whitespace of either kind rather than assuming one separator. Nothing
+    // else is touched: no character or diacritic is normalised.
+    String stripAyahMark(String text) {
+      var t = text.trim();
+      while (t.isNotEmpty) {
+        final c = t.codeUnitAt(t.length - 1);
+        final isTrailing = (c >= 0xFB50 && c <= 0xFDFF) ||
+            (c >= 0xFE70 && c <= 0xFEFF) ||
+            c == 0x00A0 ||
+            c == 0x0020;
+        if (!isTrailing) break;
+        t = t.substring(0, t.length - 1);
+      }
+      return t;
+    }
+
+    test('the pinned file is the v2.0 dataset', () {
+      expect(official.length, 6236);
+      expect(manifest['editionLabel'], 'KFGQPC Hafs Uthmanic Data v2.0');
+      expect(manifest['editionDate'], '2022-09-07');
+    });
+
+    test('every stored text is a verbatim span of the official aya_text', () {
+      for (final a in ayat) {
+        final parts = <String>[];
+        for (final n in (a['ayahNumbers'] as List)) {
+          final row = byRef['${a['surahNumber']}:$n'];
+          expect(row, isNotNull,
+              reason: '${a['duaId']}: ${a['surahNumber']}:$n not in the '
+                  'official dataset');
+          parts.add((row!['aya_text'] as String).trim());
+        }
+        final full = stripAyahMark(parts.join(' '));
+
+        expect(a['officialFullAyahText'], full,
+            reason: '${a['duaId']}: manifest full āyah differs from the '
+                'official dataset');
+
+        final stored = (a['officialText'] as String);
+        // Verbatim span: every code point comes from the official string.
+        expect(full.contains(stored), isTrue,
+            reason: '${a['duaId']}: stored text is not a contiguous span of '
+                'the official āyah — it must never be hand-assembled');
+        expect(a['isPortionOfAyah'], stored != full, reason: '${a['duaId']}');
+      }
+    });
+
+    test('the source pack carries exactly the official span', () {
+      for (final a in ayat) {
+        final recorded =
+            ((byId[a['duaId']]!['text'] as Map)['ar'] ?? '').toString();
+        expect(recorded, a['officialText'], reason: '${a['duaId']}');
+      }
+    });
+
+    test('each record declares the full provenance split', () {
+      for (final a in ayat) {
+        final e = byId[a['duaId']]!;
+        expect(e['textAuthority'], _kfcAuthority);
+        expect(e['textRiwayah'], 'حفص عن عاصم');
+        expect(e['textRasm'], 'الرسم العثماني');
+        expect(e['textEdition'], 'KFGQPC Hafs Uthmanic Data v2.0');
+        expect(e['textAuthoritySourceUrl'].toString(),
+            startsWith('https://qurancomplex.gov.sa'));
+        // Context stays with the Ministry, with its printed page.
+        expect(e['contextSourceUrl'].toString(),
+            startsWith('https://ebook.moia.gov.sa'));
+        expect(e['printedPage'], a['contextPrintedPage']);
+        // Still not verified — that remains a human act.
+        expect(e['verificationStatus'], 'unverified');
+      }
+    });
+  });
+
   group('character-by-character comparison', () {
     // Binding as soon as the official text is present. Until then each
     // record is reported as PENDING rather than passing: an unfetched āyah

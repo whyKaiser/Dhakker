@@ -3,6 +3,12 @@
  * Fills `source_packs/quran_authority_hafs_uthmani.json` with the Quranic
  * text for the 23 āyāt referenced by the MOIA source pack.
  *
+ * NOTE: the manifest is already filled from the OFFICIAL ARCHIVE pinned at
+ * `third_party/kfgqpc/hafsData_v2-0.json` (KFGQPC Hafs Uthmanic Data v2.0,
+ * 2022-09-07), which the project owner supplied directly. That pinned file
+ * is the authority the tests compare against, and it needs no network. This
+ * script remains for refreshing the manifest against a future edition.
+ *
  * ── The one rule this script exists to enforce ──────────────────────────
  *
  * The Quranic text MUST come from the official digital text published by
