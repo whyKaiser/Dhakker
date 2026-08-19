@@ -52,6 +52,12 @@ class AssistantResponse {
   final bool isOffline;
   final bool signInRequired;
 
+  /// Set only when [isOffline]. Lets the UI distinguish an operational
+  /// connectivity notice from an "unavailable offline without an approved
+  /// source" referral, and from genuinely approved cached guidance — so
+  /// unverified offline text is never presented as verified guidance.
+  final OfflineContentStatus? offlineStatus;
+
   const AssistantResponse({
     required this.answer,
     required this.language,
@@ -63,6 +69,7 @@ class AssistantResponse {
     this.safetyNotice,
     this.isOffline = false,
     this.signInRequired = false,
+    this.offlineStatus,
   });
 
   factory AssistantResponse.fromJson(
@@ -106,15 +113,25 @@ class AssistantResponse {
     );
   }
 
-  factory AssistantResponse.offline(String text, String language) {
+  /// Offline response built from a deterministic [OfflineKnowledgeEntry].
+  ///
+  /// [offlineStatus] is carried through so the UI can distinguish an ordinary
+  /// connectivity notice from "I cannot answer this ritual question offline
+  /// without an approved source" — and from genuinely approved, citation-backed
+  /// offline guidance, which is the only kind that may ever be labelled
+  /// verified. `requiresHumanGuide` is set for ritual questions, since the
+  /// correct action there is to consult an authorized guide.
+  factory AssistantResponse.offline(OfflineKnowledgeEntry entry) {
     return AssistantResponse(
-      answer: text,
-      language: language,
-      grounded: false,
+      answer: entry.text,
+      language: entry.language,
+      grounded: entry.isApproved,
       confidence: 'low',
       citations: const [],
-      requiresHumanGuide: false,
+      requiresHumanGuide:
+          entry.status == OfflineContentStatus.noApprovedSourceOffline,
       isOffline: true,
+      offlineStatus: entry.status,
     );
   }
 
@@ -359,8 +376,7 @@ class AssistantService {
           .timeout(const Duration(seconds: 20));
     } catch (_) {
       _history.removeLast();
-      return AssistantResponse.offline(
-          _offlineReply(trimmed, language), language);
+      return AssistantResponse.offline(_offlineEntry(trimmed, language));
     }
 
     final respBody = utf8.decode(response.bodyBytes);
@@ -434,14 +450,13 @@ class AssistantService {
 
   void clearHistory() => _history.clear();
 
-  // ─── Offline fixed-fact fallback ───────────────────────────────────────
-  // Deterministic, non-generative answers for a handful of common topics —
-  // used only when there is no network connectivity at all. Not a
-  // replacement for grounded retrieval; content lives in the versioned,
-  // language-aware `OfflineKnowledgeRepository` (lib/data), which labels
-  // every entry as unverified general knowledge (not citation-backed).
-  String _offlineReply(String msg, String language) {
-    final topic = OfflineKnowledgeRepository.topicFor(msg);
-    return OfflineKnowledgeRepository.textFor(topic, language).text;
+  // ─── Offline fallback ──────────────────────────────────────────────────
+  // Deterministic and non-generative, used only when there is no network
+  // connectivity at all. Contains NO religious or ritual guidance: a ritual
+  // question offline yields a referral to approved saved guidance or an
+  // authorized human guide, never a claim made by this app. See
+  // `OfflineKnowledgeRepository` (lib/data) for why.
+  OfflineKnowledgeEntry _offlineEntry(String msg, String language) {
+    return OfflineKnowledgeRepository.replyFor(msg, language);
   }
 }

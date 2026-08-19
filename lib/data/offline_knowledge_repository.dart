@@ -1,59 +1,108 @@
 /// Offline knowledge repository for the Dhakker assistant.
 ///
-/// This is a small, versioned, source-aware set of DETERMINISTIC,
-/// non-generative fallback answers used ONLY when the device has no network
-/// connectivity at all (see `AssistantService._offlineReply`). It is
-/// deliberately NOT a replacement for the server-side grounded/RAG pipeline
-/// in `assistant-proxy/worker.js` — it exists purely to keep a handful of
-/// basic, uncontroversial ritual-mechanics facts available offline.
+/// ── What this is (and deliberately is NOT) ───────────────────────────────
+/// This holds DETERMINISTIC, non-generative offline text used only when the
+/// device has no network connectivity (see `AssistantService._offlineReply`).
 ///
-/// ── Labeling ─────────────────────────────────────────────────────────────
-/// Every entry carries [OfflineKnowledgeEntry.sourceLabel] and
-/// [OfflineKnowledgeEntry.isVerified]. None of the entries here are tied to
-/// a real, approved-source citation record (unlike the server-side
-/// `knowledge_documents`/`knowledge_chunks` registry), so they are ALL
-/// labeled `isVerified: false` / "Unverified offline content — general
-/// knowledge, not a citation-backed ruling". Only ever flip `isVerified` to
-/// true for an entry that is actually backed by a real source metadata
-/// field (documentId/authority/url) — never blanket-label offline content
-/// as verified.
+/// It contains **no religious or ritual guidance of any kind**. Every ritual
+/// or ruling question asked offline is answered by directing the pilgrim to
+/// approved guidance they have already saved, or to an authorized human
+/// guide — never by this file asserting a religious fact.
+///
+/// ── Why the previous ritual facts were removed ───────────────────────────
+/// An earlier revision of this file shipped statements about Tawaf, Sa'i,
+/// Ihram, Jamarat, and Arafat — including a hadith quotation — with no
+/// approved-source citation metadata behind any of them, while the surrounding
+/// code described them as "reviewed". That is exactly the failure mode the
+/// project's religious-safety rule exists to prevent: unverifiable religious
+/// claims presented to pilgrims with an implied stamp of review. They have
+/// been removed and must not be reintroduced from memory, from a model, or
+/// from an unattributed web source.
+///
+/// The ONLY way ritual content may appear here in future is if it arrives
+/// with real approved-source metadata (documentId / authority / URL / version
+/// / verification status) via the same approved-source registry the server
+/// uses (`knowledge_documents` / `knowledge_chunks`, see
+/// `scripts/ingest_knowledge.mjs`), cached locally for offline use. Until
+/// such content exists, [approvedOfflineGuidance] is empty by design and
+/// [hasApprovedOfflineGuidance] is false.
 ///
 /// ── Languages ────────────────────────────────────────────────────────────
-/// The app supports ar/en/ur/tr/id/fr. Verified/reviewed translations exist
-/// today only in English. Rather than fabricate unreviewed religious-fact
-/// translations in the other five languages, entries for a topic in a
-/// language that has no reviewed translation yet simply fall back to the
-/// English text with an explicit `isFallbackTranslation: true` marker so
-/// callers can, if desired, prefix a "shown in English" notice. This must
-/// be kept honest: add a real translation only when it has actually been
-/// reviewed, never guessed.
+/// The operational (non-religious) messages below are translated for all six
+/// supported languages: ar, en, ur, tr, id, fr. These are ordinary UI strings
+/// — connectivity notices and a referral to a human guide — so translating
+/// them fabricates no religious content.
 library;
+
+/// How a piece of offline text should be presented to the user. The UI must
+/// render these distinctly — an operational notice must never be styled as
+/// though it were verified religious guidance.
+enum OfflineContentStatus {
+  /// Operational, non-religious app message (connectivity, how to get help).
+  /// Carries no religious authority and makes no ritual claim.
+  operationalNotice,
+
+  /// The user asked something this app cannot answer offline without an
+  /// approved source. Directs them to saved approved guidance or a human
+  /// guide. Makes no ritual claim of its own.
+  noApprovedSourceOffline,
+
+  /// Genuinely approved, citation-backed guidance cached for offline use.
+  /// Only ever produced from the approved-source registry — never hardcoded.
+  approvedGuidance,
+}
 
 class OfflineKnowledgeEntry {
   final String topicId;
   final String language;
   final String text;
-  final bool isVerified;
-  final String sourceLabel;
-  final bool isFallbackTranslation;
+  final OfflineContentStatus status;
+
+  /// Populated only for [OfflineContentStatus.approvedGuidance]. Null for
+  /// every entry that is not backed by a real approved-source record.
+  final OfflineCitationMetadata? source;
 
   const OfflineKnowledgeEntry({
     required this.topicId,
     required this.language,
     required this.text,
-    this.isVerified = false,
-    this.sourceLabel =
-        'Unverified offline content — general knowledge, not a citation-backed ruling',
-    this.isFallbackTranslation = false,
+    required this.status,
+    this.source,
+  });
+
+  /// True only when this entry is backed by real approved-source metadata.
+  /// Never true for the operational messages defined in this file.
+  bool get isApproved =>
+      status == OfflineContentStatus.approvedGuidance && source != null;
+}
+
+/// Citation metadata for genuinely approved offline content. Mirrors the
+/// server-side approved-source registry record.
+class OfflineCitationMetadata {
+  final String documentId;
+  final String title;
+  final String authority;
+  final String? section;
+  final String? url;
+  final String version;
+
+  const OfflineCitationMetadata({
+    required this.documentId,
+    required this.title,
+    required this.authority,
+    required this.version,
+    this.section,
+    this.url,
   });
 }
 
 class OfflineKnowledgeRepository {
   const OfflineKnowledgeRepository._();
 
-  /// Schema/content version — bump whenever entries are added, edited, or a
-  /// new reviewed translation is added, so callers/tests can detect drift.
-  static const int version = 1;
+  /// Content version — bump whenever entries change so callers/tests can
+  /// detect drift. v2 removed all unapproved religious claims (see the
+  /// library doc comment).
+  static const int version = 2;
 
   static const List<String> supportedLanguages = [
     'ar',
@@ -61,86 +110,119 @@ class OfflineKnowledgeRepository {
     'ur',
     'tr',
     'id',
-    'fr'
+    'fr',
   ];
 
-  /// Reviewed, source-of-truth English text per topic. English is the only
-  /// language with reviewed coverage today for every topic below.
-  static const Map<String, String> _en = {
-    'tawaf': 'Tawaf is seven circuits around the Kaaba, counter-clockwise, '
-        'starting and ending level with the Black Stone.',
-    'sai': "Sa'i is seven circuits between Safa and Marwah, starting at Safa "
-        'and ending at Marwah.',
-    'ihram': 'Ihram: intention (niyyah) + wearing the ihram garments at the '
-        'miqat, followed by the Talbiyah.',
-    'jamarat':
-        'Stoning the Jamarat: seven pebbles per pillar, starting the 10th day.',
-    'arafat':
-        "Standing at Arafat is the greatest pillar of Hajj: 'Hajj is Arafah.'",
-    'fallback':
-        'You are offline right now. I can answer a few basic ritual facts '
-            '(Tawaf / Sai / Ihram / Jamarat / Arafat) from memory. For anything '
-            'else, please ask your on-site guide once connected.',
+  /// Approved, citation-backed guidance cached for offline use.
+  ///
+  /// Intentionally EMPTY: no officially approved religious source content has
+  /// been ingested into this project yet. Populating this map by hand from
+  /// memory or model output is prohibited — entries may only be produced from
+  /// the approved-source registry, with real [OfflineCitationMetadata].
+  static const Map<String, Map<String, OfflineKnowledgeEntry>>
+      approvedOfflineGuidance = {};
+
+  /// Whether any genuinely approved offline guidance is available at all.
+  /// The UI uses this to avoid promising offline ritual answers it cannot give.
+  static bool get hasApprovedOfflineGuidance =>
+      approvedOfflineGuidance.isNotEmpty;
+
+  /// Message shown when the device is offline and the user asked something
+  /// requiring an approved religious/ritual source. Makes no ritual claim.
+  static const Map<String, String> _noApprovedSourceOffline = {
+    'ar': 'أنت غير متصل بالإنترنت حالياً، ولا تتوفر لدي إجابة من مصدر معتمد '
+        'لهذا السؤال دون اتصال. لا أستطيع الإجابة عن أسئلة المناسك أو الأحكام '
+        'من تلقاء نفسي. يرجى الرجوع إلى الإرشادات المعتمدة المحفوظة لديك، أو '
+        'سؤال مرشد معتمد أو عالم مخوّل.',
+    'en': 'You are currently offline, and I have no approved-source answer '
+        'available for this question offline. I cannot answer ritual or ruling '
+        'questions on my own. Please refer to approved guidance you have saved, '
+        'or ask an authorized guide or a qualified scholar.',
+    'ur': 'آپ اس وقت آف لائن ہیں، اور اس سوال کے لیے میرے پاس منظور شدہ ماخذ '
+        'سے کوئی جواب دستیاب نہیں۔ میں مناسک یا احکام کے سوالات کا جواب خود سے '
+        'نہیں دے سکتا۔ براہ کرم اپنی محفوظ کردہ منظور شدہ رہنمائی دیکھیں، یا '
+        'کسی مجاز رہنما یا مستند عالم سے پوچھیں۔',
+    'tr': 'Şu anda çevrimdışısınız ve bu soru için çevrimdışı olarak onaylı '
+        'kaynaklı bir yanıtım yok. İbadet veya hüküm sorularını kendi başıma '
+        'yanıtlayamam. Lütfen kaydettiğiniz onaylı rehbere bakın veya yetkili '
+        'bir rehbere ya da ehil bir alime danışın.',
+    'id': 'Anda sedang offline, dan saya tidak memiliki jawaban dari sumber '
+        'resmi untuk pertanyaan ini secara offline. Saya tidak dapat menjawab '
+        'pertanyaan ibadah atau hukum sendiri. Silakan merujuk pada panduan '
+        'resmi yang telah Anda simpan, atau tanyakan kepada pemandu resmi atau '
+        'ulama yang berwenang.',
+    'fr': "Vous êtes actuellement hors ligne et je n'ai aucune réponse issue "
+        "d'une source approuvée pour cette question hors ligne. Je ne peux pas "
+        "répondre seul aux questions de rites ou de jurisprudence. Veuillez "
+        "consulter les directives approuvées que vous avez enregistrées, ou "
+        "demander à un guide agréé ou à un érudit qualifié.",
   };
 
-  /// Reviewed translations. Only add a language here for a topic once an
-  /// actual reviewed translation exists — never fabricate one. Topics
-  /// missing from a language's map fall back to English (see [textFor]).
-  static const Map<String, Map<String, String>> _reviewedTranslations = {
-    'ar': {
-      'tawaf': 'الطواف هو سبعة أشواط حول الكعبة، عكس اتجاه عقارب الساعة، '
-          'يبدأ وينتهي عند الحجر الأسود.',
-      'sai':
-          'السعي هو سبعة أشواط بين الصفا والمروة، يبدأ من الصفا وينتهي بالمروة.',
-      'ihram': 'الإحرام: النية + لبس ثياب الإحرام عند الميقات، ثم التلبية.',
-      'jamarat': 'رمي الجمرات: سبع حصيات لكل جمرة، ابتداءً من اليوم العاشر.',
-      'arafat': 'الوقوف بعرفة هو أعظم أركان الحج: "الحج عرفة".',
-      'fallback': 'أنت الآن غير متصل بالإنترنت. يمكنني الإجابة عن بعض الحقائق '
-          'الأساسية للمناسك (الطواف / السعي / الإحرام / الجمرات / عرفة) من الذاكرة. '
-          'لأي شيء آخر، يرجى سؤال مرشدك عند عودة الاتصال.',
-    },
+  /// General offline notice for non-ritual questions. Operational only.
+  static const Map<String, String> _operationalOffline = {
+    'ar': 'أنت غير متصل بالإنترنت حالياً، لذا لا يمكنني البحث عن إجابة الآن. '
+        'لا تزال عدادات الطواف والسعي، والخرائط المحفوظة، وجهات اتصال الطوارئ '
+        'تعمل دون اتصال. سيعمل المساعد عند عودة الاتصال.',
+    'en': 'You are currently offline, so I cannot look up an answer right now. '
+        'Your Tawaf and Sa\'i counters, saved maps, and emergency contacts still '
+        'work offline. The assistant will work again once you reconnect.',
+    'ur': 'آپ اس وقت آف لائن ہیں، اس لیے میں ابھی جواب تلاش نہیں کر سکتا۔ آپ '
+        'کے طواف اور سعی کے کاؤنٹر، محفوظ نقشے، اور ہنگامی رابطے آف لائن بھی '
+        'کام کرتے ہیں۔ دوبارہ منسلک ہونے پر معاون کام کرنے لگے گا۔',
+    'tr': 'Şu anda çevrimdışısınız, bu nedenle şimdi bir yanıt arayamıyorum. '
+        'Tavaf ve sa\'y sayaçlarınız, kayıtlı haritalarınız ve acil durum '
+        'kişileriniz çevrimdışı çalışmaya devam eder. Yeniden bağlandığınızda '
+        'asistan tekrar çalışacaktır.',
+    'id': 'Anda sedang offline, jadi saya tidak dapat mencari jawaban sekarang. '
+        'Penghitung Tawaf dan Sa\'i, peta tersimpan, dan kontak darurat Anda '
+        'tetap berfungsi offline. Asisten akan berfungsi lagi setelah Anda '
+        'terhubung kembali.',
+    'fr': "Vous êtes actuellement hors ligne, je ne peux donc pas rechercher de "
+        "réponse pour le moment. Vos compteurs de Tawaf et de Sa'i, vos cartes "
+        "enregistrées et vos contacts d'urgence fonctionnent toujours hors "
+        "ligne. L'assistant refonctionnera une fois reconnecté.",
   };
 
-  /// Returns the offline text for [topicId] in [language]. If no reviewed
-  /// translation exists for that language, honestly falls back to the
-  /// reviewed English text rather than fabricating one.
-  static OfflineKnowledgeEntry textFor(String topicId, String language) {
-    final reviewed = _reviewedTranslations[language]?[topicId];
-    if (reviewed != null) {
-      return OfflineKnowledgeEntry(
-          topicId: topicId, language: language, text: reviewed);
-    }
-    final en = _en[topicId] ?? _en['fallback']!;
-    return OfflineKnowledgeEntry(
-      topicId: topicId,
-      language: language,
-      text: en,
-      isFallbackTranslation: language != 'en',
-    );
+  /// Keywords that indicate a ritual/ruling question, which this repository
+  /// must never answer on its own. Matching only changes WHICH safe message
+  /// is returned — no branch of this method ever asserts a religious fact.
+  static const List<String> _ritualKeywords = [
+    // Arabic
+    'طواف', 'سعي', 'إحرام', 'احرام', 'جمر', 'عرفة', 'حكم', 'يجوز',
+    'مناسك', 'تلبية', 'هدي', 'حلق', 'تقصير', 'ميقات', 'صلاة', 'دعاء',
+    // Latin / transliterated
+    'tawaf', 'circumambulat', 'sai', "sa'i", 'safa', 'marwa', 'ihram',
+    'miqat', 'jamarat', 'stoning', 'arafat', 'arafah', 'muzdalifah',
+    'talbiyah', 'hady', 'halq', 'ruling', 'permissible', 'allowed',
+    'fatwa', 'sunnah', 'obligatory', 'wajib', 'fard', 'prayer', 'dua',
+  ];
+
+  /// True when [message] looks like a ritual/ruling question.
+  static bool isRitualQuestion(String message) {
+    final q = message.toLowerCase();
+    return _ritualKeywords.any(q.contains);
   }
 
-  /// Matches free-text [message] against known topics via simple keyword
-  /// containment (Arabic + English/transliterated keywords), mirroring the
-  /// previous inline logic in `AssistantService`. Returns 'fallback' when no
-  /// topic matches.
-  static String topicFor(String message) {
-    final q = message.toLowerCase();
-    if (q.contains('طواف') ||
-        q.contains('tawaf') ||
-        q.contains('circumambulat')) return 'tawaf';
-    if (q.contains('سعي') ||
-        q.contains('sai') ||
-        q.contains('safa') ||
-        q.contains('marwa')) return 'sai';
-    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat')) {
-      return 'ihram';
+  /// Returns the offline entry for [message] in [language].
+  ///
+  /// Never returns religious content. A ritual/ruling question yields a
+  /// referral to approved guidance or a human guide; anything else yields an
+  /// operational connectivity notice.
+  static OfflineKnowledgeEntry replyFor(String message, String language) {
+    final lang = supportedLanguages.contains(language) ? language : 'en';
+    if (isRitualQuestion(message)) {
+      return OfflineKnowledgeEntry(
+        topicId: 'no_approved_source_offline',
+        language: lang,
+        text: _noApprovedSourceOffline[lang]!,
+        status: OfflineContentStatus.noApprovedSourceOffline,
+      );
     }
-    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning')) {
-      return 'jamarat';
-    }
-    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah')) {
-      return 'arafat';
-    }
-    return 'fallback';
+    return OfflineKnowledgeEntry(
+      topicId: 'offline_notice',
+      language: lang,
+      text: _operationalOffline[lang]!,
+      status: OfflineContentStatus.operationalNotice,
+    );
   }
 }

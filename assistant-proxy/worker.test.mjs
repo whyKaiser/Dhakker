@@ -17,6 +17,11 @@ const {
   sanitizeText,
   retrieveKnowledge,
   DEV_FIXTURE_DOCS,
+  canonicalizeCitations,
+  noApprovedSourceResponse,
+  noApprovedSourceAnswer,
+  utf8ByteLength,
+  verifyFirebaseIdToken,
 } = __testing__;
 
 // ── Schema validation ───────────────────────────────────────────────────
@@ -136,13 +141,19 @@ test("parseModelJson falls back safely on non-JSON model output", () => {
   assert.deepEqual(parsed.citations, []);
 });
 
-test("parseModelJson strips citations with missing required fields (no invented citations survive)", () => {
+test("parseModelJson keeps only documentId from model citations, discarding model-supplied metadata", () => {
   const raw = JSON.stringify({
     answer: "Some answer",
-    citations: [{ documentId: "d1" }, { title: "no id" }],
+    citations: [
+      { documentId: "d1", title: "MODEL TITLE", authority: "MODEL AUTHORITY", url: "https://evil.example" },
+      { title: "no id" },
+      { documentId: "   " },
+    ],
   });
   const parsed = parseModelJson(raw, "en");
-  assert.deepEqual(parsed.citations, []);
+  // Entries without a usable documentId are dropped; the surviving one keeps
+  // ONLY its id — the model's title/authority/url never travel any further.
+  assert.deepEqual(parsed.citations, [{ documentId: "d1" }]);
 });
 
 test("parseModelJson: grounded=true claim with an empty citations list is forced to grounded=false/low/requiresHumanGuide=true", () => {
@@ -159,14 +170,14 @@ test("parseModelJson: grounded=true claim with an empty citations list is forced
   assert.equal(parsed.requiresHumanGuide, true);
 });
 
-test("parseModelJson: grounded=true claim whose only citations fail validation is forced to grounded=false/low/requiresHumanGuide=true", () => {
+test("parseModelJson: grounded=true claim whose citations all lack a usable id is forced to grounded=false/low/requiresHumanGuide=true", () => {
   const raw = JSON.stringify({
     answer: "Some answer",
     grounded: true,
     confidence: "high",
-    // Missing required fields (authority) — filtered out by the schema check,
-    // so the effective citations list is empty.
-    citations: [{ documentId: "d1", title: "T" }],
+    // No usable documentId on any entry — the effective citations list is
+    // empty, so the grounded claim cannot stand.
+    citations: [{ title: "T", authority: "A" }, { documentId: "" }],
     requiresHumanGuide: false,
   });
   const parsed = parseModelJson(raw, "en");
@@ -271,33 +282,152 @@ test("dev fixtures never claim to be religious/authoritative content", () => {
   }
 });
 
-test("fetch: empty retrieval forces grounded=false, no citations, requiresHumanGuide=true (no invented citations)", async () => {
+test("fetch: empty retrieval returns the deterministic safe response with grounded=false/low/[]/requiresHumanGuide=true", async () => {
   const req = new Request("https://worker.example/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // A question with no dev-fixture keyword match at all -> retrieval empty.
     body: JSON.stringify({ messages: [{ role: "user", content: "zzz nonmatching query zzz" }] }),
   });
-  // No GROQ/GEMINI key configured -> upstream fails -> 502, which is the
-  // other safe-fallback path; this asserts the endpoint never crashes and
-  // never returns a 200 with fabricated grounded content in this case.
-  const res = await worker.fetch(req, { ENVIRONMENT: "development" });
-  assert.equal(res.status, 502);
+  // Provider keys ARE configured here, and a global fetch stub would happily
+  // return a fabricated ruling if it were ever called. It must not be called.
+  const res = await worker.fetch(req, {
+    ENVIRONMENT: "development",
+    GROQ_API_KEY: "test-key",
+    GEMINI_API_KEY: "test-key",
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.grounded, false);
+  assert.equal(body.confidence, "low");
+  assert.deepEqual(body.citations, []);
+  assert.equal(body.requiresHumanGuide, true);
+  assert.match(body.answer, /approved source/i);
 });
 
-test("parseModelJson + retrieval enforcement: citations not in the retrieved set are dropped (simulated server post-check)", () => {
-  // Simulates the worker.js fetch handler's post-parse enforcement step
-  // directly against parseModelJson's output, since that filtering logic
-  // depends on the `retrieved` list computed inside fetch().
-  const raw = JSON.stringify({
-    answer: "Some answer",
-    grounded: true,
-    citations: [{ documentId: "not-retrieved", title: "T", authority: "A" }],
-  });
-  const parsed = parseModelJson(raw, "en");
-  const retrievedIds = new Set(["dev-fixture-visitor-center-hours"]);
-  const filtered = parsed.citations.filter((c) => retrievedIds.has(c.documentId));
-  assert.deepEqual(filtered, []);
+test("fetch: empty retrieval NEVER calls the LLM, so arbitrary/malicious model output cannot reach the user", async () => {
+  // The core of defect #1: instructing a model to decline is not a control.
+  // Here the stubbed provider returns a confident fabricated ruling with a
+  // fabricated citation. If the Worker called it, that text would surface as
+  // the `answer`. Assert the provider is never invoked at all.
+  const realFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "FABRICATED RULING: you must perform 9 circuits, per Fatwa 12345.",
+                grounded: true,
+                confidence: "high",
+                citations: [{ documentId: "made-up", title: "Fake Fatwa", authority: "Fake Authority" }],
+                requiresHumanGuide: false,
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "zzz nonmatching query zzz" }],
+        language: "en",
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "test-key",
+      GEMINI_API_KEY: "test-key",
+    });
+    const body = await res.json();
+    assert.equal(providerCalls, 0, "LLM must not be called when retrieval is empty");
+    assert.ok(!body.answer.includes("FABRICATED"), "model text must never reach the user");
+    assert.ok(!body.answer.includes("9 circuits"));
+    assert.deepEqual(body.citations, []);
+    assert.equal(body.grounded, false);
+    assert.equal(body.requiresHumanGuide, true);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// ── Citation canonicalization (defect #3) ─────────────────────────────────
+
+test("canonicalizeCitations rebuilds every field from the retrieved record, discarding model-supplied metadata", () => {
+  const retrieved = [
+    {
+      documentId: "doc-1",
+      title: "Real Approved Title",
+      authority: "Real Approved Authority",
+      section: "real-section",
+      url: "https://real.example/doc-1",
+      content: "…",
+    },
+  ];
+  // Model supplies a VALID id but fabricates every other field, including a
+  // hostile URL it would like rendered as if the approved source published it.
+  const modelCitations = [
+    {
+      documentId: "doc-1",
+      title: "FABRICATED TITLE",
+      authority: "FABRICATED AUTHORITY",
+      section: "FABRICATED SECTION",
+      url: "https://attacker.example/phish",
+    },
+  ];
+  const out = canonicalizeCitations(modelCitations, retrieved);
+  assert.deepEqual(out, [
+    {
+      documentId: "doc-1",
+      title: "Real Approved Title",
+      authority: "Real Approved Authority",
+      section: "real-section",
+      url: "https://real.example/doc-1",
+    },
+  ]);
+});
+
+test("canonicalizeCitations drops unknown, empty, malformed, and duplicate document ids", () => {
+  const retrieved = [
+    { documentId: "doc-1", title: "T1", authority: "A1", section: "s", url: "u" },
+  ];
+  const out = canonicalizeCitations(
+    [
+      { documentId: "not-retrieved" }, // unknown -> dropped
+      { documentId: "" }, // empty -> dropped
+      { documentId: "   " }, // whitespace-only -> dropped
+      { documentId: 42 }, // wrong type -> dropped
+      { title: "no id at all" }, // malformed -> dropped
+      null, // malformed -> dropped
+      { documentId: "doc-1" }, // valid
+      { documentId: "doc-1" }, // duplicate -> dropped
+    ],
+    retrieved
+  );
+  assert.equal(out.length, 1);
+  assert.equal(out[0].documentId, "doc-1");
+  assert.equal(out[0].title, "T1");
+});
+
+test("canonicalizeCitations returns [] for non-array or empty model input", () => {
+  const retrieved = [{ documentId: "d", title: "T", authority: "A" }];
+  assert.deepEqual(canonicalizeCitations(undefined, retrieved), []);
+  assert.deepEqual(canonicalizeCitations(null, retrieved), []);
+  assert.deepEqual(canonicalizeCitations("nope", retrieved), []);
+  assert.deepEqual(canonicalizeCitations([], retrieved), []);
+});
+
+test("canonicalizeCitations yields [] when nothing was retrieved, even for well-formed model citations", () => {
+  const out = canonicalizeCitations([{ documentId: "doc-1", title: "T", authority: "A" }], []);
+  assert.deepEqual(out, []);
 });
 
 // ── Prompt injection resistance ───────────────────────────────────────────
@@ -346,7 +476,9 @@ test("fetch requires auth in production when no token is supplied", async () => 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
   });
-  const env = { ENVIRONMENT: "production", GROQ_API_KEY: "x" };
+  // FIREBASE_PROJECT_ID is present, so the fail-closed config check passes
+  // and we reach the genuine "no token supplied" rejection.
+  const env = { ENVIRONMENT: "production", GROQ_API_KEY: "x", FIREBASE_PROJECT_ID: "dhakker-prod" };
   const res = await worker.fetch(req, env);
   assert.equal(res.status, 401);
   const body = await res.json();
@@ -392,7 +524,11 @@ test("fetch falls back safely (never crashes) when no provider keys are configur
   const req = new Request("https://worker.example/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: [{ role: "user", content: "hello" }] }),
+    // Must match a dev fixture so retrieval is NON-empty and we actually
+    // reach the provider path (an empty retrieval short-circuits before it).
+    body: JSON.stringify({
+      messages: [{ role: "user", content: "what are the visitor center opening hours" }],
+    }),
   });
   const res = await worker.fetch(req, { ENVIRONMENT: "development" });
   assert.equal(res.status, 502);
@@ -409,4 +545,350 @@ test("fetch rejects a disallowed browser Origin in production", async () => {
   const env = { ENVIRONMENT: "production", ALLOWED_ORIGINS: "https://dhakker-160d0.web.app" };
   const res = await worker.fetch(req, env);
   assert.equal(res.status, 403);
+});
+
+// ── Fail-closed Firebase configuration (defect #2) ────────────────────────
+
+test("fetch fails closed with 503 in production when FIREBASE_PROJECT_ID is missing", async () => {
+  const req = new Request("https://worker.example/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer some.token.here" },
+    body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+  });
+  const res = await worker.fetch(req, { ENVIRONMENT: "production", GROQ_API_KEY: "x" });
+  assert.equal(res.status, 503);
+  const body = await res.json();
+  assert.equal(body.error.code, "ERR_SERVER_MISCONFIGURED");
+});
+
+test("fetch fails closed when FIREBASE_PROJECT_ID is present but blank/whitespace", async () => {
+  for (const value of ["", "   "]) {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer some.token.here" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "production",
+      GROQ_API_KEY: "x",
+      FIREBASE_PROJECT_ID: value,
+    });
+    assert.equal(res.status, 503, `blank project id ${JSON.stringify(value)} must fail closed`);
+  }
+});
+
+test("misconfiguration error reveals no internal detail (no env var names, no stack, no secrets)", async () => {
+  const req = new Request("https://worker.example/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer some.token.here" },
+    body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+  });
+  const res = await worker.fetch(req, { ENVIRONMENT: "production", GROQ_API_KEY: "super-secret" });
+  const text = await res.text();
+  assert.ok(!/FIREBASE_PROJECT_ID/i.test(text));
+  assert.ok(!/super-secret/.test(text));
+  assert.ok(!/GROQ|GEMINI|api[_-]?key/i.test(text));
+  assert.ok(!/at \w+ \(/.test(text), "must not leak a stack trace");
+});
+
+test("fail-closed config check also applies when REQUIRE_AUTH=true outside production", async () => {
+  const req = new Request("https://worker.example/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer some.token.here" },
+    body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
+  });
+  const res = await worker.fetch(req, { ENVIRONMENT: "development", REQUIRE_AUTH: "true" });
+  assert.equal(res.status, 503);
+});
+
+// ── Token claim validation: cross-project / malformed tokens ──────────────
+
+// Builds an unsigned JWT with the given claims. Signature verification runs
+// AFTER claim validation, so these exercise the claim checks deterministically
+// without needing Google's real signing keys.
+function makeToken(claims, header = { alg: "RS256", kid: "test-kid" }) {
+  const b64 = (o) =>
+    Buffer.from(JSON.stringify(o))
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+  return `${b64(header)}.${b64(claims)}.c2ln`;
+}
+
+function validClaims(projectId, overrides = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    exp: now + 3600,
+    iat: now - 10,
+    auth_time: now - 10,
+    aud: projectId,
+    iss: `https://securetoken.google.com/${projectId}`,
+    sub: "user-123",
+    ...overrides,
+  };
+}
+
+test("verifyFirebaseIdToken rejects a token minted for ANOTHER Firebase project (bad audience)", async () => {
+  const token = makeToken(validClaims("attacker-project"));
+  await assert.rejects(
+    () => verifyFirebaseIdToken(token, "dhakker-prod"),
+    /bad audience/
+  );
+});
+
+test("verifyFirebaseIdToken rejects a token whose issuer is another project even if aud was forged to match", async () => {
+  const claims = validClaims("dhakker-prod", {
+    iss: "https://securetoken.google.com/attacker-project",
+  });
+  await assert.rejects(() => verifyFirebaseIdToken(claims && makeToken(claims), "dhakker-prod"), /bad issuer/);
+});
+
+test("verifyFirebaseIdToken rejects expired tokens", async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = makeToken(validClaims("p", { exp: now - 3600 }));
+  await assert.rejects(() => verifyFirebaseIdToken(token, "p"), /expired/);
+});
+
+test("verifyFirebaseIdToken rejects tokens issued in the future", async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = makeToken(validClaims("p", { iat: now + 3600 }));
+  await assert.rejects(() => verifyFirebaseIdToken(token, "p"), /issued in future/);
+});
+
+test("verifyFirebaseIdToken requires auth_time and rejects a future auth_time", async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const missing = validClaims("p");
+  delete missing.auth_time;
+  await assert.rejects(() => verifyFirebaseIdToken(makeToken(missing), "p"), /auth_time/);
+  const future = makeToken(validClaims("p", { auth_time: now + 3600 }));
+  await assert.rejects(() => verifyFirebaseIdToken(future, "p"), /auth_time/);
+});
+
+test("verifyFirebaseIdToken requires a non-empty string sub", async () => {
+  for (const sub of ["", undefined, 123]) {
+    const claims = validClaims("p", { sub });
+    await assert.rejects(() => verifyFirebaseIdToken(makeToken(claims), "p"), /missing sub/);
+  }
+});
+
+test("verifyFirebaseIdToken rejects non-RS256 algorithms (e.g. alg=none downgrade)", async () => {
+  const token = makeToken(validClaims("p"), { alg: "none", kid: "k" });
+  await assert.rejects(() => verifyFirebaseIdToken(token, "p"), /unexpected alg/);
+});
+
+test("verifyFirebaseIdToken refuses to skip aud/iss when no project id is configured and it is required", async () => {
+  const token = makeToken(validClaims("whatever"));
+  await assert.rejects(
+    () => verifyFirebaseIdToken(token, "", { requireProjectId: true }),
+    /project id not configured/
+  );
+});
+
+test("verifyFirebaseIdToken rejects a malformed (non-3-part) token", async () => {
+  await assert.rejects(() => verifyFirebaseIdToken("not.a.valid.jwt.at.all", "p"), /malformed token/);
+  await assert.rejects(() => verifyFirebaseIdToken("onlyonepart", "p"), /malformed token/);
+});
+
+// ── UTF-8 byte-accurate request size limit (defect #6) ────────────────────
+
+test("utf8ByteLength counts bytes, not UTF-16 code units", () => {
+  assert.equal(utf8ByteLength("abc"), 3);
+  assert.equal(utf8ByteLength("مرحبا"), 10); // 5 Arabic chars x 2 bytes
+  assert.equal(utf8ByteLength("😀"), 4); // 1 astral char = 2 code units, 4 bytes
+});
+
+test("fetch rejects an oversized body measured in UTF-8 bytes even when char count is under the cap", async () => {
+  // ~24k Arabic characters = ~48KB UTF-8, but only ~24k JS "length" units.
+  // Under the old char-count check this passed; it must now be rejected.
+  const arabicPadding = "م".repeat(24_000);
+  const body = JSON.stringify({ messages: [{ role: "user", content: arabicPadding }] });
+  assert.ok(body.length < 32 * 1024, "precondition: char count is under the cap");
+  assert.ok(utf8ByteLength(body) > 32 * 1024, "precondition: byte length is over the cap");
+  const req = new Request("https://worker.example/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+  const res = await worker.fetch(req, { ENVIRONMENT: "development" });
+  assert.equal(res.status, 413);
+  const parsed = await res.json();
+  assert.equal(parsed.error.code, "ERR_REQUEST_TOO_LARGE");
+});
+
+// ── Upstream timeouts & provider fallback (defect #5) ─────────────────────
+
+test("all upstream timeout budgets are configured and finite", () => {
+  for (const ms of [
+    __testing__.GROQ_TIMEOUT_MS,
+    __testing__.GEMINI_TIMEOUT_MS,
+    __testing__.JWKS_TIMEOUT_MS,
+    __testing__.FIRESTORE_TIMEOUT_MS,
+  ]) {
+    assert.equal(typeof ms, "number");
+    assert.ok(ms > 0 && Number.isFinite(ms));
+    assert.ok(ms <= 30_000, "no upstream budget may exceed 30s");
+  }
+});
+
+test("a hanging Groq is aborted by its timeout and falls back to Gemini", async () => {
+  const realFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    const u = String(url);
+    seen.push(u);
+    if (u.includes("groq.com")) {
+      // Never resolves on its own — only the AbortController can end this.
+      return await new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () =>
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }))
+        );
+      });
+    }
+    // Gemini fallback responds correctly.
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    answer: "Fallback answer from Gemini.",
+                    grounded: true,
+                    confidence: "high",
+                    citations: [{ documentId: "dev-fixture-visitor-center-hours" }],
+                    requiresHumanGuide: false,
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "visitor center opening hours" }],
+        language: "en",
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      GEMINI_API_KEY: "y",
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.answer, "Fallback answer from Gemini.");
+    assert.ok(seen.some((u) => u.includes("groq.com")), "Groq was attempted");
+    assert.ok(seen.some((u) => u.includes("generativelanguage")), "Gemini fallback was used");
+    // Citation still canonicalized from the retrieved fixture, not the model.
+    assert.equal(body.citations.length, 1);
+    assert.equal(body.citations[0].documentId, "dev-fixture-visitor-center-hours");
+    assert.equal(body.citations[0].authority, DEV_FIXTURE_DOCS[0].authority);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("both providers failing yields a bounded 502, never a hang or a fabricated answer", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "visitor center opening hours" }],
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      GEMINI_API_KEY: "y",
+    });
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.equal(body.error.code, "ERR_UPSTREAM_UNAVAILABLE");
+    assert.ok(!("answer" in body), "must not return an answer field on upstream failure");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("a fabricated citation on a real retrieved id is rewritten end-to-end through fetch()", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "Grounded answer.",
+                grounded: true,
+                confidence: "high",
+                citations: [
+                  {
+                    documentId: "dev-fixture-visitor-center-hours",
+                    title: "FAKE TITLE",
+                    authority: "FAKE AUTHORITY",
+                    section: "FAKE SECTION",
+                    url: "https://attacker.example/phish",
+                  },
+                ],
+                requiresHumanGuide: false,
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "visitor center opening hours" }],
+        language: "en",
+      }),
+    });
+    const res = await worker.fetch(req, { ENVIRONMENT: "development", GROQ_API_KEY: "x" });
+    const body = await res.json();
+    const c = body.citations[0];
+    assert.equal(c.title, DEV_FIXTURE_DOCS[0].title);
+    assert.equal(c.authority, DEV_FIXTURE_DOCS[0].authority);
+    assert.notEqual(c.title, "FAKE TITLE");
+    assert.notEqual(c.authority, "FAKE AUTHORITY");
+    assert.notEqual(c.url, "https://attacker.example/phish");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// ── Deterministic no-approved-source response ─────────────────────────────
+
+test("noApprovedSourceResponse is a safe, fully-specified payload in every supported language", () => {
+  for (const lang of ["ar", "en", "ur", "tr", "id", "fr"]) {
+    const r = noApprovedSourceResponse(lang);
+    assert.equal(r.grounded, false);
+    assert.equal(r.confidence, "low");
+    assert.deepEqual(r.citations, []);
+    assert.equal(r.requiresHumanGuide, true);
+    assert.equal(r.language, lang);
+    assert.ok(r.answer && r.answer.length > 20, `${lang} answer must be a real sentence`);
+  }
+});
+
+test("noApprovedSourceAnswer is localized (distinct per language, not English everywhere)", () => {
+  const answers = ["ar", "en", "ur", "tr", "id", "fr"].map(noApprovedSourceAnswer);
+  assert.equal(new Set(answers).size, answers.length, "each language must have its own text");
+  assert.match(noApprovedSourceAnswer("ar"), /[؀-ۿ]/, "Arabic must be in Arabic script");
 });

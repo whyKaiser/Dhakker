@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dhakker/data/offline_knowledge_repository.dart';
 import 'package:dhakker/services/assistant_service.dart';
 import 'package:dhakker/Screens/Assistant/assistant_screen.dart';
 
@@ -90,14 +91,43 @@ void main() {
 
   group('AssistantResponseMeta — offline state', () {
     testWidgets('shows the Offline chip and no citations', (tester) async {
-      final response =
-          AssistantResponse.offline('Basic ritual facts only.', 'en');
+      final response = AssistantResponse.offline(
+          OfflineKnowledgeRepository.replyFor('where is the exit', 'en'));
 
       await tester.pumpWidget(harness(response));
 
       expect(find.text('Offline'), findsOneWidget);
       expect(find.text('Grounded'), findsNothing);
       expect(find.text('Sign-in required'), findsNothing);
+    });
+
+    testWidgets(
+        'an offline ritual question is shown as unavailable, NOT as verified guidance',
+        (tester) async {
+      final response = AssistantResponse.offline(
+          OfflineKnowledgeRepository.replyFor('tawaf', 'en'));
+
+      await tester.pumpWidget(harness(response));
+
+      // Must be clearly marked unavailable-without-an-approved-source, and
+      // must never be presented as grounded/approved guidance.
+      expect(find.text('Unavailable offline — no approved source'),
+          findsOneWidget);
+      expect(find.text('Approved offline guidance'), findsNothing);
+      expect(find.text('Grounded'), findsNothing);
+      expect(find.text('Consult an authorized guide'), findsOneWidget);
+    });
+
+    testWidgets(
+        'the offline unavailable state renders its Arabic label under RTL',
+        (tester) async {
+      final response = AssistantResponse.offline(
+          OfflineKnowledgeRepository.replyFor('الطواف', 'ar'));
+
+      await tester.pumpWidget(harness(response, isRtl: true));
+
+      expect(
+          find.text('غير متاح دون اتصال — لا يوجد مصدر معتمد'), findsOneWidget);
     });
   });
 

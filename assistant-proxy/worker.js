@@ -23,6 +23,24 @@
  *   environments, if REQUIRE_AUTH is unset/false, requests are allowed
  *   without a token to ease local development — this must never be the case
  *   in production.
+ * - Fail-closed configuration: whenever auth is required, a non-empty
+ *   FIREBASE_PROJECT_ID is MANDATORY and the request is rejected with 503
+ *   ERR_SERVER_MISCONFIGURED if it is missing. aud/iss are what bind a token
+ *   to *our* Firebase project — a valid Google signature only proves Google
+ *   minted the token, not that it was minted for us — so those checks are
+ *   never skipped for a missing env var. exp/iat/auth_time/sub are validated
+ *   with a 60s symmetric clock-skew allowance.
+ * - Safe no-retrieval behavior: when the approved-source retrieval returns
+ *   zero documents, the LLM is NOT called at all and a deterministic,
+ *   localized "no approved source" response is returned. Instructing a model
+ *   to decline is not a safety control — it could still emit a confident
+ *   fabricated ruling as the `answer`. Not generating text is the control.
+ * - Citation canonicalization: the model may only SELECT a retrieved
+ *   documentId. Every title/authority/section/url shown to the user is
+ *   rebuilt server-side from the retrieved record, so a model cannot pair a
+ *   real id with an invented authority or attacker-supplied URL.
+ * - Upstream timeouts: Groq, Gemini, Google JWKS, and Firestore retrieval
+ *   all use explicit AbortController deadlines (see *_TIMEOUT_MS).
  * - CORS: origin must match ALLOWED_ORIGINS (comma-separated env var). No
  *   wildcard in production.
  * - Rate limiting: best-effort, per-isolate in-memory token bucket keyed by
@@ -32,7 +50,9 @@
  *   KV-backed limiter would be the production-grade upgrade (documented as
  *   future work — requires a paid/Durable Objects-enabled plan for strict
  *   global limits).
- * - Request size cap, message-count cap, enum/schema validation on all
+ * - Request size cap enforced in UTF-8 BYTES (not JS UTF-16 code units, which
+ *   would undercount Arabic/Urdu text by ~2x), message-count cap,
+ *   enum/schema validation on all
  *   context fields, no raw untrusted JSON concatenated into the prompt
  *   (structured context is rendered into a fixed-format, escaped block).
  * - Logging: only coarse, non-identifying fields (status, provider, latency
@@ -52,6 +72,16 @@ const MAX_BODY_BYTES = 32 * 1024;
 const MODEL = "llama-3.3-70b-versatile"; // server-controlled, client cannot override
 const TEMPERATURE = 0.3; // server-controlled
 const MAX_TOKENS = 700; // server-controlled
+
+// ── Upstream timeouts (all outbound fetches are bounded) ──────────────────
+// Every upstream call gets an explicit AbortController deadline so a hung
+// dependency can never hold a Worker request open indefinitely. The Groq
+// budget is deliberately shorter than Gemini's so that a slow-but-not-dead
+// Groq still leaves room for the Gemini fallback inside a sane total.
+const GROQ_TIMEOUT_MS = 12_000;
+const GEMINI_TIMEOUT_MS = 12_000;
+const JWKS_TIMEOUT_MS = 5_000;
+const FIRESTORE_TIMEOUT_MS = 6_000;
 
 const SUPPORTED_LANGUAGES = ["ar", "en", "ur", "tr", "id", "fr"];
 const SUPPORTED_RITUALS = [
@@ -76,6 +106,7 @@ const ERROR_CODES = {
   upstream_failed: "ERR_UPSTREAM_UNAVAILABLE",
   method_not_allowed: "ERR_METHOD_NOT_ALLOWED",
   forbidden_origin: "ERR_FORBIDDEN_ORIGIN",
+  misconfigured: "ERR_SERVER_MISCONFIGURED",
 };
 
 // Per-isolate rate-limit bucket. Reset naturally when the isolate recycles.
@@ -117,7 +148,11 @@ export default {
     } catch (_) {
       return jsonError("invalid_json", "Could not read request body", 400, corsHeaders);
     }
-    if (rawBody.length > MAX_BODY_BYTES) {
+    // Enforce the cap in UTF-8 BYTES, not JS UTF-16 code units. `String.length`
+    // undercounts every non-ASCII character (Arabic/Urdu text is 2 bytes each,
+    // emoji 4), so a char-count check would let a body several times larger
+    // than the intended cap through — exactly the languages this app serves.
+    if (utf8ByteLength(rawBody) > MAX_BODY_BYTES) {
       return jsonError("too_large", "Request body too large", 413, corsHeaders);
     }
 
@@ -130,14 +165,33 @@ export default {
 
     // ── Auth ────────────────────────────────────────────────────────────────
     const requireAuth = isProduction(env) || env.REQUIRE_AUTH === "true";
+    const projectId = (env.FIREBASE_PROJECT_ID || "").trim();
+
+    // Fail CLOSED on missing configuration. Without a project id we cannot
+    // validate `aud`/`iss`, which means we cannot tell a token minted for
+    // THIS Firebase project from one minted for any attacker-controlled
+    // project — a valid Google signature alone proves nothing about which
+    // tenant issued it. Previously a missing env var silently skipped those
+    // two checks; now, whenever auth is required, absence of the project id
+    // is a hard configuration error. The client-facing message deliberately
+    // reveals nothing about which variable is missing.
+    if (requireAuth && !projectId) {
+      logRequest(env, { uid: null, language: null, provider: "none", status: "misconfigured", ms: 0 });
+      return jsonError(
+        "misconfigured",
+        "Assistant is not available right now",
+        503,
+        corsHeaders
+      );
+    }
+
     const authHeader = request.headers.get("Authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
     let uid = null;
     if (token) {
       try {
-        const projectId = env.FIREBASE_PROJECT_ID || "";
-        const claims = await verifyFirebaseIdToken(token, projectId);
+        const claims = await verifyFirebaseIdToken(token, projectId, { requireProjectId: requireAuth });
         uid = claims.sub || claims.user_id || null;
       } catch (err) {
         if (requireAuth) {
@@ -170,6 +224,27 @@ export default {
     // training data alone. See retrieveKnowledge() doc comment for how the
     // registry itself works and its documented limitations.
     const retrieved = await retrieveKnowledge(latestQuestion, language, env, token);
+
+    // ── Safe no-retrieval short-circuit ───────────────────────────────────
+    // If no approved source matched, we do NOT call the LLM at all. Asking a
+    // model to "please decline" is not a safety control: the model could
+    // still emit a confident fabricated ruling, and the user would receive
+    // that text as the `answer` even with grounded=false. The only way
+    // arbitrary model output cannot reach the pilgrim here is to never
+    // generate it. Return a deterministic, localized, template response.
+    if (retrieved.length === 0) {
+      logRequest(env, {
+        uid,
+        language,
+        provider: "none",
+        status: "no_retrieval",
+        ms: 0,
+      });
+      return new Response(JSON.stringify(noApprovedSourceResponse(language)), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
     const systemPrompt = buildSystemPrompt(language, context, retrieved);
     const providerMessages = [
@@ -205,30 +280,22 @@ export default {
 
     logRequest(env, { uid, language, provider: providerUsed, status: "ok", ms: Date.now() - startedAt });
 
-    let structured = parseModelJson(replyText, language);
-    // Hard server-side enforcement (does not rely on model compliance):
-    // if retrieval returned nothing, the response can NEVER be grounded and
-    // can NEVER carry citations, no matter what the model produced.
-    if (retrieved.length === 0) {
-      structured = {
-        ...structured,
-        grounded: false,
-        citations: [],
-        requiresHumanGuide: true,
-      };
-    } else {
-      // Also strip any citation the model invented that doesn't correspond
-      // to a document we actually retrieved — citations must be traceable
-      // to the approved-source registry, never fabricated.
-      const retrievedIds = new Set(retrieved.map((d) => d.documentId));
-      structured.citations = structured.citations.filter((c) => retrievedIds.has(c.documentId));
-    }
+    const structured = parseModelJson(replyText, language);
 
-    // Final, unconditional invariant (defense in depth, does not rely on the
-    // branches above being exhaustive): a response can NEVER be grounded
-    // when its final, validated citations list ends up empty, regardless of
-    // what the model/raw JSON claimed.
-    if (structured.citations.length === 0 && structured.grounded === true) {
+    // Canonicalize citations against the server's own retrieved records.
+    // The model is treated as a SELECTOR, not a source of citation metadata:
+    // the only field of its citation objects we honour is `documentId`, and
+    // every other field (title, authority, section, url) is rebuilt from the
+    // Firestore record we actually retrieved. Otherwise a model could pair a
+    // real documentId with an invented authority or an attacker-controlled
+    // URL and the citation would render as if the approved source had said
+    // it. Unknown, empty, malformed, and duplicate ids are dropped.
+    structured.citations = canonicalizeCitations(structured.citations, retrieved);
+
+    // Final, unconditional invariant (defense in depth): a response can NEVER
+    // be grounded when its final, canonicalized citations list ends up empty,
+    // regardless of what the model claimed.
+    if (structured.citations.length === 0) {
       structured.grounded = false;
       structured.confidence = "low";
       structured.requiresHumanGuide = true;
@@ -360,6 +427,82 @@ function validateContext(raw) {
   return Object.keys(ctx).length ? ctx : null;
 }
 
+function utf8ByteLength(str) {
+  return new TextEncoder().encode(str).length;
+}
+
+/// Bounded fetch: every upstream call must carry an explicit deadline so a
+/// hung dependency cannot pin a Worker request open. Throws on timeout, which
+/// the callers treat as an ordinary upstream failure (so provider fallback
+/// and fail-safe retrieval behave identically for "slow" and "broken").
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/// Rebuild citations from server-retrieved records. The model may only choose
+/// WHICH retrieved document to cite (by documentId); all displayed metadata
+/// comes from our own record, never from model output. Duplicate/unknown/
+/// empty/malformed ids are dropped.
+function canonicalizeCitations(modelCitations, retrieved) {
+  const byId = new Map();
+  for (const doc of retrieved) {
+    if (doc && typeof doc.documentId === "string" && doc.documentId) {
+      byId.set(doc.documentId, doc);
+    }
+  }
+  const out = [];
+  const seen = new Set();
+  for (const c of Array.isArray(modelCitations) ? modelCitations : []) {
+    if (!c || typeof c.documentId !== "string") continue;
+    const id = c.documentId.trim();
+    if (!id || seen.has(id)) continue;
+    const record = byId.get(id);
+    if (!record) continue; // unknown id → the model invented it
+    seen.add(id);
+    out.push({
+      documentId: record.documentId,
+      title: record.title,
+      authority: record.authority,
+      section: typeof record.section === "string" ? record.section : "",
+      url: typeof record.url === "string" ? record.url : "",
+    });
+  }
+  return out;
+}
+
+/// Deterministic, localized "no approved source" response. Never produced by
+/// an LLM — this is the exact payload returned whenever retrieval is empty.
+function noApprovedSourceResponse(language) {
+  return {
+    answer: noApprovedSourceAnswer(language),
+    language,
+    grounded: false,
+    confidence: "low",
+    citations: [],
+    recommendedAction: null,
+    requiresHumanGuide: true,
+    safetyNotice: null,
+  };
+}
+
+function noApprovedSourceAnswer(language) {
+  const map = {
+    ar: "لم أجد مصدراً معتمداً يجيب على هذا السؤال، ولا أستطيع تقديم إجابة موثوقة بدون مصدر معتمد. يرجى سؤال مرشد معتمد أو عالم مخوّل.",
+    en: "I could not find an approved source covering this question, and I cannot give a verified answer without one. Please ask an authorized guide or a qualified scholar.",
+    ur: "مجھے اس سوال کا کوئی منظور شدہ ماخذ نہیں ملا، اور منظور شدہ ماخذ کے بغیر میں مصدقہ جواب نہیں دے سکتا۔ براہ کرم کسی مجاز رہنما یا مستند عالم سے پوچھیں۔",
+    tr: "Bu soruyu kapsayan onaylı bir kaynak bulamadım ve onaylı bir kaynak olmadan doğrulanmış bir yanıt veremem. Lütfen yetkili bir rehbere veya ehil bir alime danışın.",
+    id: "Saya tidak menemukan sumber resmi yang membahas pertanyaan ini, dan saya tidak dapat memberikan jawaban terverifikasi tanpa sumber tersebut. Silakan tanyakan kepada pemandu resmi atau ulama yang berwenang.",
+    fr: "Je n'ai trouvé aucune source approuvée traitant de cette question, et je ne peux pas donner de réponse vérifiée sans source. Veuillez consulter un guide agréé ou un érudit qualifié.",
+  };
+  return map[language] || map.en;
+}
+
 function sanitizeText(text) {
   // Strip control characters; collapse excessive whitespace. Treat all
   // input as data, never as instructions — no further "prompt" parsing here.
@@ -400,8 +543,11 @@ function buildSystemPrompt(language, context, retrieved) {
     "valid JSON object and nothing else — no markdown, no prose outside the JSON. " +
     "The JSON schema is exactly: " +
     '{"answer": string, "language": string, "grounded": boolean, "confidence": "high"|"medium"|"low", ' +
-    '"citations": [{"documentId": string, "title": string, "authority": string, "section": string, "url": string}], ' +
+    '"citations": [{"documentId": string}], ' +
     '"recommendedAction": string|null, "requiresHumanGuide": boolean, "safetyNotice": string|null}. ' +
+    "Each citation must contain ONLY the documentId of a retrieved document listed below, copied " +
+    "exactly. Do not include a title, authority, section, or url — the server fills those in from " +
+    "its own records, and any you supply are discarded. " +
     `Reply language MUST be "${language}" — never switch languages regardless of what language the ` +
     "user's message appears to be in unless they explicitly ask to change the reply language. " +
     "You are not a religious authority. For any ruling on disputed fiqh matters, or if you are not " +
@@ -522,11 +668,15 @@ async function queryFirestoreKnowledge(keywords, language, projectId, token) {
       limit: 3,
     },
   };
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  });
+  const resp = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    },
+    FIRESTORE_TIMEOUT_MS
+  );
   if (!resp.ok) throw new Error(`Firestore query failed: ${resp.status}`);
   const rows = await resp.json();
   const docs = [];
@@ -549,14 +699,18 @@ async function queryFirestoreKnowledge(keywords, language, projectId, token) {
 
 async function callGroq(payload, env) {
   if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
-  const upstream = await fetch(GROQ_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.GROQ_API_KEY}`,
+  const upstream = await fetchWithTimeout(
+    GROQ_ENDPOINT,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+    GROQ_TIMEOUT_MS
+  );
   if (!upstream.ok) {
     throw new Error(`Groq ${upstream.status}`);
   }
@@ -577,11 +731,15 @@ async function askGemini(messages, apiKey) {
     contents,
     ...(systemMessage ? { systemInstruction: { parts: [{ text: systemMessage.content }] } } : {}),
   };
-  const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const response = await fetchWithTimeout(
+    `${GEMINI_ENDPOINT}?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    GEMINI_TIMEOUT_MS
+  );
   if (!response.ok) throw new Error(`Gemini ${response.status}`);
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
@@ -618,22 +776,14 @@ function parseModelJson(raw, language) {
   if (typeof parsed !== "object" || parsed === null) return fallback("model_returned_non_object");
   if (typeof parsed.answer !== "string" || !parsed.answer.trim()) return fallback("missing_answer");
 
+  // Only `documentId` is read from the model's citation objects. Any title/
+  // authority/section/url it supplies is discarded here and rebuilt from the
+  // server's own retrieved record by canonicalizeCitations() — the model is a
+  // selector of approved documents, never a source of citation metadata.
   const citations = Array.isArray(parsed.citations)
     ? parsed.citations
-        .filter(
-          (c) =>
-            c &&
-            typeof c.documentId === "string" &&
-            typeof c.title === "string" &&
-            typeof c.authority === "string"
-        )
-        .map((c) => ({
-          documentId: c.documentId,
-          title: c.title,
-          authority: c.authority,
-          section: typeof c.section === "string" ? c.section : "",
-          url: typeof c.url === "string" ? c.url : "",
-        }))
+        .filter((c) => c && typeof c.documentId === "string" && c.documentId.trim())
+        .map((c) => ({ documentId: c.documentId.trim() }))
     : [];
 
   // A response can NEVER be grounded when its citations list is empty,
@@ -671,7 +821,8 @@ function fallbackAnswer(language) {
 
 // ── Firebase ID token verification (Web Crypto, no Admin SDK) ─────────────
 
-async function verifyFirebaseIdToken(token, projectId) {
+async function verifyFirebaseIdToken(token, projectId, options = {}) {
+  const { requireProjectId = true } = options;
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("malformed token");
   const [headerB64, payloadB64, signatureB64] = parts;
@@ -680,13 +831,39 @@ async function verifyFirebaseIdToken(token, projectId) {
 
   if (header.alg !== "RS256") throw new Error("unexpected alg");
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp !== "number" || payload.exp < now) throw new Error("expired");
-  if (typeof payload.iat !== "number" || payload.iat > now + 60) throw new Error("issued in future");
-  if (projectId) {
-    if (payload.aud !== projectId) throw new Error("bad audience");
-    if (payload.iss !== `https://securetoken.google.com/${projectId}`) throw new Error("bad issuer");
+  const CLOCK_SKEW_S = 60;
+
+  // exp / iat / auth_time — all validated consistently with the documented
+  // Firebase ID token contract, with a small symmetric clock-skew allowance.
+  if (typeof payload.exp !== "number" || payload.exp <= now - CLOCK_SKEW_S) {
+    throw new Error("expired");
   }
-  if (!payload.sub) throw new Error("missing sub");
+  if (typeof payload.iat !== "number" || payload.iat > now + CLOCK_SKEW_S) {
+    throw new Error("issued in future");
+  }
+  // auth_time is REQUIRED on a genuine Firebase ID token and must not be in
+  // the future: it records when the user actually authenticated.
+  if (typeof payload.auth_time !== "number" || payload.auth_time > now + CLOCK_SKEW_S) {
+    throw new Error("bad auth_time");
+  }
+
+  // aud / iss are the ONLY claims that bind this token to OUR Firebase
+  // project. A valid Google signature proves Google minted the token — not
+  // that it was minted for us — so an attacker with any Firebase project of
+  // their own could otherwise present a perfectly-signed token. These checks
+  // are therefore never skipped when auth is required; the caller fails
+  // closed before reaching here if the project id is unset.
+  if (!projectId) {
+    if (requireProjectId) throw new Error("project id not configured");
+    // Non-production, explicitly unconfigured: signature-only verification.
+    // Not sufficient for production and never reached when requireAuth.
+  } else {
+    if (payload.aud !== projectId) throw new Error("bad audience");
+    if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
+      throw new Error("bad issuer");
+    }
+  }
+  if (typeof payload.sub !== "string" || !payload.sub) throw new Error("missing sub");
 
   const jwks = await fetchGoogleJwks();
   const cert = jwks[header.kid];
@@ -704,7 +881,7 @@ async function verifyFirebaseIdToken(token, projectId) {
 async function fetchGoogleJwks() {
   const now = Date.now();
   if (cachedJwks && now - cachedJwksAt < JWKS_CACHE_MS) return cachedJwks;
-  const resp = await fetch(GOOGLE_JWKS_URL);
+  const resp = await fetchWithTimeout(GOOGLE_JWKS_URL, {}, JWKS_TIMEOUT_MS);
   if (!resp.ok) throw new Error("could not fetch signing keys");
   const certs = await resp.json(); // { kid: pemCert, ... }
   cachedJwks = certs;
@@ -828,4 +1005,13 @@ export const __testing__ = {
   sanitizeText,
   retrieveKnowledge,
   DEV_FIXTURE_DOCS,
+  canonicalizeCitations,
+  noApprovedSourceResponse,
+  noApprovedSourceAnswer,
+  utf8ByteLength,
+  verifyFirebaseIdToken,
+  GROQ_TIMEOUT_MS,
+  GEMINI_TIMEOUT_MS,
+  JWKS_TIMEOUT_MS,
+  FIRESTORE_TIMEOUT_MS,
 };

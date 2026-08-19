@@ -71,8 +71,39 @@ the original Groq+Gemini fallback flow and endpoints are preserved) to add:
 - **Stable, localizable error codes**: `ERR_INVALID_JSON`,
   `ERR_INVALID_SCHEMA`, `ERR_REQUEST_TOO_LARGE`, `ERR_UNAUTHENTICATED`,
   `ERR_RATE_LIMITED`, `ERR_UPSTREAM_UNAVAILABLE`, `ERR_METHOD_NOT_ALLOWED`,
-  `ERR_FORBIDDEN_ORIGIN` — no raw provider errors/status/config text is
-  ever returned to the client.
+  `ERR_FORBIDDEN_ORIGIN`, `ERR_SERVER_MISCONFIGURED` — no raw provider
+  errors/status/config text is ever returned to the client.
+- **Fail-closed configuration**: whenever auth is required (production, or
+  `REQUIRE_AUTH=true`), a non-empty `FIREBASE_PROJECT_ID` is mandatory; a
+  missing/blank value returns `503 ERR_SERVER_MISCONFIGURED` before any
+  request is processed. `aud`/`iss` are what bind a token to *our* Firebase
+  project — a valid Google signature only proves Google minted the token,
+  not that it was minted for us — so those checks are **never** skipped
+  because the variable is absent. `exp`, `iat`, `auth_time` and `sub` are
+  all validated, with a 60s symmetric clock-skew allowance.
+- **Safe no-retrieval short-circuit**: when approved-source retrieval
+  returns zero documents, the LLM is **not called at all** and a
+  deterministic localized response is returned
+  (`grounded=false`, `confidence=low`, `citations=[]`,
+  `requiresHumanGuide=true`). Instructing a model to decline is not a
+  safety control — it could still emit a confident fabricated ruling as the
+  `answer` field. Not generating the text is the control.
+- **Citation canonicalization**: the model may only *select* a retrieved
+  `documentId`; every `title`/`authority`/`section`/`url` shown to the user
+  is rebuilt server-side from the retrieved Firestore record. Any metadata
+  the model supplies is discarded, so it cannot pair a real document id
+  with an invented authority or an attacker-supplied URL. Unknown, empty,
+  malformed and duplicate ids are dropped.
+- **Bounded upstreams**: Groq, Gemini, Google JWKS, and Firestore retrieval
+  all use explicit `AbortController` deadlines (`GROQ_TIMEOUT_MS`,
+  `GEMINI_TIMEOUT_MS`, `JWKS_TIMEOUT_MS`, `FIRESTORE_TIMEOUT_MS`), so a
+  hung dependency cannot pin a request open. A timed-out Groq falls back to
+  Gemini; both failing yields a bounded `502`, never a fabricated answer.
+- **Byte-accurate size limit**: the request cap is enforced in **UTF-8
+  bytes**, not JS UTF-16 code units. A char-count check undercounts Arabic
+  and Urdu text by ~2x (and emoji by 2x), which would have let a body
+  several times the intended cap through — in exactly the languages this
+  app serves.
 - **Privacy-safe logging**: only `{uid-prefix, language, provider, status,
   ms}` is logged — never the question text, full token, or precise
   location.
@@ -81,7 +112,7 @@ the original Groq+Gemini fallback flow and endpoints are preserved) to add:
 
 `assistant-proxy/worker.test.mjs` (Node's built-in test runner, no external
 dependency — run with `node --test assistant-proxy/worker.test.mjs` or
-`npm test` inside `assistant-proxy/`): **41 tests, all passing**, covering
+`npm test` inside `assistant-proxy/`): **66 tests, all passing**, covering
 schema validation (missing/oversized/malformed messages, ignored
 client-supplied model/temperature), consent-gated context validation
 (dropped without consent, enum-only fields survive, raw lat/lng never
@@ -96,16 +127,42 @@ non-POST, 401 unauthenticated-in-production, 400 invalid JSON/schema, 413
 oversized body, 502 safe fallback with no provider keys configured, 403 on
 disallowed browser origin).
 
+The security-review round added coverage for each fixed defect:
+
+- **Safe no-retrieval**: that an empty retrieval returns the deterministic
+  payload, and — with a stubbed provider that would return a fabricated
+  ruling and a fabricated citation — that the provider is **never invoked**
+  (`providerCalls === 0`) and none of that text reaches the response.
+- **Fail-closed config**: 503 in production with `FIREBASE_PROJECT_ID`
+  missing or blank/whitespace, the same under `REQUIRE_AUTH=true` outside
+  production, and that the error body leaks no env-var name, secret, or
+  stack trace.
+- **Token claims**: tokens minted for *another* Firebase project (bad
+  `aud`), a forged `aud` with a mismatched `iss`, expired, future-`iat`,
+  missing/future `auth_time`, missing/non-string `sub`, `alg=none`
+  downgrade, malformed tokens, and refusal to skip `aud`/`iss` when no
+  project id is configured.
+- **Citation canonicalization**: a model supplying a **valid** documentId
+  alongside a fabricated title/authority/section/url has every field
+  rebuilt from the retrieved record (asserted both at unit level and
+  end-to-end through `fetch()`), plus rejection of unknown/empty/
+  malformed/duplicate ids.
+- **Timeouts & fallback**: all four budgets are finite and ≤30s; a hanging
+  Groq is aborted and falls back to Gemini (with the citation still
+  canonicalized); both providers failing yields a bounded 502 with no
+  `answer` field.
+- **UTF-8 size limit**: `utf8ByteLength` counts bytes not code units, and a
+  ~24k-Arabic-character body (under the char cap, over the byte cap) is
+  rejected with 413.
+
 ```
 $ node --test assistant-proxy/worker.test.mjs
-# tests 41
-# pass 41
+# tests 66
+# pass 66
 # fail 0
 ```
 
-This count was re-verified after every Worker change in this round — see
-the "Response validation" section below for the specific grounded/citations
-invariant fix that added the two new `parseModelJson` tests.
+This count was re-verified after every Worker change in this round.
 
 ## Client-side changes
 
@@ -197,19 +254,51 @@ cases), plus a widget-level assertion in
 `test/assistant_response_widget_test.dart` that the "Grounded" chip never
 renders for such a response.
 
-## Offline knowledge (restructured)
+## Offline knowledge (contains no religious content)
 
-`lib/data/offline_knowledge_repository.dart` now holds the deterministic,
-non-generative offline fallback facts previously inlined in
-`AssistantService._offlineReply`. It is versioned (`version` constant),
-keyed by topic + language, and every entry is explicitly labeled via
-`OfflineKnowledgeEntry.sourceLabel`/`isVerified` as **unverified general
-knowledge, not a citation-backed ruling** — none of it is tied to a real
-`knowledge_documents` source record, so none of it is marked verified.
-Reviewed translations exist today for English and Arabic; a topic with no
-reviewed translation in the requested language honestly falls back to the
-reviewed English text (`isFallbackTranslation: true`) rather than
-fabricating an unreviewed translation for Urdu/Turkish/Indonesian/French.
+`lib/data/offline_knowledge_repository.dart` holds the deterministic,
+non-generative offline text. It contains **no religious or ritual guidance
+of any kind**, and `approvedOfflineGuidance` is intentionally **empty**.
+
+An earlier revision of this file shipped statements about Tawaf, Sa'i,
+Ihram, Jamarat and Arafat — including a hadith quotation — with no
+approved-source citation metadata, while the surrounding code described
+them as "reviewed". A security/religious-safety review flagged this as
+merge-blocking and the claims were **removed**. Presenting unverifiable
+religious assertions to pilgrims under an implied stamp of review is
+exactly the failure this project's religious-safety rule exists to
+prevent.
+
+Current behavior, offline:
+
+- A **ritual/ruling question** (detected by `isRitualQuestion`, which
+  matches Arabic and Latin/transliterated keywords) returns a referral:
+  the app states it cannot answer ritual questions on its own offline and
+  directs the pilgrim to approved guidance they have saved, or to an
+  authorized guide/qualified scholar. It asserts no ritual fact.
+- **Anything else** returns an operational connectivity notice (counters,
+  saved maps, and emergency contacts still work offline).
+
+Both messages are ordinary UI strings — connectivity notices and a human
+referral — so they are translated for **all six** supported languages
+(ar/en/ur/tr/id/fr) without fabricating any religious content. An
+unsupported language code falls back to English.
+
+`OfflineContentStatus` distinguishes `operationalNotice`,
+`noApprovedSourceOffline`, and `approvedGuidance`, and this is carried
+through `AssistantResponse.offlineStatus` into the UI so the three render
+differently. Only `approvedGuidance` — which requires real
+`OfflineCitationMetadata` (documentId/authority/URL/version) and can only
+be produced from the approved-source registry, never hardcoded — may be
+labelled verified. Since no approved content has been ingested,
+`hasApprovedOfflineGuidance` is currently `false` and the "Approved offline
+guidance" badge is unreachable in practice.
+
+Enforced by `test/offline_knowledge_repository_test.dart`, which asserts
+across all six languages that no entry is ever marked approved, that no
+entry carries citation metadata, and that specific removed claims (lap
+counts, "seven pebbles", "Black Stone", "Hajj is Arafah", and their Arabic
+equivalents) cannot reappear in any offline text.
 
 ## PilgrimContext wiring (implemented)
 
@@ -279,40 +368,50 @@ on.
    test-harness work; the ritual/zone logic was verified by code review
    only, not by an automated test in this round.
 
-## Could not run in this environment
+## Verification status
 
-The sandbox this change was made in has **no Flutter/Dart SDK installed**
-(`flutter`/`dart` are not on `PATH`, and no Flutter SDK directory exists
-outside the platform embedding folders that ship with the repo — checked
-again in this round with the same result). As a result `dart format .`,
-`flutter pub get`, `flutter analyze`, and `flutter test` could **not** be
-run or verified in this session, in this round either. The changed Dart
-files were manually reviewed and brace/paren-balance checked, and the
-existing `AssistantService`/`AssistantScreen` public API surface was kept
-consistent, but **Flutter-side compilation was not actually verified by a
-compiler in this session**.
+Both sides are now actually executed and verified.
 
-To close this gap without a local SDK, `.github/workflows/flutter-ci.yml`
-was added, running on every push/PR to this branch:
+**Flutter** — a Flutter 3.24.2 SDK (matching `flutter-ci.yml`) was
+installed into the working environment and the real commands were run,
+with exit codes checked explicitly:
 
 ```
-dart format --output=none --set-exit-if-changed .
-flutter pub get
-flutter analyze
-flutter test
+dart format --output=none --set-exit-if-changed <feature files>   # exit 0
+flutter pub get                                                    # exit 0
+flutter analyze                                                    # exit 0, "No issues found!"
+flutter test                                                       # exit 0, 44/44 passing
 ```
 
-plus a second job running `node --test assistant-proxy/worker.test.mjs`.
-This session has no way to observe the resulting GitHub Actions run from
-the sandbox — its pass/fail result must be checked externally (in the
-GitHub Actions tab for this branch) before treating the branch as
-merge-ready. **Do not treat a Flutter change on this branch as verified
-until that CI run (or a local `flutter test` run) is actually green.**
+Note that `flutter analyze` exits non-zero on **info**-level lints too,
+not only errors — reading its output without checking the exit code is
+not sufficient verification.
 
-The Worker side, by contrast, *was* fully executed and verified with
-Node's built-in test runner (`node --test`) in this session, since
-Cloudflare Workers code is plain JavaScript/Web-standard APIs — see the
-Worker tests section above for the current, actually-run count.
+**Worker** — `node --test assistant-proxy/worker.test.mjs`: 66/66 passing.
+
+**CI** — `.github/workflows/flutter-ci.yml` runs both suites on every push
+to this branch and on PRs targeting `main`, and can be triggered manually
+via `workflow_dispatch`. Its formatting step deliberately checks only the
+Dart files this feature owns rather than the whole tree: the repository's
+pre-existing files were never run through `dart format` on a
+case-sensitive filesystem, so a repo-wide check fails on ~60 unrelated
+files. The step still fails if any feature-owned file is misformatted.
+
+### Still not verified here
+
+- **Firestore security rules** have been reviewed by inspection only. No
+  Firestore emulator was available in this environment, so the rules for
+  `knowledge_documents` / `knowledge_chunks` / `assistant_feedback` have
+  **not** been executed against one.
+- **Live retrieval** has never run against a real Firestore project (no
+  credentials available), so `queryFirestoreKnowledge` is exercised only
+  through unit tests and dev fixtures.
+- **No officially approved religious source content exists in this
+  repository.** Only non-religious dev fixtures are bundled, and they are
+  disabled outside non-production environments. Until real approved
+  content is ingested via `scripts/ingest_knowledge.mjs`, every
+  religious/ritual question hits the safe no-retrieval path by design —
+  online *and* offline.
 
 ## What needs external credentials / approved content / paid infra
 
