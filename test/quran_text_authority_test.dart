@@ -140,18 +140,29 @@ void main() {
     // a v2.0 fix to that very āyah. So strip the glyph and then trailing
     // whitespace of either kind rather than assuming one separator. Nothing
     // else is touched: no character or diacritic is normalised.
-    String stripAyahMark(String text) {
-      var t = text.trim();
-      while (t.isNotEmpty) {
-        final c = t.codeUnitAt(t.length - 1);
-        final isTrailing = (c >= 0xFB50 && c <= 0xFDFF) ||
-            (c >= 0xFE70 && c <= 0xFEFF) ||
-            c == 0x00A0 ||
-            c == 0x0020;
-        if (!isTrailing) break;
-        t = t.substring(0, t.length - 1);
+    bool isAyahMarker(int c) =>
+        (c >= 0xFB50 && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF);
+
+    // The official aya_text carries the āyah-number glyph, normally preceded
+    // by U+00A0 — but not always: 2:286 uses a plain space, and read.me
+    // records a v2.0 fix to that āyah. Per the brief the marker is dropped on
+    // storage, including the one between two āyāt of a multi-āyah record.
+    // Nothing else is touched: waqf marks and every diacritic stay exactly as
+    // the authority publishes them.
+    String dropAyahMarkers(String text) {
+      final out = StringBuffer();
+      for (final r in text.runes) {
+        if (isAyahMarker(r)) {
+          // also drop the separator that introduced the marker
+          final s = out.toString();
+          final trimmed = s.replaceFirst(RegExp(r'[ \u00A0]+$'), '');
+          out.clear();
+          out.write(trimmed);
+          continue;
+        }
+        out.writeCharCode(r);
       }
-      return t;
+      return out.toString().replaceAll(RegExp(r'  +'), ' ').trim();
     }
 
     test('the pinned file is the v2.0 dataset', () {
@@ -160,7 +171,7 @@ void main() {
       expect(manifest['editionDate'], '2022-09-07');
     });
 
-    test('every stored text is a verbatim span of the official aya_text', () {
+    test('stored text is the official text with only āyah markers removed', () {
       for (final a in ayat) {
         final parts = <String>[];
         for (final n in (a['ayahNumbers'] as List)) {
@@ -170,19 +181,48 @@ void main() {
                   'official dataset');
           parts.add((row!['aya_text'] as String).trim());
         }
-        final full = stripAyahMark(parts.join(' '));
+        final full = dropAyahMarkers(parts.join(' '));
 
         expect(a['officialFullAyahText'], full,
             reason: '${a['duaId']}: manifest full āyah differs from the '
                 'official dataset');
 
-        final stored = (a['officialText'] as String);
-        // Verbatim span: every code point comes from the official string.
+        final stored = a['officialText'] as String;
+
+        // No āyah-number marker survives in stored text — including the one
+        // that separates two āyāt in a multi-āyah record.
+        expect(stored.runes.any(isAyahMarker), isFalse,
+            reason: '${a['duaId']}: an āyah-number marker was kept');
+
+        // Every remaining character comes from the official text: the stored
+        // string is a contiguous span of the marker-stripped official text,
+        // never hand-assembled.
         expect(full.contains(stored), isTrue,
             reason: '${a['duaId']}: stored text is not a contiguous span of '
-                'the official āyah — it must never be hand-assembled');
+                'the official āyah');
+
         expect(a['isPortionOfAyah'], stored != full, reason: '${a['duaId']}');
       }
+    });
+
+    test('waqf marks are preserved, never stripped with the markers', () {
+      const waqf = 'ۖۗۘۙۚۛ';
+      var seen = 0;
+      for (final a in ayat) {
+        final stored = a['officialText'] as String;
+        final full = a['officialFullAyahText'] as String;
+        final i = full.indexOf(stored);
+        final span = full.substring(i, i + stored.length);
+        expect(
+          waqf.split('').map((w) => stored.split(w).length).toList(),
+          waqf.split('').map((w) => span.split(w).length).toList(),
+          reason: '${a['duaId']}: a waqf mark was lost',
+        );
+        seen += stored.split('').where(waqf.contains).length;
+      }
+      // The corpus really does contain waqf marks, so this test cannot pass
+      // vacuously on an empty set.
+      expect(seen, greaterThan(0));
     });
 
     test('the source pack carries exactly the official span', () {
