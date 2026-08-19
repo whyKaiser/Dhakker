@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../bloc/cubit.dart';
+import '../../data/offline_knowledge_repository.dart';
 import '../../services/assistant_service.dart';
 import '../../services/pilgrim_context_builder.dart';
 
@@ -830,11 +831,37 @@ class AssistantResponseMeta extends StatelessWidget {
         color: _danger,
       ));
     } else if (r.isOffline) {
-      chips.add(AssistantMetaChip(
-        icon: Icons.wifi_off_rounded,
-        label: isRtl ? 'غير متصل' : 'Offline',
-        color: Colors.orange,
-      ));
+      // Distinguish the three offline cases. Only genuinely approved,
+      // citation-backed cached guidance may be labelled verified; an
+      // ordinary connectivity notice and a "no approved source offline"
+      // referral must never look like verified religious guidance.
+      switch (r.offlineStatus) {
+        case OfflineContentStatus.approvedGuidance:
+          chips.add(AssistantMetaChip(
+            icon: Icons.verified_rounded,
+            label:
+                isRtl ? 'إرشاد معتمد دون اتصال' : 'Approved offline guidance',
+            color: Colors.green,
+          ));
+          break;
+        case OfflineContentStatus.noApprovedSourceOffline:
+          chips.add(AssistantMetaChip(
+            icon: Icons.wifi_off_rounded,
+            label: isRtl
+                ? 'غير متاح دون اتصال — لا يوجد مصدر معتمد'
+                : 'Unavailable offline — no approved source',
+            color: Colors.orange,
+          ));
+          break;
+        case OfflineContentStatus.operationalNotice:
+        case null:
+          chips.add(AssistantMetaChip(
+            icon: Icons.wifi_off_rounded,
+            label: isRtl ? 'غير متصل' : 'Offline',
+            color: Colors.orange,
+          ));
+          break;
+      }
     } else if (r.grounded) {
       chips.add(AssistantMetaChip(
         icon: Icons.verified_rounded,

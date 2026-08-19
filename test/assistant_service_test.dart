@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:dhakker/data/offline_knowledge_repository.dart';
 import 'package:dhakker/services/assistant_service.dart';
 
 void main() {
@@ -167,10 +168,25 @@ void main() {
 
     test('offline() factory marks isOffline true and never grounded', () {
       final resp = AssistantResponse.offline(
-          'Tawaf is seven circuits (offline fact).', 'en');
+          OfflineKnowledgeRepository.replyFor(
+              'where do I collect luggage', 'en'));
       expect(resp.isOffline, isTrue);
       expect(resp.grounded, isFalse);
       expect(resp.citations, isEmpty);
+    });
+
+    test('offline() carries the offline status through for the UI', () {
+      final ritual = AssistantResponse.offline(
+          OfflineKnowledgeRepository.replyFor('tawaf', 'en'));
+      expect(
+          ritual.offlineStatus, OfflineContentStatus.noApprovedSourceOffline);
+      expect(ritual.requiresHumanGuide, isTrue,
+          reason: 'a ritual question offline must point at a human guide');
+
+      final general = AssistantResponse.offline(
+          OfflineKnowledgeRepository.replyFor('hello', 'en'));
+      expect(general.offlineStatus, OfflineContentStatus.operationalNotice);
+      expect(general.requiresHumanGuide, isFalse);
     });
   });
 

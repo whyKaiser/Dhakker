@@ -43,6 +43,7 @@ jobs:
             "lib/services/pilgrim_context_builder.dart"
             "test/assistant_response_widget_test.dart"
             "test/assistant_service_test.dart"
+            "test/offline_knowledge_repository_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

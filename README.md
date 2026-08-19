@@ -105,7 +105,7 @@ firebase deploy --only hosting
 |---|---|
 | `GROQ_API_KEY` (سرّي) | مفتاح Groq — المزوّد الأساسي |
 | `GEMINI_API_KEY` (سرّي، اختياري) | مفتاح Gemini — احتياطي عند فشل Groq |
-| `FIREBASE_PROJECT_ID` | للتحقق من `aud`/`iss` في Firebase ID Token |
+| `FIREBASE_PROJECT_ID` | **مطلوب** للتحقق من `aud`/`iss` في Firebase ID Token. عند تفعيل المصادقة (الإنتاج أو `REQUIRE_AUTH=true`) يُرفض أي طلب بـ `503 ERR_SERVER_MISCONFIGURED` إذا كان فارغاً — لا يتم تخطّي التحقق من `aud`/`iss` أبداً بسبب غياب المتغيّر |
 | `ALLOWED_ORIGINS` | نطاقات الويب المسموحة لـ CORS، مفصولة بفواصل (لا `*` في الإنتاج) |
 | `ENVIRONMENT` | `production` يُفعّل: رفض بلا توكن، رفض أصل غير مسموح، منع fixtures التطوير |
 | `REQUIRE_AUTH` | `true` لإجبار التحقق من الهوية في بيئة غير الإنتاج أيضاً |
