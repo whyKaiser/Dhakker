@@ -1,83 +1,93 @@
-# MOIA source pack — review sheet (round 2)
+# MOIA source pack — review sheet (round 3)
 
-**All 61 records `unverified`.** Nothing uploaded to Firestore, nothing deployed, `main` untouched.
+**85 records, all `unverified`.** Nothing uploaded to Firestore, nothing deployed, `main` untouched.
 
-## ⚠️ Pages 65–73 were NOT supplied
+## Pages 65–73 verified and transcribed
 
-The second attachment is **byte-identical** to the first (same MD5 `a39462c3…`). Both contain printed pages **59, 64, 69, 74, 94–103** only.
+File MD5 `855b2b27…`, 1.3 MB, 9 pages. Visually confirmed: page 1 = printed **65**, page 9 = printed **73**. Page 69 in this file matches the copy already held — a useful consistency check.
 
-**Consequence:** Maqam Ibrahim, Zamzam, Hijr Ismail, Safa, Marwah and Al-Mas'a still have **no location-specific text**. I did not invent substitutes and did not promote general duas to fill the gap.
+**24 new records** from pages 65–73.
 
-## Records: 11 core + 50 general = **61**
-
-| # | Title | Kind | Page | Text (truncated) |
+| # | Title | Kind | Zone | Page |
 |---|---|---|---|---|
-| 1 | التلبية | `specific_text` | 59 | لَبَّيْكَ اللهُمَّ، لَبَّيْكَ، لَبَّيْكَ لَا شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْم … |
-| 2 | الزيادة في التلبية | `specific_text` | 59 | لَبَّيْكَ اللهُمَّ لَبَّيْكَ، لَبَّيْكَ وَسَعْدَيْكَ، وَالْخَيْرُ فِي يَدَيْكَ، لَبَّيْكَ وَالرَّغْبَاءُ إِلَي … |
-| 3 | دعاء دخول المسجد | `specific_text` | 64 | بسم الله والصلاة والسلام علىٰ رسول الله، وأعوذُ بالله العظيم وبوجهه الكريم وسلطانه القديم من الشيطان الرجيم، ا … |
-| 4 | حديث دخول المسجد والخروج منه | `specific_text` | 64 | إِذَا دَخَلَ أَحَدُكُمُ الْمَسْجِدَ، فَلْيَقُلْ: اللهُمَّ افتَحْ لِي أَبْوَابَ رَحْمَتِكَ، وَإِذَا خَرَجَ، فَل … |
-| 5 | ما يُستلم في الطواف | `procedural_guidance` | 69 | لَمْ أَرَ النَّبِيَّ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ يَسْتَلِمُ مِنَ الْبَيْتِ إِلَّا الرُّكْنَيْنِ الْيَمَانِ … |
-| 6 | ما يقال بين الركن اليماني والحجر الأسود | `specific_text` | 69 | رَبَّنَآ ءَاتِنَا فِي ٱلدُّنْيَا حَسَنَةً وَفِي ٱلْأَخِرَةِ حَسَنَةً وَقِنَا عَذَابَ ٱلنَّارِ |
-| 7 | التكبير عند الحجر الأسود | `specific_text` | 69 | الله أكبر |
-| 8 | وجوب شمول الحلق لجميع الرأس | `procedural_guidance` | 74 | ويجب أن يكونَ الحلقُ شاملًا لجميع الرأس؛ لقولِه تعالى: ﴿مُحَلِّقِينَ رُءُوسَكُمْ وَمُقَصِّرِينَ﴾ [الفتح: 27]،  … |
-| 9 | شمول التقصير لجميع الرأس | `procedural_guidance` | 74 | وكذلك التقصير يعمُّ به جميع الرأس. |
-| 10 | تقصير المرأة | `procedural_guidance` | 74 | وأما المرأة فتُقصر رأسها بكل حال، ولا يجوز لها الحلق، فتقصر من كل قَرْنٍ (ضفيرة) أُنملة، يعني أن المرأة تمسك ب … |
-| 11 | تمام العمرة والتحلل | `procedural_guidance` | 74 | وبهذه الأعمال تمت عمرته وحل منها حِلًّا كاملًا، يُبيح له جميع محظوراتِ الإحرامِ. |
+| 1 | النية عند ابتداء الطواف | `procedural_guidance` | المطاف (منطقة الطواف) | 65 |
+| 2 | الاضطباع | `procedural_guidance` | المطاف (منطقة الطواف) | 65 |
+| 3 | الرَّمَل | `procedural_guidance` | المطاف (منطقة الطواف) | 65 |
+| 4 | ما يقال عند استلام الحجر الأسود | `specific_text` | الحجر الأسود | 65 |
+| 5 | أثر عمر رضي الله عنه عند الحجر | `specific_text` | الحجر الأسود | 66 |
+| 6 | النهي عن المزاحمة عند الحجر | `specific_text` | الحجر الأسود | 67 |
+| 7 | آداب الطواف وترك أذية الطائفين | `procedural_guidance` | المطاف (منطقة الطواف) | 68 |
+| 8 | توجيه للنساء بترك مزاحمة الرجال | `procedural_guidance` | المطاف (منطقة الطواف) | 68 |
+| 9 | اتجاه الطواف بعد التكبير | `procedural_guidance` | المطاف (منطقة الطواف) | 68 |
+| 10 | ما يقال في بقية الطواف | `procedural_guidance` | المطاف (منطقة الطواف) | 70 |
+| 11 | التحذير من تخصيص دعاء لكل شوط | `procedural_guidance` | المطاف (منطقة الطواف) | 70 |
+| 12 | عدد أشواط الطواف | `procedural_guidance` | المطاف (منطقة الطواف) | 71 |
+| 13 | لا يصح الطواف من داخل الحِجْر | `specific_text` | حجر إسماعيل (الحطيم) | 71 |
+| 14 | ما يُقرأ عند التقدم لمقام إبراهيم | `specific_text` | مقام إبراهيم | 71 |
+| 15 | ركعتا الطواف خلف المقام | `specific_text` | مقام إبراهيم | 71 |
+| 16 | التنبه لأذية الطائفين عند المقام | `procedural_guidance` | مقام إبراهيم | 71 |
+| 17 | التحذير من التمسح بمقام إبراهيم | `procedural_guidance` | مقام إبراهيم | 71 |
+| 18 | الرجوع إلى الحجر الأسود بعد الركعتين | `specific_text` | الحجر الأسود | 72 |
+| 19 | ما يُقرأ عند الدنو من الصفا | `specific_text` | المسعى (ممر السعي) | 72 |
+| 20 | الذكر على الصفا | `specific_text` | المسعى (ممر السعي) | 72 |
+| 21 | ما يقال على المروة | `specific_text` | المسعى (ممر السعي) | 73 |
+| 22 | لا دعاء مخصّص لكل شوط في السعي | `procedural_guidance` | المسعى (ممر السعي) | 73 |
+| 23 | الصعود والسعي الشديد سنة لا واجب | `procedural_guidance` | المسعى (ممر السعي) | 73 |
+| 24 | عدد أشواط السعي | `procedural_guidance` | المسعى (ممر السعي) | 73 |
 
-## Uncertainty register — 4 resolved, 6 open
+## ⚠️ Two gaps that remain — not invented
 
-| ID | Page | Status | Sev | Detail |
-|---|---|---|---|---|
-| U10 | 102 | ✅ resolved | resolved | حُسم التناقض بالفحص البصري: صفحة 102 تحوي أولًا نهاية دعاء القنوت الممتد من 101، ثم ذكر التهليل، ثم يبدأ عنوان «المبيت بمزدلفة». فالسجلّان صحيحان ولا يوجد سجل يُحذف. |
-| U2 | 96→97 | ✅ resolved | resolved | تأكّد بصريًّا: [النمل: 19] تبدأ أسفل صفحة 96 وتنتهي أعلى صفحة 97 بـ«…وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ ٱلصَّٰلِحِينَ»، و[الأحقاف: 15] كاملة في صفحة 97 وتنتهي بـ«…إِنِّي تُبْتُ إِلَيْك |
-| U3 | 99→100 | ✅ resolved | resolved | قُرئ الدعاء متصلًا عبر الصفحتين وأُدرج كاملًا كسجل moia-mukhtasar-1446-general-050. |
-| U8 | 74 | ✅ resolved | resolved | فُصل السجل المركّب إلى أربع نقاط منفصلة كما طُبعت فعلًا في صفحة 74. |
-| U11 | 59 | 🔴 open | low | رموز ﷺ و«رضي الله عنهما» زخرفية مركّبة؛ كُتبت نصًّا حيث لزم. لا تؤثر على المتون. |
-| U4 | 94-102 | 🔴 open | medium | علامات رقم الآية (۝193) رُسمت كدائرة مزخرفة تحوي الرقم؛ نُقلت كـ ۝ بدون الرقم. تحتاج ضبطًا حسب سياسة العرض. |
-| U5 | 94-102 | 🔴 open | high | النصوص القرآنية بالرسم العثماني (ٱ، ۚ ۖ ۗ، ءَا، ـَٔا). نُقلت كما رُئيت، وتبقى أعلى المواضع خطورة وتحتاج تدقيقًا حرفًا بحرف على الورق. لا يمكن إغلاقها بالفحص البصري للصور وحده. |
-| U6 | 64 | 🔴 open | low | «افتَحْ» — الفاء بلا سكون ظاهر في الصورة؛ يُرجى تأكيدها على الورق. |
-| U7 | 69 | 🔴 open | medium | «ٱلْأَخِرَةِ» بالرسم العثماني دون ألف — نُقلت كما رُسمت. |
-| U9 | 98 | 🔴 open | low | «اللهمَّ» في أول دعاء الصفحة بخط مختلف قليلًا عن «اللَّهُمَّ» في بقيتها. |
+- **بئر زمزم (Zamzam): no text.** Pages 65–73 move from the two rak'ahs at the Maqam (71–72) straight back to the Black Stone and out to Al-Mas'a. Zamzam is never mentioned. No text was fabricated.
+- **الكعبة المشرفة as its own zone: no text.** The Tawaf material attaches to Al-Mataf and the Black Stone.
 
-## Zone coverage — 19 zones × 5
+## Two decisive findings from p70 and p73
 
-- Display slots: **95** · distinct duas actually used: **57**
-- General duas reused across zones: **30** (max reuse **8×**)
-- Zones with **no** source-specific text: **14** of 19
-- Guard check: **no place-specific text reused in another zone** ✅
+The source **explicitly forbids** assigning a supplication to each circuit — in Tawaf (p70) and again in Sa'i (p73), calling it «عمل محدث، وبدعة منكرة لا تجوز». Both are now transcribed as records. This is direct textual backing for the structural rule applied from the start.
 
-> 95 slots ≠ 95 distinct duas. General duas repeat across zones by design; each carries `basis` so the UI can label it «دعاء عام» and never attribute it to the place.
+## Coverage matrix — 19 zones × 5
 
-| Zone | key | 1 | 2 | 3 | 4 | 5 |
-|---|---|---|---|---|---|---|
-| المطاف (منطقة الطواف) | `mataf` | 🟢p69 | 🟢p69 | 🕌p64 | ⚪p94 | ⚪p94 |
-| الكعبة المشرفة | `kaaba` | 🕌p64 | ⚪p94 | ⚪p95 | ⚪p95 | ⚪p95 |
-| مقام إبراهيم | `maqam_ibrahim` | 🕌p64 | ⚪p95 | ⚪p95 | ⚪p95 | ⚪p95 |
-| بئر زمزم | `zamzam` | 🕌p64 | ⚪p96 | ⚪p96 | ⚪p96 | ⚪p96 |
-| الحجر الأسود | `hajar_aswad` | 🟢p69 | 🟢p69 | 🕌p64 | ⚪p96 | ⚪p96 |
-| حجر إسماعيل (الحطيم) | `hijr_ismail` | 🕌p64 | ⚪p96 | ⚪p96 | ⚪p96 | ⚪p96 |
-| المسعى (ممر السعي) | `masaa` | 🕌p64 | ⚪p97 | ⚪p97 | ⚪p97 | ⚪p97 |
-| منى | `mina` | ⚪p97 | ⚪p98 | ⚪p98 | ⚪p98 | ⚪p98 |
-| جمرة العقبة الكبرى | `jamrat_aqabah` | ⚪p98 | ⚪p98 | ⚪p98 | ⚪p98 | ⚪p99 |
-| الجمرة الوسطى | `jamrat_wusta` | ⚪p99 | ⚪p99 | ⚪p99 | ⚪p99 | ⚪p100 |
-| الجمرة الصغرى (الأولى) | `jamrat_sughra` | ⚪p100 | ⚪p100 | ⚪p100 | ⚪p101 | ⚪p101 |
-| مزدلفة | `muzdalifah` | ⚪p101 | ⚪p101 | ⚪p101 | ⚪p101 | ⚪p102 |
-| المشعر الحرام | `mashar_haram` | ⚪p99 | ⚪p94 | ⚪p94 | ⚪p94 | ⚪p95 |
-| عرفات | `arafat` | ⚪p95 | ⚪p95 | ⚪p95 | ⚪p95 | ⚪p95 |
-| جبل الرحمة | `jabal_rahmah` | ⚪p95 | ⚪p96 | ⚪p96 | ⚪p96 | ⚪p96 |
-| مسجد نمرة | `masjid_namirah` | 🕌p64 | 🕌p64 | ⚪p96 | ⚪p96 | ⚪p96 |
-| ذو الحليفة (ميقات أهل المدينة) | `miqat_dhul_hulayfah` | 🟢p59 | 🟢p59 | ⚪p96 | ⚪p96 | ⚪p96 |
-| يلملم (ميقات أهل اليمن) | `miqat_yalamlam` | 🟢p59 | 🟢p59 | ⚪p97 | ⚪p97 | ⚪p97 |
-| قرن المنازل (ميقات أهل نجد) | `miqat_qarn_manazil` | 🟢p59 | 🟢p59 | ⚪p97 | ⚪p97 | ⚪p98 |
+- Slots **95** · distinct duas used **74** (was 57)
+- basis: **26 specific** · **9 mosque_entry** · **60 general**
+- Fully covered by place-specific text: **mataf, hajar_aswad, masaa**
+- Zones with **no** place-specific text: **11** of 19
+- Guard: **no place-specific text assigned to a zone that does not own it** ✅
 
-🟢 source ties it here · 🕌 mosque-entry (general to all mosques per the source) · ⚪ general, NOT attributed here
+| Zone | key | specific avail. | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|---|
+| المطاف (منطقة الطواف) | `mataf` | 10 | 🟢p69 | 🟢p65 | 🟢p65 | 🟢p65 | 🟢p68 |
+| الكعبة المشرفة | `kaaba` | 0 | 🕌p64 | 🕌p64 | ⚪p94 | ⚪p94 | ⚪p94 |
+| مقام إبراهيم | `maqam_ibrahim` | 4 | 🟢p71 | 🟢p71 | 🟢p71 | 🟢p71 | 🕌p64 |
+| بئر زمزم | `zamzam` | 0 | 🕌p64 | 🕌p64 | ⚪p95 | ⚪p95 | ⚪p95 |
+| الحجر الأسود | `hajar_aswad` | 5 | 🟢p69 | 🟢p65 | 🟢p66 | 🟢p67 | 🟢p72 |
+| حجر إسماعيل (الحطيم) | `hijr_ismail` | 1 | 🟢p71 | 🕌p64 | 🕌p64 | ⚪p95 | ⚪p95 |
+| المسعى (ممر السعي) | `masaa` | 6 | 🟢p72 | 🟢p72 | 🟢p73 | 🟢p73 | 🟢p73 |
+| منى | `mina` | 0 | ⚪p95 | ⚪p95 | ⚪p96 | ⚪p96 | ⚪p96 |
+| جمرة العقبة الكبرى | `jamrat_aqabah` | 0 | ⚪p96 | ⚪p96 | ⚪p96 | ⚪p96 | ⚪p96 |
+| الجمرة الوسطى | `jamrat_wusta` | 0 | ⚪p96 | ⚪p96 | ⚪p97 | ⚪p97 | ⚪p97 |
+| الجمرة الصغرى (الأولى) | `jamrat_sughra` | 0 | ⚪p97 | ⚪p97 | ⚪p98 | ⚪p98 | ⚪p98 |
+| مزدلفة | `muzdalifah` | 0 | ⚪p98 | ⚪p98 | ⚪p98 | ⚪p98 | ⚪p98 |
+| المشعر الحرام | `mashar_haram` | 0 | ⚪p99 | ⚪p99 | ⚪p99 | ⚪p99 | ⚪p99 |
+| عرفات | `arafat` | 0 | ⚪p100 | ⚪p100 | ⚪p100 | ⚪p100 | ⚪p101 |
+| جبل الرحمة | `jabal_rahmah` | 0 | ⚪p101 | ⚪p101 | ⚪p101 | ⚪p101 | ⚪p101 |
+| مسجد نمرة | `masjid_namirah` | 0 | 🕌p64 | 🕌p64 | ⚪p102 | ⚪p99 | ⚪p94 |
+| ذو الحليفة (ميقات أهل المدينة) | `miqat_dhul_hulayfah` | 2 | 🟢p59 | 🟢p59 | ⚪p94 | ⚪p94 | ⚪p95 |
+| يلملم (ميقات أهل اليمن) | `miqat_yalamlam` | 2 | 🟢p59 | 🟢p59 | ⚪p95 | ⚪p95 | ⚪p95 |
+| قرن المنازل (ميقات أهل نجد) | `miqat_qarn_manazil` | 2 | 🟢p59 | 🟢p59 | ⚪p95 | ⚪p95 | ⚪p95 |
 
-## Stable zone identifier
+🟢 tied here by the source · 🕌 mosque-entry (general to all mosques per the source) · ⚪ general, NOT attributed here
 
-`nameAr` is editable, so it is unsafe as a join key. Added a stable `zoneKey` slug to all 19 zones in `lib/shared/data/hajj_zones_seed.dart` (e.g. `mataf`, `hajar_aswad`, `miqat_yalamlam`). The matrix keys on `zoneKey`; `zoneId` stays empty until import maps it to the live Firestore doc id.
+## Open uncertainties
 
-## Still needed
+| ID | Page | Sev | Detail |
+|---|---|---|---|
+| U5 | 94-102 | high | النصوص القرآنية بالرسم العثماني (ٱ، ۚ ۖ ۗ، ءَا، ـَٔا). نُقلت كما رُئيت، وتبقى أعلى المواضع خطورة وتحتاج تدقيقًا حرفًا بحرف على الورق. لا يمكن إغلاقها بالفحص البصري للصور  |
+| U4 | 94-102 | medium | علامات رقم الآية (۝193) رُسمت كدائرة مزخرفة تحوي الرقم؛ نُقلت كـ ۝ بدون الرقم. تحتاج ضبطًا حسب سياسة العرض. |
+| U6 | 64 | low | «افتَحْ» — الفاء بلا سكون ظاهر في الصورة؛ يُرجى تأكيدها على الورق. |
+| U7 | 69 | medium | «ٱلْأَخِرَةِ» بالرسم العثماني دون ألف — نُقلت كما رُسمت. |
+| U9 | 98 | low | «اللهمَّ» في أول دعاء الصفحة بخط مختلف قليلًا عن «اللَّهُمَّ» في بقيتها. |
+| U11 | 59 | low | رموز ﷺ و«رضي الله عنهما» زخرفية مركّبة؛ كُتبت نصًّا حيث لزم. لا تؤثر على المتون. |
+| U12 | 71 | medium | «إِبْرَٰهِـۧمَ» in Baqarah 125 carries a superscript yā' in the Uthmani rasm; transcribed as printed, needs character-level check. |
 
-1. **Pages 65–73** — required for Maqam Ibrahim / Zamzam / Hijr Ismail / Safa / Marwah / Al-Mas'a.
-2. **U5 (high, open)** — Uthmani rasm needs character-level checking on paper; image inspection cannot close it.
-3. U4, U6, U7, U9, U11 — minor, listed above.
+## Tests
+
+`flutter analyze` 0 · `flutter test` 44/44 · worker 86/86 · Firestore rules 21/21

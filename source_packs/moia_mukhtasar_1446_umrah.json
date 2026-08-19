@@ -117,11 +117,12 @@
     }
   ],
   "pagesNotSuppliedInExcerpt": [
-    "صفحات 65-73 لم تُرفق. الملف المرفق الثاني مطابق تمامًا للأول (نفس بصمة MD5) ويحوي الصفحات 59، 64، 69، 74، 94-103 فقط.",
-    "أثر ذلك: لا يوجد في هذه الحزمة أي نص خاص بمقام إبراهيم أو زمزم أو حجر إسماعيل أو الصفا أو المروة أو المسعى. لم تُختلق أي بدائل."
+    "اكتملت الصفحات 65-73 (ملف MD5 855b2b27…، 9 صفحات، تأكّد بصريًّا أن أولها 65 وآخرها 73).",
+    "⚠️ لا يوجد في الصفحات 65-73 أي نص خاص ببئر زمزم. هذا القسم ينتقل من ركعتي المقام (71-72) إلى الرجوع للحجر الأسود ثم الخروج للمسعىٰ، دون ذكر زمزم. لم يُختلق أي نص.",
+    "الكعبة المشرفة كمنطقة مستقلة: لا نص يخصّها بذاتها؛ نصوص الطواف مرتبطة بالمطاف والحجر الأسود."
   ],
   "counts": {
-    "total": 61
+    "total": 85
   },
   "entries": [
     {
@@ -2742,6 +2743,1003 @@
       "visuallyUncertain": [],
       "isGeneralSupplication": true,
       "quranRef": null
+    },
+    {
+      "duaId": "moia-1446-tawaf-no-verbal-niyyah",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "النية عند ابتداء الطواف",
+        "en": "Intention at the start of Tawaf"
+      },
+      "text": {
+        "ar": "ثم يتقدم إلىٰ البيت مُتّجهًا نحوَ الحَجَرِ الأسود ليبتدئَ الطوافَ، ولا يقول: نويت الطواف لأنه لم يَرِد عن النبي صلى الله عليه وسلم، والنيةُ محلُّها القلبُ.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "نية",
+        "بدعة"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "intention"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — ابتداء الطواف والنية — صفحة 65",
+      "printedPage": 65,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "المصدر ينفي التلفظ بالنية. سجل إرشادي لا نص يُتلىٰ.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-idtiba",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "الاضطباع",
+        "en": "Idtiba'"
+      },
+      "text": {
+        "ar": "والاضطباع: أن يكشف كتفَه الأيمنَ، فيجعلَ وسط ردائهِ تحتَ إبطهِ الأيمن، وطرفيهِ علىٰ كتفهِ الأيسر.",
+        "en": ""
+      },
+      "tagsAr": [
+        "اضطباع",
+        "طواف",
+        "سنة"
+      ],
+      "tagsEn": [
+        "idtiba",
+        "tawaf"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الاضطباع — صفحة 65",
+      "printedPage": 65,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "سنة للرجل في طواف القدوم/العمرة.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-raml",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "الرَّمَل",
+        "en": "Raml"
+      },
+      "text": {
+        "ar": "والرَّمَلُ: إسراعُ المشي مع مُقاربة الخُطا.",
+        "en": ""
+      },
+      "tagsAr": [
+        "رمل",
+        "طواف",
+        "سنة"
+      ],
+      "tagsEn": [
+        "raml",
+        "tawaf"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الرَّمَل — صفحة 65",
+      "printedPage": 65,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "يرمل في الأشواط الثلاثة الأولىٰ ويمشي في الأربعة الباقية (ص65).",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-hajar-tasmiya",
+      "zoneNameAr": "الحجر الأسود",
+      "zoneKey": "hajar_aswad",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "ما يقال عند استلام الحجر الأسود",
+        "en": "Said at the Black Stone"
+      },
+      "text": {
+        "ar": "بسم الله والله أكبر",
+        "en": ""
+      },
+      "tagsAr": [
+        "الحجر الأسود",
+        "استلام",
+        "تكبير"
+      ],
+      "tagsEn": [
+        "black-stone",
+        "takbir"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — ما يقال عند الحجر الأسود — صفحة 65",
+      "printedPage": 65,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "يقال في الحالات الأربع كلها (ص65-67). المصدر ينص أن ذلك تعظيمًا لله واقتداءً بالنبي ﷺ، لا اعتقادًا أن الحجر ينفع أو يضر.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-hajar-umar",
+      "zoneNameAr": "الحجر الأسود",
+      "zoneKey": "hajar_aswad",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "أثر عمر رضي الله عنه عند الحجر",
+        "en": "Umar's statement at the Black Stone"
+      },
+      "text": {
+        "ar": "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ، لَا تَضُرُّ وَلَا تَنْفَعُ، وَلَوْلَا أَنِّي رَأَيْتُ النَّبِيَّ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ يُقَبِّلُكَ مَا قَبَّلْتُكَ",
+        "en": ""
+      },
+      "tagsAr": [
+        "الحجر الأسود",
+        "توحيد",
+        "اتباع"
+      ],
+      "tagsEn": [
+        "black-stone",
+        "tawhid"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — أثر عمر بن الخطاب عند الحجر الأسود — صفحة 66",
+      "printedPage": 66,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "يعزوه المصدر للبخاري (1597) ومسلم (1270). المصدر يعلّق: فيه تنبيه لأهمية التوحيد ومتابعة النبي ﷺ وعدم الإحداث في الدين.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-hajar-crowding",
+      "zoneNameAr": "الحجر الأسود",
+      "zoneKey": "hajar_aswad",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "النهي عن المزاحمة عند الحجر",
+        "en": "Do not crowd at the Stone"
+      },
+      "text": {
+        "ar": "يَا أَبَا حَفْصٍ إِنَّكَ رَجُلٌ قَوِيٌّ فَلَا تُزَاحِمْ عَلَى الرُّكْنِ فَإِنَّكَ تُؤْذِي الضَّعِيفَ، وَلَكِنْ إِنْ وَجَدْتَ خَلْوَةً فَاسْتَلِمْ وَإِلَّا فَكَبِّرْ وَامْضِ",
+        "en": ""
+      },
+      "tagsAr": [
+        "الحجر الأسود",
+        "مزاحمة",
+        "أذية"
+      ],
+      "tagsEn": [
+        "black-stone",
+        "crowding"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — النهي عن المزاحمة على الركن — صفحة 67",
+      "printedPage": 67,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "قاله النبي ﷺ لعمر رضي الله عنه. المصدر يعزوه لعبدالرزاق (5/36) وابن أبي شيبة (3/171) والشافعي وأحمد. مفيد جدًّا لتوجيه الحاج وقت الزحام.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-adab",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "آداب الطواف وترك أذية الطائفين",
+        "en": "Etiquette: do not harm others"
+      },
+      "text": {
+        "ar": "ويجب علىٰ الطائف في الحالات الثلاث الأولىٰ: أن لا يؤذي الطائفين، ويلحق الضرر بهم؛ لأن الاستلام سنة، وترك الإيذاء واجب، فالإتيان بالواجب أولىٰ، وينبغي له إذا كان قويًّا، وكان فيه زحام أن يبتعد عن مزاحمة الضعفاء لئلا يؤذيهم.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "أذية",
+        "زحام",
+        "آداب"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "etiquette",
+        "crowding"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — آداب الطائف وترك الأذية — صفحة 68",
+      "printedPage": 68,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "قاعدة مهمة: ترك الإيذاء واجب والاستلام سنة.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-women-crowding",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "توجيه للنساء بترك مزاحمة الرجال",
+        "en": "Guidance for women in crowds"
+      },
+      "text": {
+        "ar": "وينبغي للنساء عدم مزاحمة الرجال، لئلا يؤدي ذلك إلىٰ محرم كتكشفهن أو غير ذلك، بل تتحرىٰ الوقت الذي يكون فيه نساء فقط، فتقبل الحجر حينئذٍ.",
+        "en": ""
+      },
+      "tagsAr": [
+        "نساء",
+        "زحام",
+        "طواف"
+      ],
+      "tagsEn": [
+        "women",
+        "crowding",
+        "tawaf"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — توجيه للنساء في الزحام — صفحة 68",
+      "printedPage": 68,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-direction",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "اتجاه الطواف بعد التكبير",
+        "en": "Direction of Tawaf"
+      },
+      "text": {
+        "ar": "ثم بعد قوله: (بسم الله والله أكبر)، عند الحجر الأسود يأخذُ ذات اليمين، ويجعلُ الكعبة علىٰ يساره.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "اتجاه",
+        "الكعبة"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "direction"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — اتجاه الطواف — صفحة 68",
+      "printedPage": 68,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-free-dhikr",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "ما يقال في بقية الطواف",
+        "en": "What is said during the rest of Tawaf"
+      },
+      "text": {
+        "ar": "ويقول في بقية طوافهِ ما أحبّ مِنْ ذكرٍ ودُعاءٍ وقراءةٍ، فإنما جُعل الطواف بالبيتِ وبالصفا والمروة ورمي الجمار لإقامةِ ذكر الله.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "ذكر",
+        "دعاء"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "dhikr"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — ما يقال في بقية الطواف — صفحة 70",
+      "printedPage": 70,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "أساس نصّي صريح لقاعدة: لا دعاء مخصّص لكل شوط.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-no-per-circuit",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "التحذير من تخصيص دعاء لكل شوط",
+        "en": "Warning against per-circuit supplications"
+      },
+      "text": {
+        "ar": "وأما ما يفعله بعض الطائفين: من تخصيص دعاء معين، أو ذكر معين، لكل شوط من الأشواط السبعة، وقد يحمل معه كتابًا يقرأ منه هذه الأدعية والأذكار المعينة، فكل هذا عمل محدث، وبدعة منكرة لا تجوز، بل يدعو بما تيسر له من خيري الدنيا والآخرة، وليس لكل شوط دعاء معين أو ذكر معين، فلم يرد عن النبي صلى الله عليه وسلم شيء من ذلك لا من قوله ولا من فعله.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "بدعة",
+        "تخصيص",
+        "شوط"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "bidah",
+        "per-circuit"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — تحذير من تخصيص دعاء لكل شوط — صفحة 70",
+      "printedPage": 70,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "نص صريح من المصدر يُحرّم تخصيص دعاء لكل شوط — يؤكد القاعدة البنيوية المطبَّقة في الحزمة.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-tawaf-seven",
+      "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "عدد أشواط الطواف",
+        "en": "Tawaf is seven circuits"
+      },
+      "text": {
+        "ar": "والطواف سبعةُ أشواط، يبتدئُ من الحجر الأسود وينتهي به.",
+        "en": ""
+      },
+      "tagsAr": [
+        "طواف",
+        "أشواط",
+        "سبعة"
+      ],
+      "tagsEn": [
+        "tawaf",
+        "circuits"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — عدد أشواط الطواف — صفحة 71",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-hijr-not-valid",
+      "zoneNameAr": "حجر إسماعيل (الحطيم)",
+      "zoneKey": "hijr_ismail",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "لا يصح الطواف من داخل الحِجْر",
+        "en": "Tawaf is invalid from inside Al-Hijr"
+      },
+      "text": {
+        "ar": "ولا يصحُّ الطوافُ من داخل الحِجْرِ؛ لأنه من الكعبة.",
+        "en": ""
+      },
+      "tagsAr": [
+        "حجر إسماعيل",
+        "الحطيم",
+        "طواف"
+      ],
+      "tagsEn": [
+        "hijr",
+        "hatim",
+        "tawaf"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — عدم صحة الطواف من داخل الحِجْر — صفحة 71",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "النص الوحيد الخاص بحجر إسماعيل في هذه الصفحات.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-maqam-ayah",
+      "zoneNameAr": "مقام إبراهيم",
+      "zoneKey": "maqam_ibrahim",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "ما يُقرأ عند التقدم لمقام إبراهيم",
+        "en": "Recited at Maqam Ibrahim"
+      },
+      "text": {
+        "ar": "وَٱتَّخِذُواْ مِن مَّقَامِ إِبْرَٰهِـۧمَ مُصَلًّى",
+        "en": ""
+      },
+      "tagsAr": [
+        "مقام إبراهيم",
+        "ركعتان",
+        "طواف"
+      ],
+      "tagsEn": [
+        "maqam-ibrahim",
+        "two-rakahs"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — مقام إبراهيم — الآية — صفحة 71",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "[البقرة: 125]. تُقرأ عند التقدم للمقام بعد إتمام سبعة أشواط (ص71).",
+      "visuallyUncertain": [
+        "نص قرآني بالرسم العثماني — «إِبْرَٰهِـۧمَ» تحتوي ياءً صغيرة فوق السطر؛ نُقلت كما رُسمت وتحتاج تدقيقًا حرفيًّا"
+      ]
+    },
+    {
+      "duaId": "moia-1446-maqam-rakatayn",
+      "zoneNameAr": "مقام إبراهيم",
+      "zoneKey": "maqam_ibrahim",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "ركعتا الطواف خلف المقام",
+        "en": "The two rak'ahs behind the Maqam"
+      },
+      "text": {
+        "ar": "ثم صلىٰ ركعتين خلفَه قريبًا منه إن تيسَّر، وإلا فبعيدًا، يكون المقام بينه وبين الكعبة، يقرأ في الركعة الأولىٰ: الفاتحة، وسورة ﴿قُلْ يَٰٓأَيُّهَا ٱلْكَٰفِرُونَ﴾، وفي الركعة الثانية: الفاتحة، وسورة ﴿قُلْ هُوَ ٱللَّهُ أَحَدٌ﴾.",
+        "en": ""
+      },
+      "tagsAr": [
+        "مقام إبراهيم",
+        "ركعتان",
+        "الكافرون",
+        "الإخلاص"
+      ],
+      "tagsEn": [
+        "maqam-ibrahim",
+        "two-rakahs"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — مقام إبراهيم — ركعتا الطواف — صفحة 71",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-maqam-crowding",
+      "zoneNameAr": "مقام إبراهيم",
+      "zoneKey": "maqam_ibrahim",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "التنبه لأذية الطائفين عند المقام",
+        "en": "Avoid crowding at the Maqam"
+      },
+      "text": {
+        "ar": "ومما ينبغي التنبه له: أن بعض المسلمين يصلي هاتين الركعتين قريبًا من مقام إبراهيم وقت الزحام، فيؤذي الطائفين، ويُعيق سيرهم وحركتهم، ويسبب الزحام والضيق، مع أنه يجوز له أن يُصلي خلف المقام في مكان بعيد سواء في صحن المطاف أم في داخل أروقة المسجد، كما أنه يجوز له أن يُصلي في أي مكان، ولا يشترط مكان معين.",
+        "en": ""
+      },
+      "tagsAr": [
+        "مقام إبراهيم",
+        "زحام",
+        "أذية"
+      ],
+      "tagsEn": [
+        "maqam-ibrahim",
+        "crowding"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — التنبه للزحام عند المقام — صفحة 71",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-maqam-no-tamassuh",
+      "zoneNameAr": "مقام إبراهيم",
+      "zoneKey": "maqam_ibrahim",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "التحذير من التمسح بمقام إبراهيم",
+        "en": "Warning against wiping the Maqam"
+      },
+      "text": {
+        "ar": "وينبغي التنبه والتنبيه: إلىٰ أولئك الذين يتمسحون بالمقام، ويمسحون أبدانهم وأطفالهم، وهذا من البدع والضلالات المحرمة، فإن النبي صلى الله عليه وسلم لم يرد عنه التمسح بمقام إبراهيم، ولا الإذن فيه، وكذلك صحابته الكرام رضي الله عنهم.",
+        "en": ""
+      },
+      "tagsAr": [
+        "مقام إبراهيم",
+        "بدعة",
+        "تمسح"
+      ],
+      "tagsEn": [
+        "maqam-ibrahim",
+        "bidah"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — التحذير من التمسح بالمقام — صفحتا 71-72",
+      "printedPage": 71,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "يمتد النص بين أسفل صفحة 71 وأعلى صفحة 72.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-return-hajar",
+      "zoneNameAr": "الحجر الأسود",
+      "zoneKey": "hajar_aswad",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "الرجوع إلى الحجر الأسود بعد الركعتين",
+        "en": "Returning to the Black Stone"
+      },
+      "text": {
+        "ar": "ثم يرجع إلىٰ الحجر الأسود: فيستلمه إن تيسر له، فإن لم يتيسر له فلا يشير إليه.",
+        "en": ""
+      },
+      "tagsAr": [
+        "الحجر الأسود",
+        "استلام"
+      ],
+      "tagsEn": [
+        "black-stone"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الرجوع إلى الحجر الأسود — صفحة 72",
+      "printedPage": 72,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "لاحظ: هنا لا يشير إليه إن لم يتيسر (بخلاف حال الطواف).",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-safa-ayah",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "ما يُقرأ عند الدنو من الصفا",
+        "en": "Recited on approaching Al-Safa"
+      },
+      "text": {
+        "ar": "إِنَّ ٱلصَّفَا وَٱلْمَرْوَةَ مِن شَعَآئِرِ ٱللَّهِ",
+        "en": ""
+      },
+      "tagsAr": [
+        "الصفا",
+        "المروة",
+        "سعي"
+      ],
+      "tagsEn": [
+        "safa",
+        "marwah",
+        "sai"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — ما يُقرأ عند الدنو من الصفا — صفحة 72",
+      "printedPage": 72,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "[البقرة: 158]. المصدر ينص: «يقرأها مرة واحدة في هذا الموضع قبل أن يبدأ السعي، ولا يقرؤها مرة أخرىٰ».",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-safa-dhikr",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "الذكر على الصفا",
+        "en": "Dhikr upon Al-Safa"
+      },
+      "text": {
+        "ar": "لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ، أَنْجَزَ وَعْدَهُ، وَنَصَرَ عَبْدَهُ، وَهَزَمَ الْأَحْزَابَ وَحْدَهُ",
+        "en": ""
+      },
+      "tagsAr": [
+        "الصفا",
+        "ذكر",
+        "سعي",
+        "تهليل"
+      ],
+      "tagsEn": [
+        "safa",
+        "dhikr",
+        "sai"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الذكر على الصفا — صفحة 72",
+      "printedPage": 72,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "يرقىٰ الصفا حتىٰ يرىٰ الكعبة فيستقبلها ويرفع يديه، يُكرِّر الذكر ثلاثَ مراتٍ ويدعو بينها. يعزوه المصدر لمسلم (1218). ويقول مثله على المروة (ص73).",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-marwah-same",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "specific_text",
+      "title": {
+        "ar": "ما يقال على المروة",
+        "en": "Said upon Al-Marwah"
+      },
+      "text": {
+        "ar": "فيرقىٰ المروةَ، ويستقبلَ القِبلةَ، ويرفعَ يديه ويقولَ مثل ما قال علىٰ الصفا.",
+        "en": ""
+      },
+      "tagsAr": [
+        "المروة",
+        "سعي",
+        "ذكر"
+      ],
+      "tagsEn": [
+        "marwah",
+        "sai"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الذكر على المروة — صفحة 73",
+      "printedPage": 73,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "المصدر يحيل على ذكر الصفا نفسه — لم يذكر نصًّا مستقلًّا للمروة.",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-sai-no-per-circuit",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "لا دعاء مخصّص لكل شوط في السعي",
+        "en": "No per-circuit supplication in Sa'i"
+      },
+      "text": {
+        "ar": "ويقولُ في بقية سعيه ما أحب من ذكرٍ وقراءةٍ ودعاء، ولا يوجد دعاء معين أو ذكر معين لكل شوط كما يظنه بعض الناس كما تقدم التنبيه عليه في الطواف.",
+        "en": ""
+      },
+      "tagsAr": [
+        "سعي",
+        "بدعة",
+        "تخصيص",
+        "شوط"
+      ],
+      "tagsEn": [
+        "sai",
+        "bidah",
+        "per-circuit"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — لا دعاء معين لكل شوط في السعي — صفحة 73",
+      "printedPage": 73,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-sai-sunan",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "الصعود والسعي الشديد سنة لا واجب",
+        "en": "Ascending and brisk walking are sunnah"
+      },
+      "text": {
+        "ar": "والصعود علىٰ الصفا والمروة، والسعي الشديد بين العَلَمين، كلها سُنَّةٌ وليست بواجبٍ.",
+        "en": ""
+      },
+      "tagsAr": [
+        "سعي",
+        "سنة",
+        "العلمين"
+      ],
+      "tagsEn": [
+        "sai",
+        "sunnah"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — سنن السعي — صفحة 73",
+      "printedPage": 73,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
+    },
+    {
+      "duaId": "moia-1446-sai-seven",
+      "zoneNameAr": "المسعى (ممر السعي)",
+      "zoneKey": "masaa",
+      "zoneId": "",
+      "contentKind": "procedural_guidance",
+      "title": {
+        "ar": "عدد أشواط السعي",
+        "en": "Sa'i is seven circuits"
+      },
+      "text": {
+        "ar": "فإذا أتمَّ سعيَه سبعةَ أشواطٍ، من الصفا إلىٰ المروة شوطٌ، ومن المروةِ إلىٰ الصفا شوطٌ آخر، يبدأ بالصفا، وينتهي بالمروة.",
+        "en": ""
+      },
+      "tagsAr": [
+        "سعي",
+        "أشواط",
+        "الصفا",
+        "المروة"
+      ],
+      "tagsEn": [
+        "sai",
+        "circuits"
+      ],
+      "languageCodes": [
+        "ar"
+      ],
+      "isActive": true,
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — عدد أشواط السعي — صفحة 73",
+      "printedPage": 73,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "",
+      "visuallyUncertain": []
     }
   ]
 }
