@@ -1,0 +1,296 @@
+{
+  "//": "سجل النص القرآني المرجعي. لا يحتوي هذا الملف نصًّا قرآنيًّا بعد: يجب تعبئته آليًّا من المصدر الرسمي عبر scripts/fetch_quran_authority.mjs. لا يجوز كتابة أي آية هنا يدويًّا ولا من ذاكرة نموذج ولا من OCR.",
+  "status": "pending_official_fetch",
+  "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+  "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+  "riwayah": "حفص عن عاصم",
+  "rasm": "الرسم العثماني",
+  "editionLabel": "",
+  "editionNote": "يُملأ editionLabel من بيانات الإصدار التي يعيدها المصدر الرسمي، لا يُخمَّن.",
+  "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+  "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+  "fetchedAt": null,
+  "ayat": [
+    {
+      "duaId": "moia-mukhtasar-1446-general-001",
+      "surahName": "البقرة",
+      "surahNumber": 2,
+      "ayahNumbers": [
+        201
+      ],
+      "contextPrintedPage": 94,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-002",
+      "surahName": "البقرة",
+      "surahNumber": 2,
+      "ayahNumbers": [
+        286
+      ],
+      "contextPrintedPage": 94,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-003",
+      "surahName": "آل عمران",
+      "surahNumber": 3,
+      "ayahNumbers": [
+        8
+      ],
+      "contextPrintedPage": 94,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-004",
+      "surahName": "آل عمران",
+      "surahNumber": 3,
+      "ayahNumbers": [
+        16
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-005",
+      "surahName": "آل عمران",
+      "surahNumber": 3,
+      "ayahNumbers": [
+        38
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-006",
+      "surahName": "آل عمران",
+      "surahNumber": 3,
+      "ayahNumbers": [
+        147
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-007",
+      "surahName": "آل عمران",
+      "surahNumber": 3,
+      "ayahNumbers": [
+        193,
+        194
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-008",
+      "surahName": "الأعراف",
+      "surahNumber": 7,
+      "ayahNumbers": [
+        23
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-009",
+      "surahName": "التوبة",
+      "surahNumber": 9,
+      "ayahNumbers": [
+        129
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-010",
+      "surahName": "إبراهيم",
+      "surahNumber": 14,
+      "ayahNumbers": [
+        35
+      ],
+      "contextPrintedPage": 95,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-011",
+      "surahName": "إبراهيم",
+      "surahNumber": 14,
+      "ayahNumbers": [
+        40,
+        41
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-012",
+      "surahName": "الكهف",
+      "surahNumber": 18,
+      "ayahNumbers": [
+        10
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-013",
+      "surahName": "طه",
+      "surahNumber": 20,
+      "ayahNumbers": [
+        25,
+        26
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-014",
+      "surahName": "طه",
+      "surahNumber": 20,
+      "ayahNumbers": [
+        114
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-015",
+      "surahName": "الأنبياء",
+      "surahNumber": 21,
+      "ayahNumbers": [
+        87
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-016",
+      "surahName": "الأنبياء",
+      "surahNumber": 21,
+      "ayahNumbers": [
+        89
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-017",
+      "surahName": "المؤمنون",
+      "surahNumber": 23,
+      "ayahNumbers": [
+        97,
+        98
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-018",
+      "surahName": "الفرقان",
+      "surahNumber": 25,
+      "ayahNumbers": [
+        65,
+        66
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-019",
+      "surahName": "الفرقان",
+      "surahNumber": 25,
+      "ayahNumbers": [
+        74
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-020",
+      "surahName": "النمل",
+      "surahNumber": 27,
+      "ayahNumbers": [
+        19
+      ],
+      "contextPrintedPage": 96,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-021",
+      "surahName": "الأحقاف",
+      "surahNumber": 46,
+      "ayahNumbers": [
+        15
+      ],
+      "contextPrintedPage": 97,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-general-022",
+      "surahName": "الحشر",
+      "surahNumber": 59,
+      "ayahNumbers": [
+        10
+      ],
+      "contextPrintedPage": 97,
+      "uncertainty": "U5",
+      "officialText": "",
+      "fetched": false
+    },
+    {
+      "duaId": "moia-1446-maqam-ayah",
+      "surahName": "البقرة",
+      "surahNumber": 2,
+      "ayahNumbers": [
+        125
+      ],
+      "contextPrintedPage": 71,
+      "uncertainty": "U12",
+      "officialText": "",
+      "fetched": false
+    }
+  ]
+}
