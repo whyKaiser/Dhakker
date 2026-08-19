@@ -112,7 +112,7 @@ the original Groq+Gemini fallback flow and endpoints are preserved) to add:
 
 `assistant-proxy/worker.test.mjs` (Node's built-in test runner, no external
 dependency — run with `node --test assistant-proxy/worker.test.mjs` or
-`npm test` inside `assistant-proxy/`): **66 tests, all passing**, covering
+`npm test` inside `assistant-proxy/`): **86 tests, all passing**, covering
 schema validation (missing/oversized/malformed messages, ignored
 client-supplied model/temperature), consent-gated context validation
 (dropped without consent, enum-only fields survive, raw lat/lng never
@@ -157,8 +157,8 @@ The security-review round added coverage for each fixed defect:
 
 ```
 $ node --test assistant-proxy/worker.test.mjs
-# tests 66
-# pass 66
+# tests 86
+# pass 86
 # fail 0
 ```
 
@@ -369,95 +369,122 @@ on.
    test-harness work; the ritual/zone logic was verified by code review
    only, not by an automated test in this round.
 
-## Approved source registry (where the official sources actually live)
+## Source registry (where content lives, and what "verified" means)
 
-**No religious source text is stored in this repository, by design.** The
-approved content lives only in the project's live Firestore database and is
-curated through the in-app admin console. Nothing below exposes credentials
-or copies source text into Git.
+**No religious source text is stored in this repository, by design.** Content
+lives only in the project's live Firestore database and is curated through the
+in-app admin console. Nothing below exposes credentials or copies source text
+into Git.
 
-### Where the sources are stored
+### Important: existing records are NOT approved sources
 
-The live registry is the Firestore collection **`supplications`**. It is:
+The `supplications` collection holds **existing content records**. Their
+presence in the collection implies **nothing** about whether any authority
+reviewed or approved them — the collection predates this feature and carries
+no provenance metadata at all. They must not be described as "approved
+sources", and none of them may be marked verified in bulk.
+
+A record becomes citable by the assistant only after a human has matched it
+against an official published source and recorded that fact. Until then it is
+unverified, uncitable, and still perfectly usable as a location dua.
+
+### Where content is stored
+
+The live collection is **`supplications`**. It is:
 
 - written by the admin console (`lib/Screens/Admin/Manage Supplications/`),
-- read by the Flutter home screen for location-aware duas
-  (`HomeDuaController` → `SupplicationService`),
-- and, as of this change, read by the Worker RAG path.
+- read by the Flutter home screen for location-aware duas,
+- and, as of this change, read by the Worker retrieval path.
 
-Access is controlled by `firestore.rules`: signed-in read, admin-only
-create/delete, and update restricted to admins except that a pilgrim may
-increment `usage_count` only. A pilgrim therefore cannot mark anything
-verified.
+`firestore.rules` grants signed-in read, admin-only create/delete, and update
+restricted to admins except that a pilgrim may increment `usage_count` only —
+and may never touch any verification field.
 
-There is also a `knowledge_documents` / `knowledge_chunks` pair, added by
-this feature as a purpose-built RAG schema. **It is empty in this project**
-— no code path in the Flutter app reads or writes it. It is retained for a
-possible future migration and is selectable via `KNOWLEDGE_COLLECTION`, but
-the default and the real registry is `supplications`.
+`knowledge_documents` / `knowledge_chunks` is a purpose-built RAG schema added
+by this feature. **It is empty**; no Flutter code path reads or writes it. It
+is selectable via `KNOWLEDGE_COLLECTION` for a future migration.
 
 ### Schema
 
-Legacy fields (pre-existing, written by the admin console):
+Content fields (pre-existing):
 
 | Field | Type | Purpose |
 |---|---|---|
-| `duaId` | string | Stable document id → retrieval `documentId` |
-| `zoneId` | string | Zone this belongs to → citation `section` fallback |
+| `duaId` | string | Stable id → retrieval `documentId` |
+| `zoneId` | string | Zone → `section` fallback |
 | `title` | map `{ar,en}` | Localized title → citation `title` |
 | `text` | map `{ar,en}` | Localized body → retrieval `content` |
-| `tagsAr` / `tagsEn` | string[] | Search keywords → retrieval match |
+| `tagsAr` / `tagsEn` | string[] | Search keywords |
 | `languageCodes` | string[] | Languages this record covers |
-| `isActive` | bool | Only active records are retrieved |
-| `audioMode`, `audioUrl`, `usage_count`, `updatedAt` | — | Unrelated to RAG |
+| `isActive` | bool | Must be true to be retrieved |
 
-Provenance fields (**added by this change**, required for citation):
+Provenance + lifecycle fields (added by this change):
 
 | Field | Type | Purpose |
 |---|---|---|
-| `authority` | string | The issuing/approving body — the name shown in the citation |
-| `verificationStatus` | string | Must be exactly `"verified"` to be citable |
-| `sourceUrl` | string | Official reference link → citation `url` |
-| `sourceVersion` | string | Edition/date of the approved source |
-| `section` | string | Optional explicit section (else falls back to `zoneId`) |
+| `verificationStatus` | string | Must be exactly `"verified"` |
+| `authority` | string | Body that published the edition actually checked |
+| `sourceUrl` | string | **HTTPS** link to that published edition |
+| `sourceVersion` | string | Which edition/date was checked |
+| `sourceLanguage` | string | Language of the source consulted |
+| `sourceSection` | string | Page/section reference within the source |
+| `verifiedAt` | timestamp | When verification was recorded |
+| `verifiedBy` | string | UID of the admin who verified |
+| `contentHash` | string | sha256 of the reviewed text — detects later edits |
+| `revokedAt` | timestamp | Set to withdraw a source; excludes it immediately |
+| `reviewNotes` | string | How the match was performed |
 
-### The provenance gate
+### The gate — fail closed, enforced in three places
 
-A record becomes citable by the assistant **only** when it has a non-empty
-`authority` **and** `verificationStatus == "verified"`. Anything else is
-skipped by retrieval, which means the question falls through to the
-deterministic "no approved source" response.
+A record is retrievable **only** when ALL hold:
 
-This is deliberate and is the crux of the religious-safety design: a
-citation names an authority to the pilgrim. If we emitted a citation for a
-record that carries no recorded approving body, the app would be asserting
-an endorsement nobody actually gave — the same fabrication risk as an
-invented URL, just laundered through real content. Content without
-provenance is still perfectly usable as a location dua; it is simply not
-something the assistant will cite.
+- `verificationStatus == "verified"`
+- `isActive == true`
+- `authority` non-empty
+- `sourceUrl` a valid `https://` URL
+- `sourceVersion` non-empty
+- not revoked (`revokedAt` unset)
 
-### Verification process (admin)
+Each condition exists because a citation asserts to a pilgrim who stands
+behind the text. No authority → we cannot name the approver. No valid HTTPS
+`sourceUrl` → the pilgrim cannot independently check it. No `sourceVersion` →
+we cannot say which edition was reviewed. Any gap turns a citation into an
+unfalsifiable claim of endorsement.
 
-1. Open the admin console → Manage Supplications → add/edit a supplication.
-2. Enter the content and tags as usual.
-3. Fill **Issuing authority**, **Source URL**, and **Version** from the
-   official published source.
-4. Turn on **"مصدر معتمد وموثّق"** (approved & verified source) only after
-   confirming the text against that official source. This writes
-   `verificationStatus: "verified"`.
-5. Leave it off for anything not yet checked — the record still works as a
-   location dua, it just will not be cited by the assistant.
+Enforced independently by:
 
-Only an admin can set this (enforced in `firestore.rules`); the toggle is
-not reachable by pilgrims.
+1. **`assistant-proxy/worker.js`** — `mapSupplicationRows` gate, plus a
+   server-side `verificationStatus` equality filter in the query itself.
+2. **`firestore.rules`** — `hasCompleteProvenance()`; not even an admin may
+   write `verificationStatus: "verified"` without every required field, and
+   ordinary users cannot write any verification field at all.
+3. **Admin UI** — `_provenanceGapMessage()` blocks the save with a specific
+   list of what is missing. This is the friendliest layer, never the
+   authority.
 
-### Migration note
+### Verification procedure (admin)
 
-Records created before this change have **no** provenance fields, so they
-are currently not citable and every assistant question will take the safe
-no-answer path until the fields are populated. This is a data task, not a
-code change. Backfilling `authority` / `verificationStatus` on existing
-approved records is what switches the grounded path on.
+1. Obtain the **official published source** — the actual publication, not a
+   summary or a third-party site.
+2. Open the admin console → Manage Supplications → add/edit.
+3. Match the record's text against the source, word for word.
+4. Fill **Issuing authority**, **Source URL** (https), **Version**,
+   **Section/page**, **Source language**, and **Review notes**.
+5. Turn on **"مصدر معتمد وموثّق"**. The console stamps `verifiedAt`,
+   `verifiedBy`, and a `contentHash` of the reviewed text.
+6. If the text is later edited, the stored `contentHash` no longer matches —
+   treat that as requiring re-verification.
+7. To withdraw a source, set `revokedAt`; retrieval excludes it immediately.
+
+`scripts/source_import_template.json` is a metadata-only template for bulk
+preparation. It contains placeholders, never religious text, and its filled
+form must not be committed.
+
+### Migration status
+
+Every existing record is currently unverified, so the grounded path is closed
+and every ritual question takes the safe no-answer route. Opening it is a
+per-record human review task, deliberately with no bulk shortcut.
 
 ## Verification status
 
@@ -478,7 +505,27 @@ Note that `flutter analyze` exits non-zero on **info**-level lints too,
 not only errors — reading its output without checking the exit code is
 not sufficient verification.
 
-**Worker** — `node --test assistant-proxy/worker.test.mjs`: 66/66 passing.
+**Worker** — `node --test assistant-proxy/worker.test.mjs`: 86/86 passing.
+
+**Firestore rules** — 21/21 passing against the real Firebase emulator:
+
+```
+npm --prefix test_firestore_rules install
+npm --prefix test_firestore_rules test
+```
+
+`firebase emulators:exec` boots the emulator, runs the suite, and tears it
+down; no real project is touched. This also runs as its own CI job. The suite
+covers authenticated-vs-anonymous reads, admin-only create/delete, the
+usage_count-only pilgrim update path, every individual verification field
+being unwritable by ordinary users, and the rule that not even an admin may
+mark a record verified without complete provenance (missing field, empty
+field, and non-HTTPS `sourceUrl` all rejected).
+
+Note: the emulator logs `evaluation error` lines for the pre-existing
+`isAdmin()` helper's `get()` on the users document. Verified by probe against
+`origin/main` that this predates these changes; access is still correctly
+denied, it is simply not a clean `false`.
 
 **CI** — `.github/workflows/flutter-ci.yml` runs both suites on every push
 to this branch and on PRs targeting `main`, and can be triggered manually
@@ -490,13 +537,14 @@ files. The step still fails if any feature-owned file is misformatted.
 
 ### Still not verified here
 
-- **Firestore security rules** have been reviewed by inspection only. No
-  Firestore emulator was available in this environment, so the rules for
-  `knowledge_documents` / `knowledge_chunks` / `assistant_feedback` have
-  **not** been executed against one.
 - **Live retrieval** has never run against a real Firestore project (no
-  credentials available), so `queryFirestoreKnowledge` is exercised only
-  through unit tests and dev fixtures.
+  credentials available), so the retrieval adapters are exercised only
+  through unit tests and metadata-only fixtures.
+- **The composite indexes in `firestore.indexes.json` have not been
+  deployed or verified against a live project.** Without them the retrieval
+  query fails — which degrades safely to "no approved source", so the
+  symptom is silence rather than an error. Deploy with
+  `firebase deploy --only firestore:indexes`.
 - **No approved religious source text is committed to this repository** —
   deliberately. The real approved content lives in the live Firestore
   `supplications` collection (see "Approved source registry" above), which
