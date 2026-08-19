@@ -1,0 +1,253 @@
+{
+  "//": [
+    "SOURCE PACK — SCAFFOLD ONLY. NO RELIGIOUS TEXT HAS BEEN ENTERED.",
+    "",
+    "STATUS: every `title.ar` and `text.ar` below is an UNFILLED PLACEHOLDER.",
+    "",
+    "WHY: the assistant preparing this pack had no access to the publication.",
+    "No PDF or page images were attached to the session, and the official URL",
+    "was unreachable from its environment. The source is image-based, so OCR",
+    "would in any case require page-by-page visual confirmation.",
+    "",
+    "Filling these fields from memory, from a model, or from any site other",
+    "than the official publication is PROHIBITED. Doing so would place",
+    "unverified religious text under this Ministry's name, edition and page",
+    "numbers — text that would then look checked when it is not.",
+    "",
+    "HOW TO COMPLETE: for each entry, open the stated printed page in the",
+    "official publication, transcribe the passage exactly (preserving Quranic",
+    "text and all diacritics), and replace the placeholder. Keep",
+    "verificationStatus as 'unverified'. A human sets 'verified' only via the",
+    "admin console, after matching the text against the printed page.",
+    "",
+    "See docs/ARCHITECTURE.md -> 'Source registry' for the field contract."
+  ],
+
+  "templateVersion": 2,
+  "packStatus": "scaffold-awaiting-source-pages",
+
+  "source": {
+    "title": "المختصر في صفة الحج والعمرة والزيارة في ضوء الكتاب والسنة",
+    "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+    "edition": "الطبعة الأولى، 1446هـ / 2025م",
+    "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+    "sourceLanguage": "ar",
+    "scope": "قسم العمرة فقط (Umrah section only)",
+    "//pageNumbers": "All page references are PRINTED page numbers as stated by the requester, not PDF viewer page indices. Confirm the two agree before transcribing."
+  },
+
+  "//structuralRules": [
+    "Per instruction: NO per-circuit Tawaf duas. Entry 3 covers what is touched",
+    "during Tawaf as a single record; entry 4 covers the supplication between",
+    "the Yemeni Corner and the Black Stone as a single record. Neither is bound",
+    "to a circuit number.",
+    "Entry 6 is explicitly general — it must not be presented as belonging to",
+    "any specific rite or circuit."
+  ],
+
+  "entries": [
+    {
+      "duaId": "moia-mukhtasar-1446-umrah-talbiyah",
+      "zoneId": "REPLACE-with-zone-id-from-zones-collection",
+      "topic": "Talbiyah",
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from printed page 59 >>>",
+        "en": "Talbiyah"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from printed page 59. Preserve diacritics. >>>",
+        "en": ""
+      },
+      "tagsAr": ["تلبية", "لبيك", "إحرام", "عمرة"],
+      "tagsEn": ["talbiyah", "ihram", "umrah"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — التلبية — صفحة 59",
+      "printedPage": 59,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGE. Not transcribed — no access to the publication."
+    },
+
+    {
+      "duaId": "moia-mukhtasar-1446-umrah-entering-haram",
+      "zoneId": "REPLACE-with-zone-id-from-zones-collection",
+      "topic": "Entering Al-Masjid Al-Haram",
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from printed page 64 >>>",
+        "en": "Entering Al-Masjid Al-Haram"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from printed page 64. Preserve diacritics. >>>",
+        "en": ""
+      },
+      "tagsAr": ["دخول", "المسجد الحرام", "الحرم", "عمرة"],
+      "tagsEn": ["entering", "masjid", "haram", "umrah"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — دخول المسجد الحرام — صفحة 64",
+      "printedPage": 64,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGE. Not transcribed — no access to the publication."
+    },
+
+    {
+      "duaId": "moia-mukhtasar-1446-umrah-tawaf-touching",
+      "zoneId": "REPLACE-with-zone-id-from-zones-collection",
+      "topic": "What is touched during Tawaf",
+      "//note": "SINGLE record covering the whole Tawaf. Do NOT split per circuit.",
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from printed page 69 >>>",
+        "en": "What is touched during Tawaf"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from printed page 69. Preserve diacritics. >>>",
+        "en": ""
+      },
+      "tagsAr": ["طواف", "استلام", "الحجر الأسود", "الركن اليماني"],
+      "tagsEn": ["tawaf", "touching", "black-stone", "yemeni-corner"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — ما يُستلم في الطواف — صفحة 69",
+      "printedPage": 69,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGE. Not transcribed — no access to the publication."
+    },
+
+    {
+      "duaId": "moia-mukhtasar-1446-umrah-between-corners",
+      "zoneId": "REPLACE-with-zone-id-from-zones-collection",
+      "topic": "Supplication between the Yemeni Corner and the Black Stone",
+      "//note": "SINGLE record. Not bound to any circuit number.",
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from printed page 69 >>>",
+        "en": "Supplication between the Yemeni Corner and the Black Stone"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from printed page 69. Contains Quranic text: preserve the rasm and every diacritic exactly as printed. >>>",
+        "en": ""
+      },
+      "tagsAr": ["دعاء", "الركن اليماني", "الحجر الأسود", "طواف"],
+      "tagsEn": ["supplication", "yemeni-corner", "black-stone", "tawaf"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الدعاء بين الركن اليماني والحجر الأسود — صفحة 69",
+      "printedPage": 69,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGE. Not transcribed — no access to the publication. CONTAINS QURANIC TEXT — requires the most careful character-level check."
+    },
+
+    {
+      "duaId": "moia-mukhtasar-1446-umrah-halq-taqsir",
+      "zoneId": "REPLACE-with-zone-id-from-zones-collection",
+      "topic": "Shaving and shortening after Umrah",
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from printed page 74 >>>",
+        "en": "Shaving and shortening after Umrah"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from printed page 74. Preserve diacritics. >>>",
+        "en": ""
+      },
+      "tagsAr": ["حلق", "تقصير", "تحلل", "عمرة"],
+      "tagsEn": ["shaving", "shortening", "halq", "taqsir", "umrah"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "قسم العمرة — الحلق والتقصير — صفحة 74",
+      "printedPage": 74,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGE. Not transcribed — no access to the publication."
+    },
+
+    {
+      "duaId": "moia-mukhtasar-1446-general-supplications-001",
+      "zoneId": "",
+      "topic": "General selected supplications",
+      "//note": [
+        "GENERAL supplications — pages 94 onward. Must NOT be presented as",
+        "belonging to a specific rite, station, or Tawaf circuit.",
+        "zoneId is intentionally EMPTY so this is never triggered as a",
+        "location-specific dua.",
+        "Duplicate this entry (…-002, -003, …) — ONE RECORD PER SUPPLICATION.",
+        "Set the exact printed page on each; 94 below is only the start of the",
+        "range and must be corrected per item."
+      ],
+      "title": {
+        "ar": "<<< UNFILLED — transcribe the heading from the printed page >>>",
+        "en": "General selected supplications"
+      },
+      "text": {
+        "ar": "<<< UNFILLED — transcribe exactly from the stated printed page. Preserve diacritics. >>>",
+        "en": ""
+      },
+      "tagsAr": ["أدعية", "أدعية عامة", "مختارة"],
+      "tagsEn": ["supplications", "general", "selected"],
+      "languageCodes": ["ar"],
+      "isActive": true,
+
+      "verificationStatus": "unverified",
+      "authority": "وزارة الشؤون الإسلامية والدعوة والإرشاد - المكتب العلمي لمعالي الوزير",
+      "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
+      "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
+      "sourceLanguage": "ar",
+      "sourceSection": "أدعية عامة مختارة — صفحة 94 وما بعدها (حدِّد الصفحة الدقيقة لكل دعاء)",
+      "printedPage": 94,
+      "isGeneralSupplication": true,
+
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "AWAITING SOURCE PAGES. Not transcribed — no access to the publication. Exact page must be set per individual supplication."
+    }
+  ]
+}
