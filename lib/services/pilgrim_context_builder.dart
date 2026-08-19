@@ -36,7 +36,8 @@ class PilgrimContextBuilder {
       // right now (real-time GPS-proximity signal), never merely because a
       // lap counter is non-zero — a counter stays non-zero for hours after
       // the ritual actually finished and must not be used to infer it.
-      tawafLapsCompleted: ritual == 'tawaf' ? cubit.roundCount.clamp(0, 7) : null,
+      tawafLapsCompleted:
+          ritual == 'tawaf' ? cubit.roundCount.clamp(0, 7) : null,
       saiLapsCompleted: ritual == 'sai' ? cubit.saiCount.clamp(0, 7) : null,
       // Coarse named zone only (e.g. "Al-Haram") — never raw lat/lng, which
       // never enters this object in the first place.

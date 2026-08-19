@@ -68,7 +68,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               Text(
                 isAr ? 'رقم طوارئ SOS' : 'SOS Emergency Number',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               Text(
@@ -76,7 +79,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     ? 'الرقم الذي يُرسل إليه موقع الحاج عند الاستغاثة (بصيغة دولية مثل +9665XXXXXXXX).'
                     : 'The number that receives the pilgrim\'s location on SOS (international format, e.g. +9665XXXXXXXX).',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: DhakkerColors.muted, fontSize: 12.5, height: 1.5),
+                style: const TextStyle(
+                    color: DhakkerColors.muted, fontSize: 12.5, height: 1.5),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -86,7 +90,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
                 decoration: const InputDecoration(
                   hintText: '+9665XXXXXXXX',
-                  prefixIcon: Icon(Icons.phone_in_talk_rounded, color: DhakkerColors.gold),
+                  prefixIcon: Icon(Icons.phone_in_talk_rounded,
+                      color: DhakkerColors.gold),
                 ),
               ),
               const SizedBox(height: 18),
@@ -96,7 +101,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     child: TextButton(
                       onPressed: () => Navigator.pop(ctx),
                       child: Text(isAr ? 'إلغاء' : 'Cancel',
-                          style: const TextStyle(color: DhakkerColors.muted, fontWeight: FontWeight.w800)),
+                          style: const TextStyle(
+                              color: DhakkerColors.muted,
+                              fontWeight: FontWeight.w800)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -105,10 +112,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: DhakkerColors.gold,
                         foregroundColor: DhakkerColors.darkText,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                      onPressed: () =>
+                          Navigator.pop(ctx, controller.text.trim()),
                       child: Text(isAr ? 'حفظ' : 'Save',
                           style: const TextStyle(fontWeight: FontWeight.w900)),
                     ),
@@ -138,7 +147,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: const Color(0xFFCC4B47),
-        content: Text(isAr ? 'تعذّر الحفظ، حاول مجدداً' : 'Could not save, try again'),
+        content: Text(
+            isAr ? 'تعذّر الحفظ، حاول مجدداً' : 'Could not save, try again'),
       ));
     }
   }
@@ -174,15 +184,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
 
-
     CashHelper.removeCash(key: 'uid');
     CashHelper.removeCash(key: 'userTypeIndex');
 
-
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) =>  const SplashScreen(0)),
-          (route) => false,
+      MaterialPageRoute(builder: (_) => const SplashScreen(0)),
+      (route) => false,
     );
   }
 
@@ -203,389 +211,433 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         bottom: false,
         child: _isLoading
             ? Center(
-          child: CircularProgressIndicator(
-            color: isDark ? DhakkerColors.gold : DhakkerColors.gold2,
-          ),
-        )
+                child: CircularProgressIndicator(
+                  color: isDark ? DhakkerColors.gold : DhakkerColors.gold2,
+                ),
+              )
             : SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 18),
-
-              // --- 1. كرت اللغة ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: Row(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Align(
-                        alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment:
-                          isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.adminSettingsLanguage,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
+                    const SizedBox(height: 18),
+
+                    // --- 1. كرت اللغة ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: isAr
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: isAr
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.adminSettingsLanguage,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    s.adminSettingsLanguageHint,
+                                    style: TextStyle(
+                                      color: muted.withOpacity(.95),
+                                      fontSize: 12.8,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              s.adminSettingsLanguageHint,
-                              style: TextStyle(
-                                color: muted.withOpacity(.95),
-                                fontSize: 12.8,
-                                fontWeight: FontWeight.w700,
+                          ),
+                          const SizedBox(width: 14),
+                          _PillButton(
+                            label:
+                                Localizations.localeOf(context).languageCode ==
+                                        'ar'
+                                    ? s.langEnglish
+                                    : s.langArabic,
+                            onTap: LocaleController.toggle,
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- 2. كرت لوحة الإحصائيات الذكية ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const AdminSosMonitorScreen()),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: DhakkerColors.gold.withOpacity(.12),
                               ),
+                              child: const Icon(
+                                Icons.warning_amber_rounded,
+                                color: DhakkerColors.gold,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Align(
+                                alignment: isAr
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: isAr
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isAr
+                                          ? "مراقبة نداءات SOS"
+                                          : "SOS Monitor",
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isAr
+                                          ? "متابعة حالات الاستغاثة ومواقعها"
+                                          : "Track emergency alerts & locations",
+                                      style: TextStyle(
+                                        color: muted.withOpacity(.95),
+                                        fontSize: 12.8,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 15,
+                              color: DhakkerColors.gold,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    _PillButton(
-                      label: Localizations.localeOf(context).languageCode == 'ar'
-                          ? s.langEnglish
-                          : s.langArabic,
-                      onTap: LocaleController.toggle,
+                    const SizedBox(height: 14),
+
+                    // --- 2.1 كرت لوحة الازدحام اللحظية ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AdminCrowdScreen()),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: DhakkerColors.gold.withOpacity(.12),
+                              ),
+                              child: const Icon(
+                                Icons.groups_rounded,
+                                color: DhakkerColors.gold,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Align(
+                                alignment: isAr
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: isAr
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isAr ? "الازدحام اللحظي" : "Live Crowd",
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isAr
+                                          ? "عدد الحجّاج في كل منطقة الآن"
+                                          : "Pilgrims per zone right now",
+                                      style: TextStyle(
+                                        color: muted.withOpacity(.95),
+                                        fontSize: 12.8,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 15,
+                              color: DhakkerColors.gold,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- 2.2 كرت بثّ التنبيهات للحجّاج ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AdminAlertsScreen()),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: DhakkerColors.gold.withOpacity(.12),
+                              ),
+                              child: const Icon(
+                                Icons.campaign_rounded,
+                                color: DhakkerColors.gold,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Align(
+                                alignment: isAr
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: isAr
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isAr
+                                          ? "تنبيهات الحجّاج"
+                                          : "Pilgrim Alerts",
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isAr
+                                          ? "إرسال تنبيهات تظهر لكل الحجّاج"
+                                          : "Broadcast alerts to all pilgrims",
+                                      style: TextStyle(
+                                        color: muted.withOpacity(.95),
+                                        fontSize: 12.8,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 15,
+                              color: DhakkerColors.gold,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- 2.5 كرت رقم طوارئ SOS ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: InkWell(
+                        onTap: _editSosPhone,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: DhakkerColors.gold.withOpacity(.12),
+                              ),
+                              child: const Icon(
+                                Icons.phone_in_talk_rounded,
+                                color: DhakkerColors.gold,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Align(
+                                alignment: isAr
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: isAr
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isAr
+                                          ? "رقم طوارئ SOS"
+                                          : "SOS Emergency Number",
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _sosPhone.isEmpty
+                                          ? (isAr
+                                              ? "غير محدّد — اضغط للتعيين"
+                                              : "Not set — tap to set")
+                                          : _sosPhone,
+                                      textDirection: TextDirection.ltr,
+                                      style: TextStyle(
+                                        color: muted.withOpacity(.95),
+                                        fontSize: 12.8,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(
+                              Icons.edit_rounded,
+                              size: 16,
+                              color: DhakkerColors.gold,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- 3. كرت الثيم ---
+                    _SettingCard(
+                      cardColor: card,
+                      shadowDark: isDark,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: isAr
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: isAr
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.adminSettingsTheme,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _darkMode
+                                        ? s.adminSettingsThemeDark
+                                        : s.adminSettingsThemeLight,
+                                    style: TextStyle(
+                                      color: muted.withOpacity(.95),
+                                      fontSize: 12.8,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          FlutterSwitch(
+                            value: _darkMode,
+                            onToggle: _toggleTheme,
+                            height: 36,
+                            width: 72,
+                            toggleSize: 30,
+                            borderRadius: 40,
+                            padding: 4,
+                            activeColor: DhakkerColors.gold,
+                            inactiveColor:
+                                (isDark ? Colors.white : Colors.black)
+                                    .withOpacity(.12),
+                            toggleColor: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- 4. زر الخروج ---
+                    _LogoutButton(
+                      text: s.adminSettingsLogout,
+                      onTap: _logout,
                       isDark: isDark,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-
-              // --- 2. كرت لوحة الإحصائيات الذكية ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AdminSosMonitorScreen()),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: DhakkerColors.gold.withOpacity(.12),
-                        ),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          color: DhakkerColors.gold,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Align(
-                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? "مراقبة نداءات SOS" : "SOS Monitor",
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                isAr ? "متابعة حالات الاستغاثة ومواقعها" : "Track emergency alerts & locations",
-                                style: TextStyle(
-                                  color: muted.withOpacity(.95),
-                                  fontSize: 12.8,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 15,
-                        color: DhakkerColors.gold,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // --- 2.1 كرت لوحة الازدحام اللحظية ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminCrowdScreen()),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: DhakkerColors.gold.withOpacity(.12),
-                        ),
-                        child: const Icon(
-                          Icons.groups_rounded,
-                          color: DhakkerColors.gold,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Align(
-                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? "الازدحام اللحظي" : "Live Crowd",
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                isAr ? "عدد الحجّاج في كل منطقة الآن" : "Pilgrims per zone right now",
-                                style: TextStyle(
-                                  color: muted.withOpacity(.95),
-                                  fontSize: 12.8,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 15,
-                        color: DhakkerColors.gold,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // --- 2.2 كرت بثّ التنبيهات للحجّاج ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminAlertsScreen()),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: DhakkerColors.gold.withOpacity(.12),
-                        ),
-                        child: const Icon(
-                          Icons.campaign_rounded,
-                          color: DhakkerColors.gold,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Align(
-                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? "تنبيهات الحجّاج" : "Pilgrim Alerts",
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                isAr ? "إرسال تنبيهات تظهر لكل الحجّاج" : "Broadcast alerts to all pilgrims",
-                                style: TextStyle(
-                                  color: muted.withOpacity(.95),
-                                  fontSize: 12.8,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 15,
-                        color: DhakkerColors.gold,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // --- 2.5 كرت رقم طوارئ SOS ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: InkWell(
-                  onTap: _editSosPhone,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: DhakkerColors.gold.withOpacity(.12),
-                        ),
-                        child: const Icon(
-                          Icons.phone_in_talk_rounded,
-                          color: DhakkerColors.gold,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Align(
-                          alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAr ? "رقم طوارئ SOS" : "SOS Emergency Number",
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _sosPhone.isEmpty
-                                    ? (isAr ? "غير محدّد — اضغط للتعيين" : "Not set — tap to set")
-                                    : _sosPhone,
-                                textDirection: TextDirection.ltr,
-                                style: TextStyle(
-                                  color: muted.withOpacity(.95),
-                                  fontSize: 12.8,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.edit_rounded,
-                        size: 16,
-                        color: DhakkerColors.gold,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // --- 3. كرت الثيم ---
-              _SettingCard(
-                cardColor: card,
-                shadowDark: isDark,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment:
-                          isAr ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.adminSettingsTheme,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _darkMode
-                                  ? s.adminSettingsThemeDark
-                                  : s.adminSettingsThemeLight,
-                              style: TextStyle(
-                                color: muted.withOpacity(.95),
-                                fontSize: 12.8,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    FlutterSwitch(
-                      value: _darkMode,
-                      onToggle: _toggleTheme,
-                      height: 36,
-                      width: 72,
-                      toggleSize: 30,
-                      borderRadius: 40,
-                      padding: 4,
-                      activeColor: DhakkerColors.gold,
-                      inactiveColor: (isDark ? Colors.white : Colors.black).withOpacity(.12),
-                      toggleColor: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // --- 4. زر الخروج ---
-              _LogoutButton(
-                text: s.adminSettingsLogout,
-                onTap: _logout,
-                isDark: isDark,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

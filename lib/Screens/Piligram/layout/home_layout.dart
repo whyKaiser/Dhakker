@@ -21,7 +21,8 @@ class AppHomeLayout extends StatefulWidget {
   State<AppHomeLayout> createState() => _AppHomeLayoutState();
 }
 
-class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _AppHomeLayoutState extends State<AppHomeLayout>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _autoLocationEnabled = true;
   bool _locationServiceEnabled = false;
   bool _hasPermission = false;
@@ -38,7 +39,9 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
   // لربط حركة التبويبات بالـ PageView الناعم
   late PageController _pageController;
 
-  bool get _isGpsReady => kIsWeb ? true : (_autoLocationEnabled && _locationServiceEnabled && _hasPermission);
+  bool get _isGpsReady => kIsWeb
+      ? true
+      : (_autoLocationEnabled && _locationServiceEnabled && _hasPermission);
 
   @override
   void initState() {
@@ -46,7 +49,8 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
 
     // تهيئة الـ PageController بدون وجود وثبة مفاجئة
-    _pageController = PageController(initialPage: AppCubit.get(context).currentScreen);
+    _pageController =
+        PageController(initialPage: AppCubit.get(context).currentScreen);
 
     if (kIsWeb) {
       _isLoadingGps = false;
@@ -125,9 +129,8 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     final permission = await Geolocator.checkPermission();
 
-    final hasPermission =
-        permission == LocationPermission.always ||
-            permission == LocationPermission.whileInUse;
+    final hasPermission = permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
 
     if (serviceEnabled && hasPermission) {
       if (!mounted) return;
@@ -156,9 +159,8 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
     setState(() {
       _autoLocationEnabled = cachedAuto is bool ? cachedAuto : true;
       _locationServiceEnabled = serviceEnabled;
-      _hasPermission =
-          permission == LocationPermission.always ||
-              permission == LocationPermission.whileInUse;
+      _hasPermission = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
       _isLoadingGps = false;
     });
   }
@@ -168,18 +170,17 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
 
     _serviceStatusSubscription =
         Geolocator.getServiceStatusStream().listen((status) async {
-          final serviceEnabled = status == ServiceStatus.enabled;
-          final permission = await Geolocator.checkPermission();
+      final serviceEnabled = status == ServiceStatus.enabled;
+      final permission = await Geolocator.checkPermission();
 
-          if (!mounted) return;
+      if (!mounted) return;
 
-          setState(() {
-            _locationServiceEnabled = serviceEnabled;
-            _hasPermission =
-                permission == LocationPermission.always ||
-                    permission == LocationPermission.whileInUse;
-          });
-        });
+      setState(() {
+        _locationServiceEnabled = serviceEnabled;
+        _hasPermission = permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse;
+      });
+    });
   }
 
   // زر الطوارئ السريع في الشريط العلوي: تأكيد قصير ثم إرسال الموقع.
@@ -387,7 +388,9 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
                     ),
                   ),
                   child: Icon(
-                    isDestructive ? Icons.location_off_rounded : Icons.location_on_rounded,
+                    isDestructive
+                        ? Icons.location_off_rounded
+                        : Icons.location_on_rounded,
                     color: accent,
                     size: 34,
                   ),
@@ -556,7 +559,8 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
       buildWhen: (prev, curr) => curr is! AppQiblaDirectionUpdateState,
       listenWhen: (prev, curr) => curr is! AppQiblaDirectionUpdateState,
       listener: (context, state) {
-        if (AppCubit.get(context).currentScreen != _pageController.page?.round()) {
+        if (AppCubit.get(context).currentScreen !=
+            _pageController.page?.round()) {
           _pageController.jumpToPage(AppCubit.get(context).currentScreen);
         }
 
@@ -565,12 +569,15 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
         if (state is AppSOSSuccessState) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             backgroundColor: const Color(0xFF2E7D32),
-            content: Text(isAr ? "تم إرسال نداء الاستغاثة" : "Emergency request sent"),
+            content: Text(
+                isAr ? "تم إرسال نداء الاستغاثة" : "Emergency request sent"),
           ));
         } else if (state is AppSOSErrorState) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             backgroundColor: const Color(0xFFCC4B47),
-            content: Text(isAr ? "تعذّر إرسال نداء الاستغاثة" : "Could not send emergency request"),
+            content: Text(isAr
+                ? "تعذّر إرسال نداء الاستغاثة"
+                : "Could not send emergency request"),
           ));
         }
       },
@@ -642,7 +649,8 @@ class _AppHomeLayoutState extends State<AppHomeLayout> with WidgetsBindingObserv
                 palette: palette,
                 currentIndex: cubit.currentScreen,
                 onTap: (index) {
-                  HapticFeedback.lightImpact(); // نقرة iOS خفيفة عند تبديل التبويب
+                  HapticFeedback
+                      .lightImpact(); // نقرة iOS خفيفة عند تبديل التبويب
                   _pageController.animateToPage(
                     index,
                     duration: const Duration(milliseconds: 350),
@@ -837,7 +845,8 @@ class _ThemeToggleButton extends StatefulWidget {
   final bool isDark;
   final VoidCallback onTap;
 
-  const _ThemeToggleButton({required this.palette, required this.isDark, required this.onTap});
+  const _ThemeToggleButton(
+      {required this.palette, required this.isDark, required this.onTap});
 
   @override
   State<_ThemeToggleButton> createState() => _ThemeToggleButtonState();
@@ -866,7 +875,8 @@ class _ThemeToggleButtonState extends State<_ThemeToggleButton> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: widget.palette.gold.withOpacity(.12),
-            border: Border.all(color: widget.palette.gold.withOpacity(.4), width: 1.3),
+            border: Border.all(
+                color: widget.palette.gold.withOpacity(.4), width: 1.3),
           ),
           child: Center(
             child: AnimatedSwitcher(
@@ -1007,18 +1017,20 @@ class _GpsStatusButtonState extends State<_GpsStatusButton> {
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                valueColor: AlwaysStoppedAnimation<Color>(ringColor),
-              ),
-            )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+                    ),
+                  )
                 : Icon(
-              widget.isActive ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
-              size: 24,
-              color: ringColor,
-            ),
+                    widget.isActive
+                        ? Icons.gps_fixed_rounded
+                        : Icons.gps_off_rounded,
+                    size: 24,
+                    color: ringColor,
+                  ),
           ),
         ),
       ),
@@ -1154,15 +1166,18 @@ class _FixedBottomNav extends StatelessWidget {
               label: s.navMap,
             ),
             BottomNavigationBarItem(
-              icon: _NavIcon(Icons.menu_book_rounded, selected: currentIndex == 2),
+              icon: _NavIcon(Icons.menu_book_rounded,
+                  selected: currentIndex == 2),
               label: isAr ? 'الدليل' : 'Guide',
             ),
             BottomNavigationBarItem(
-              icon: _NavIcon(Icons.auto_awesome_rounded, selected: currentIndex == 3),
+              icon: _NavIcon(Icons.auto_awesome_rounded,
+                  selected: currentIndex == 3),
               label: isAr ? 'المساعد' : 'Assistant',
             ),
             BottomNavigationBarItem(
-              icon: _NavIcon(Icons.settings_rounded, selected: currentIndex == 4),
+              icon:
+                  _NavIcon(Icons.settings_rounded, selected: currentIndex == 4),
               label: s.navSettings,
             ),
           ],

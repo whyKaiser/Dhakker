@@ -245,14 +245,14 @@ class HajjZonesSeed {
 
   /// يرفع جميع المناطق إلى Firestore مع تجنّب التكرار.
   /// إذا وُجدت منطقة بنفس nameEn لا تُضاف مرة ثانية.
-  static Future<Map<String, int>> seedToFirestore([FirebaseFirestore? db]) async {
+  static Future<Map<String, int>> seedToFirestore(
+      [FirebaseFirestore? db]) async {
     final col = (db ?? FirebaseFirestore.instance).collection('zones');
 
     // اجلب الأسماء الموجودة مسبقاً
     final existing = await col.get();
-    final existingNames = existing.docs
-        .map((d) => (d.data()['nameEn'] ?? '').toString())
-        .toSet();
+    final existingNames =
+        existing.docs.map((d) => (d.data()['nameEn'] ?? '').toString()).toSet();
 
     int added = 0;
     int skipped = 0;

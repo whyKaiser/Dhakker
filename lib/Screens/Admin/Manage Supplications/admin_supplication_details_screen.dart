@@ -20,7 +20,8 @@ class AdminSupplicationDetailsScreen extends StatefulWidget {
 }
 
 class _AdminSupplicationDetailsScreenState
-    extends State<AdminSupplicationDetailsScreen> with SingleTickerProviderStateMixin {
+    extends State<AdminSupplicationDetailsScreen>
+    with SingleTickerProviderStateMixin {
   final FlutterTts _flutterTts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -87,7 +88,8 @@ class _AdminSupplicationDetailsScreenState
 
       if (!supplicationDoc.exists) {
         if (!mounted) return;
-        _showSnack(S.of(context).adminSupplicationDetailsNotFound, isError: true);
+        _showSnack(S.of(context).adminSupplicationDetailsNotFound,
+            isError: true);
         Navigator.pop(context);
         return;
       }
@@ -113,7 +115,8 @@ class _AdminSupplicationDetailsScreenState
       _detailsEntranceController.forward();
     } catch (_) {
       if (!mounted) return;
-      _showSnack(S.of(context).adminSupplicationDetailsLoadError, isError: true);
+      _showSnack(S.of(context).adminSupplicationDetailsLoadError,
+          isError: true);
       Navigator.pop(context);
     }
   }
@@ -126,10 +129,10 @@ class _AdminSupplicationDetailsScreenState
     final textMap = _supplicationData?['text'];
     final text = textMap is Map
         ? (isAr
-        ? (textMap['ar'] ?? textMap['en'] ?? '')
-        : (textMap['en'] ?? textMap['ar'] ?? ''))
-        .toString()
-        .trim()
+                ? (textMap['ar'] ?? textMap['en'] ?? '')
+                : (textMap['en'] ?? textMap['ar'] ?? ''))
+            .toString()
+            .trim()
         : '';
 
     if (text.isEmpty) {
@@ -235,18 +238,18 @@ class _AdminSupplicationDetailsScreenState
         child: _isLoading
             ? const _SupplicationDetailsLoadingView()
             : _supplicationData == null
-            ? const SizedBox.shrink()
-            : _SupplicationDetailsBody(
-          supplicationData: _supplicationData!,
-          zoneData: _zoneData,
-          isSpeaking: _isSpeaking,
-          isPlayingFile: _isPlayingFile,
-          onPlayTts: _playTts,
-          onStopTts: _stopTts,
-          onPlayAudioFile: _playAudioFile,
-          onStopAudioFile: _stopAudioFile,
-          entranceController: _detailsEntranceController,
-        ),
+                ? const SizedBox.shrink()
+                : _SupplicationDetailsBody(
+                    supplicationData: _supplicationData!,
+                    zoneData: _zoneData,
+                    isSpeaking: _isSpeaking,
+                    isPlayingFile: _isPlayingFile,
+                    onPlayTts: _playTts,
+                    onStopTts: _stopTts,
+                    onPlayAudioFile: _playAudioFile,
+                    onStopAudioFile: _stopAudioFile,
+                    entranceController: _detailsEntranceController,
+                  ),
       ),
     );
   }
@@ -284,8 +287,11 @@ class _SupplicationDetailsBody extends StatelessWidget {
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
 
-    final titleMap = supplicationData['title'] is Map ? supplicationData['title'] as Map : {};
-    final textMap = supplicationData['text'] is Map ? supplicationData['text'] as Map : {};
+    final titleMap = supplicationData['title'] is Map
+        ? supplicationData['title'] as Map
+        : {};
+    final textMap =
+        supplicationData['text'] is Map ? supplicationData['text'] as Map : {};
 
     final currentTitle = isAr
         ? (titleMap['ar'] ?? titleMap['en'] ?? '').toString().trim()
@@ -321,12 +327,16 @@ class _SupplicationDetailsBody extends StatelessWidget {
           const SizedBox(height: 10),
           _InfoRow(
             label: s.adminSupplicationDetailsAudioModeLabel,
-            value: audioMode == 'file' ? s.adminSupplicationAudioFile : s.adminSupplicationAudioTts,
+            value: audioMode == 'file'
+                ? s.adminSupplicationAudioFile
+                : s.adminSupplicationAudioTts,
           ),
           const SizedBox(height: 10),
           _InfoRow(
             label: s.adminSupplicationDetailsStatusLabel,
-            value: isActive ? s.adminSupplicationStatusActiveText : s.adminSupplicationStatusInactiveText,
+            value: isActive
+                ? s.adminSupplicationStatusActiveText
+                : s.adminSupplicationStatusInactiveText,
           ),
         ],
       ),
@@ -349,17 +359,26 @@ class _SupplicationDetailsBody extends StatelessWidget {
         _AudioActionCard(
           title: s.adminSupplicationDetailsTtsCardTitle,
           subtitle: s.adminSupplicationDetailsTtsCardSubtitle,
-          buttonLabel: isSpeaking ? s.adminSupplicationDetailsStopButton : s.adminSupplicationDetailsPlayTtsButton,
-          icon: isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+          buttonLabel: isSpeaking
+              ? s.adminSupplicationDetailsStopButton
+              : s.adminSupplicationDetailsPlayTtsButton,
+          icon:
+              isSpeaking ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
           isActive: isSpeaking,
           onTap: isSpeaking ? onStopTts : onPlayTts,
         ),
       if (audioMode == 'file')
         _AudioActionCard(
           title: s.adminSupplicationDetailsFileCardTitle,
-          subtitle: audioUrl.isEmpty ? s.adminSupplicationDetailsNoAudioFile : s.adminSupplicationDetailsFileCardSubtitle,
-          buttonLabel: isPlayingFile ? s.adminSupplicationDetailsStopButton : s.adminSupplicationDetailsPlayFileButton,
-          icon: isPlayingFile ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded,
+          subtitle: audioUrl.isEmpty
+              ? s.adminSupplicationDetailsNoAudioFile
+              : s.adminSupplicationDetailsFileCardSubtitle,
+          buttonLabel: isPlayingFile
+              ? s.adminSupplicationDetailsStopButton
+              : s.adminSupplicationDetailsPlayFileButton,
+          icon: isPlayingFile
+              ? Icons.stop_circle_rounded
+              : Icons.play_circle_fill_rounded,
           isActive: isPlayingFile,
           onTap: isPlayingFile ? onStopAudioFile : onPlayAudioFile,
         ),
@@ -430,8 +449,10 @@ class _HeroCard extends StatelessWidget {
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
-    final statusColor = isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
-    final audioColor = audioMode == 'file' ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
+    final statusColor =
+        isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final audioColor =
+        audioMode == 'file' ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -466,7 +487,8 @@ class _HeroCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(color: text, fontSize: 17, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                      color: text, fontSize: 17, fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -476,11 +498,20 @@ class _HeroCard extends StatelessWidget {
             children: [
               Expanded(child: _MiniBadge(label: zoneName, color: accent)),
               const SizedBox(width: 10),
-              Expanded(child: _MiniBadge(label: audioMode == 'file' ? s.adminSupplicationAudioFile : s.adminSupplicationAudioTts, color: audioColor)),
+              Expanded(
+                  child: _MiniBadge(
+                      label: audioMode == 'file'
+                          ? s.adminSupplicationAudioFile
+                          : s.adminSupplicationAudioTts,
+                      color: audioColor)),
             ],
           ),
           const SizedBox(height: 10),
-          _MiniBadge(label: isActive ? s.adminSupplicationStatusActiveText : s.adminSupplicationStatusInactiveText, color: statusColor),
+          _MiniBadge(
+              label: isActive
+                  ? s.adminSupplicationStatusActiveText
+                  : s.adminSupplicationStatusInactiveText,
+              color: statusColor),
         ],
       ),
     );
@@ -517,7 +548,9 @@ class _AudioActionCardState extends State<_AudioActionCard> {
     final card = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
-    final accent = widget.isActive ? const Color(0xFFDC2626) : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
+    final accent = widget.isActive
+        ? const Color(0xFFDC2626)
+        : (isDark ? DhakkerColors.gold : DhakkerColors.gold2);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -539,12 +572,18 @@ class _AudioActionCardState extends State<_AudioActionCard> {
               Icon(widget.icon, color: accent, size: 24),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(widget.title, style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 14.4)),
+                child: Text(widget.title,
+                    style: TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14.4)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(widget.subtitle, style: TextStyle(color: muted, fontWeight: FontWeight.w700, height: 1.5)),
+          Text(widget.subtitle,
+              style: TextStyle(
+                  color: muted, fontWeight: FontWeight.w700, height: 1.5)),
           const SizedBox(height: 14),
           GestureDetector(
             onTapDown: (_) => setState(() => _btnScale = 0.95),
@@ -567,11 +606,13 @@ class _AudioActionCardState extends State<_AudioActionCard> {
                     disabledBackgroundColor: accent,
                     disabledForegroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: null,
                   icon: Icon(widget.icon),
-                  label: Text(widget.buttonLabel, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  label: Text(widget.buttonLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
             ),
@@ -610,9 +651,18 @@ class _TextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.5, fontWeight: FontWeight.w800)),
+          Text(title,
+              style: TextStyle(
+                  color: muted.withOpacity(.95),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          Text(text.isEmpty ? '—' : text, style: TextStyle(color: textColor, fontSize: 14.2, fontWeight: FontWeight.w700, height: 1.75)),
+          Text(text.isEmpty ? '—' : text,
+              style: TextStyle(
+                  color: textColor,
+                  fontSize: 14.2,
+                  fontWeight: FontWeight.w700,
+                  height: 1.75)),
         ],
       ),
     );
@@ -662,7 +712,10 @@ class _MiniBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withOpacity(.18)),
       ),
-      child: Text(label, textAlign: TextAlign.center, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -680,9 +733,21 @@ class _InfoRow extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(child: Text(label, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.4, fontWeight: FontWeight.w800))),
+        Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    color: muted.withOpacity(.95),
+                    fontSize: 12.4,
+                    fontWeight: FontWeight.w800))),
         const SizedBox(width: 12),
-        Expanded(child: Text(value, textAlign: TextAlign.end, style: TextStyle(color: text, fontSize: 12.8, fontWeight: FontWeight.w800, height: 1.45))),
+        Expanded(
+            child: Text(value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                    color: text,
+                    fontSize: 12.8,
+                    fontWeight: FontWeight.w800,
+                    height: 1.45))),
       ],
     );
   }
@@ -700,8 +765,19 @@ class _SectionTitle extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(child: Text(title, style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: .1))),
-        Container(width: 26, height: 3, decoration: BoxDecoration(color: muted.withOpacity(.35), borderRadius: BorderRadius.circular(99))),
+        Expanded(
+            child: Text(title,
+                style: TextStyle(
+                    color: text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .1))),
+        Container(
+            width: 26,
+            height: 3,
+            decoration: BoxDecoration(
+                color: muted.withOpacity(.35),
+                borderRadius: BorderRadius.circular(99))),
       ],
     );
   }
@@ -741,7 +817,8 @@ class _LoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(18)),
+      decoration:
+          BoxDecoration(color: card, borderRadius: BorderRadius.circular(18)),
     );
   }
 }

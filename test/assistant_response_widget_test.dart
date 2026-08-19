@@ -22,13 +22,20 @@ void main() {
   }
 
   group('AssistantResponseMeta — grounded state', () {
-    testWidgets('shows the Grounded chip and renders citations', (tester) async {
+    testWidgets('shows the Grounded chip and renders citations',
+        (tester) async {
       final response = AssistantResponse.fromJson({
         'answer': 'Tawaf is seven circuits.',
         'grounded': true,
         'confidence': 'high',
         'citations': [
-          {'documentId': 'd1', 'title': 'Sample Guide', 'authority': 'Dev Fixture', 'section': '', 'url': ''},
+          {
+            'documentId': 'd1',
+            'title': 'Sample Guide',
+            'authority': 'Dev Fixture',
+            'section': '',
+            'url': ''
+          },
         ],
         'requiresHumanGuide': false,
       }, 'en');
@@ -44,8 +51,10 @@ void main() {
   });
 
   group('AssistantResponseMeta — ungrounded state', () {
-    testWidgets('shows the human-guide chip and zero citations', (tester) async {
-      final response = AssistantResponse.unverified('en', notice: 'no_retrieval');
+    testWidgets('shows the human-guide chip and zero citations',
+        (tester) async {
+      final response =
+          AssistantResponse.unverified('en', notice: 'no_retrieval');
 
       await tester.pumpWidget(harness(response));
 
@@ -54,7 +63,9 @@ void main() {
       expect(find.textContaining(' — '), findsNothing);
     });
 
-    testWidgets('a response claiming grounded:true with empty citations never shows Grounded', (tester) async {
+    testWidgets(
+        'a response claiming grounded:true with empty citations never shows Grounded',
+        (tester) async {
       // Server/Worker misbehavior simulation: raw JSON claims grounded:true
       // with no valid citations. AssistantResponse.fromJson must have
       // already forced grounded:false (defense in depth) — this asserts the
@@ -79,7 +90,8 @@ void main() {
 
   group('AssistantResponseMeta — offline state', () {
     testWidgets('shows the Offline chip and no citations', (tester) async {
-      final response = AssistantResponse.offline('Basic ritual facts only.', 'en');
+      final response =
+          AssistantResponse.offline('Basic ritual facts only.', 'en');
 
       await tester.pumpWidget(harness(response));
 
@@ -90,7 +102,8 @@ void main() {
   });
 
   group('AssistantResponseMeta — sign-in-required state', () {
-    testWidgets('shows a distinct Sign-in required chip, not a generic error', (tester) async {
+    testWidgets('shows a distinct Sign-in required chip, not a generic error',
+        (tester) async {
       final response = AssistantResponse.signInRequired('en');
 
       await tester.pumpWidget(harness(response));
@@ -115,7 +128,10 @@ void main() {
     testWidgets('renders its icon and label', (tester) async {
       await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
-          body: AssistantMetaChip(icon: Icons.verified_rounded, label: 'Grounded', color: Colors.green),
+          body: AssistantMetaChip(
+              icon: Icons.verified_rounded,
+              label: 'Grounded',
+              color: Colors.green),
         ),
       ));
 

@@ -81,7 +81,9 @@ class DuaPlaybackService {
         final loc = v['locale']!.toLowerCase();
         int s = 0;
         if (n.contains('network')) s += 4;
-        if (n.contains('enhanced') || n.contains('neural') || n.contains('premium')) s += 4;
+        if (n.contains('enhanced') ||
+            n.contains('neural') ||
+            n.contains('premium')) s += 4;
         if (loc.contains('sa')) s += 2; // العربية السعودية مفضّلة
         if (loc.contains('xa')) s += 1; // صوت قوقل العربي
         return s;
