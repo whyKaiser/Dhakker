@@ -461,7 +461,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنْيَا حَسَنَةً وَفِي ٱلْأَخِرَةِ حَسَنَةً وَقِنَا عَذَابَ ٱلنَّارِ",
+        "ar": "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ",
         "en": ""
       },
       "tagsAr": [
@@ -485,13 +485,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [البقرة: 201] — صفحة 94",
       "printedPage": 94,
       "isGeneralSupplication": true,
-      "quranRef": "[البقرة: 201]",
+      "quranRef": {
+        "surah": 2,
+        "ayat": [
+          201
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-002",
@@ -504,7 +518,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ",
+        "ar": "رَبَّنَا لَا تُؤَاخِذۡنَآ إِن نَّسِينَآ أَوۡ أَخۡطَأۡنَاۚ رَبَّنَا وَلَا تَحۡمِلۡ عَلَيۡنَآ إِصۡرٗا كَمَا حَمَلۡتَهُۥ عَلَى ٱلَّذِينَ مِن قَبۡلِنَاۚ رَبَّنَا وَلَا تُحَمِّلۡنَا مَا لَا طَاقَةَ لَنَا بِهِۦۖ وَٱعۡفُ عَنَّا وَٱغۡفِرۡ لَنَا وَٱرۡحَمۡنَآۚ أَنتَ مَوۡلَىٰنَا فَٱنصُرۡنَا عَلَى ٱلۡقَوۡمِ ٱلۡكَٰفِرِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -529,13 +543,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [البقرة: 286] — صفحة 94",
       "printedPage": 94,
       "isGeneralSupplication": true,
-      "quranRef": "[البقرة: 286]",
+      "quranRef": {
+        "surah": 2,
+        "ayat": [
+          286
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-003",
@@ -548,7 +576,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ ٱلْوَهَّابُ",
+        "ar": "رَبَّنَا لَا تُزِغۡ قُلُوبَنَا بَعۡدَ إِذۡ هَدَيۡتَنَا وَهَبۡ لَنَا مِن لَّدُنكَ رَحۡمَةًۚ إِنَّكَ أَنتَ ٱلۡوَهَّابُ",
         "en": ""
       },
       "tagsAr": [
@@ -573,13 +601,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [آل عمران: 8] — صفحة 94",
       "printedPage": 94,
       "isGeneralSupplication": true,
-      "quranRef": "[آل عمران: 8]",
+      "quranRef": {
+        "surah": 3,
+        "ayat": [
+          8
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": false,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-004",
@@ -592,7 +634,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَآ إِنَّنَآ ءَامَنَّا فَٱغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ ٱلنَّارِ",
+        "ar": "رَبَّنَآ إِنَّنَآ ءَامَنَّا فَٱغۡفِرۡ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ ٱلنَّارِ",
         "en": ""
       },
       "tagsAr": [
@@ -617,13 +659,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [آل عمران: 16] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[آل عمران: 16]",
+      "quranRef": {
+        "surah": 3,
+        "ayat": [
+          16
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-005",
@@ -636,7 +692,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ هَبْ لِي مِن لَّدُنكَ ذُرِّيَّةً طَيِّبَةً ۖ إِنَّكَ سَمِيعُ ٱلدُّعَآءِ",
+        "ar": "رَبِّ هَبۡ لِي مِن لَّدُنكَ ذُرِّيَّةٗ طَيِّبَةًۖ إِنَّكَ سَمِيعُ ٱلدُّعَآءِ",
         "en": ""
       },
       "tagsAr": [
@@ -661,13 +717,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [آل عمران: 38] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[آل عمران: 38]",
+      "quranRef": {
+        "surah": 3,
+        "ayat": [
+          38
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-006",
@@ -680,7 +750,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا ٱغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِيٓ أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ",
+        "ar": "رَبَّنَا ٱغۡفِرۡ لَنَا ذُنُوبَنَا وَإِسۡرَافَنَا فِيٓ أَمۡرِنَا وَثَبِّتۡ أَقۡدَامَنَا وَٱنصُرۡنَا عَلَى ٱلۡقَوۡمِ ٱلۡكَٰفِرِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -705,13 +775,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [آل عمران: 147] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[آل عمران: 147]",
+      "quranRef": {
+        "surah": 3,
+        "ayat": [
+          147
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-007",
@@ -724,7 +808,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَآ إِنَّنَا سَمِعْنَا مُنَادِيًا يُنَادِي لِلْإِيمَٰنِ أَنْ ءَامِنُوا۟ بِرَبِّكُمْ فَـَٔامَنَّا ۚ رَبَّنَا فَٱغْفِرْ لَنَا ذُنُوبَنَا وَكَفِّرْ عَنَّا سَيِّـَٔاتِنَا وَتَوَفَّنَا مَعَ ٱلْأَبْرَارِ ۝ رَبَّنَا وَءَاتِنَا مَا وَعَدتَّنَا عَلَىٰ رُسُلِكَ وَلَا تُخْزِنَا يَوْمَ ٱلْقِيَٰمَةِ ۗ إِنَّكَ لَا تُخْلِفُ ٱلْمِيعَادَ",
+        "ar": "رَّبَّنَآ إِنَّنَا سَمِعۡنَا مُنَادِيٗا يُنَادِي لِلۡإِيمَٰنِ أَنۡ ءَامِنُواْ بِرَبِّكُمۡ فَـَٔامَنَّاۚ رَبَّنَا فَٱغۡفِرۡ لَنَا ذُنُوبَنَا وَكَفِّرۡ عَنَّا سَيِّـَٔاتِنَا وَتَوَفَّنَا مَعَ ٱلۡأَبۡرَارِ ﳀ رَبَّنَا وَءَاتِنَا مَا وَعَدتَّنَا عَلَىٰ رُسُلِكَ وَلَا تُخۡزِنَا يَوۡمَ ٱلۡقِيَٰمَةِۖ إِنَّكَ لَا تُخۡلِفُ ٱلۡمِيعَادَ",
         "en": ""
       },
       "tagsAr": [
@@ -749,13 +833,28 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [آل عمران: 193، 194] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[آل عمران: 193، 194]",
+      "quranRef": {
+        "surah": 3,
+        "ayat": [
+          193,
+          194
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": false,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-008",
@@ -768,7 +867,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا ظَلَمْنَآ أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ ٱلْخَٰسِرِينَ",
+        "ar": "رَبَّنَا ظَلَمۡنَآ أَنفُسَنَا وَإِن لَّمۡ تَغۡفِرۡ لَنَا وَتَرۡحَمۡنَا لَنَكُونَنَّ مِنَ ٱلۡخَٰسِرِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -793,13 +892,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الأعراف: 23] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[الأعراف: 23]",
+      "quranRef": {
+        "surah": 7,
+        "ayat": [
+          23
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-009",
@@ -812,7 +925,7 @@
         "en": ""
       },
       "text": {
-        "ar": "حَسْبِيَ ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ۖ عَلَيْهِ تَوَكَّلْتُ ۖ وَهُوَ رَبُّ ٱلْعَرْشِ",
+        "ar": "حَسۡبِيَ ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَۖ عَلَيۡهِ تَوَكَّلۡتُۖ وَهُوَ رَبُّ ٱلۡعَرۡشِ",
         "en": ""
       },
       "tagsAr": [
@@ -837,13 +950,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [التوبة: 129] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[التوبة: 129]",
+      "quranRef": {
+        "surah": 9,
+        "ayat": [
+          129
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-010",
@@ -856,7 +983,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ ٱجْعَلْ هَٰذَا ٱلْبَلَدَ ءَامِنًا وَٱجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ ٱلْأَصْنَامَ",
+        "ar": "رَبِّ ٱجۡعَلۡ هَٰذَا ٱلۡبَلَدَ ءَامِنٗا وَٱجۡنُبۡنِي وَبَنِيَّ أَن نَّعۡبُدَ ٱلۡأَصۡنَامَ",
         "en": ""
       },
       "tagsAr": [
@@ -881,13 +1008,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [إبراهيم: 35] — صفحة 95",
       "printedPage": 95,
       "isGeneralSupplication": true,
-      "quranRef": "[إبراهيم: 35]",
+      "quranRef": {
+        "surah": 14,
+        "ayat": [
+          35
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-011",
@@ -900,7 +1041,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ ٱجْعَلْنِي مُقِيمَ ٱلصَّلَوٰةِ وَمِن ذُرِّيَّتِيۚ رَبَّنَا وَتَقَبَّلْ دُعَآءِ ۝ رَبَّنَا ٱغْفِرْ لِي وَلِوَٰلِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ ٱلْحِسَابُ",
+        "ar": "رَبِّ ٱجۡعَلۡنِي مُقِيمَ ٱلصَّلَوٰةِ وَمِن ذُرِّيَّتِيۚ رَبَّنَا وَتَقَبَّلۡ دُعَآءِ ﰧ رَبَّنَا ٱغۡفِرۡ لِي وَلِوَٰلِدَيَّ وَلِلۡمُؤۡمِنِينَ يَوۡمَ يَقُومُ ٱلۡحِسَابُ",
         "en": ""
       },
       "tagsAr": [
@@ -926,13 +1067,28 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [إبراهيم: 40، 41] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[إبراهيم: 40، 41]",
+      "quranRef": {
+        "surah": 14,
+        "ayat": [
+          40,
+          41
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": false,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-012",
@@ -945,7 +1101,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَآ ءَاتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا",
+        "ar": "رَبَّنَآ ءَاتِنَا مِن لَّدُنكَ رَحۡمَةٗ وَهَيِّئۡ لَنَا مِنۡ أَمۡرِنَا رَشَدٗا",
         "en": ""
       },
       "tagsAr": [
@@ -970,13 +1126,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الكهف: 10] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[الكهف: 10]",
+      "quranRef": {
+        "surah": 18,
+        "ayat": [
+          10
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-013",
@@ -989,7 +1159,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ ٱشْرَحْ لِي صَدْرِي ۝ وَيَسِّرْ لِيٓ أَمْرِي",
+        "ar": "رَبِّ ٱشۡرَحۡ لِي صَدۡرِي ﰘ وَيَسِّرۡ لِيٓ أَمۡرِي",
         "en": ""
       },
       "tagsAr": [
@@ -1014,13 +1184,28 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [طه: 25، 26] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[طه: 25، 26]",
+      "quranRef": {
+        "surah": 20,
+        "ayat": [
+          25,
+          26
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-014",
@@ -1033,7 +1218,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَّبِّ زِدْنِي عِلْمًا",
+        "ar": "رَّبِّ زِدۡنِي عِلۡمٗا",
         "en": ""
       },
       "tagsAr": [
@@ -1058,13 +1243,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [طه: 114] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[طه: 114]",
+      "quranRef": {
+        "surah": 20,
+        "ayat": [
+          114
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-015",
@@ -1077,7 +1276,7 @@
         "en": ""
       },
       "text": {
-        "ar": "لَّآ إِلَٰهَ إِلَّآ أَنتَ سُبْحَٰنَكَ إِنِّي كُنتُ مِنَ ٱلظَّٰلِمِينَ",
+        "ar": "لَّآ إِلَٰهَ إِلَّآ أَنتَ سُبۡحَٰنَكَ إِنِّي كُنتُ مِنَ ٱلظَّٰلِمِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -1102,13 +1301,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الأنبياء: 87] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[الأنبياء: 87]",
+      "quranRef": {
+        "surah": 21,
+        "ayat": [
+          87
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-016",
@@ -1121,7 +1334,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ ٱلْوَٰرِثِينَ",
+        "ar": "رَبِّ لَا تَذَرۡنِي فَرۡدٗا وَأَنتَ خَيۡرُ ٱلۡوَٰرِثِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -1146,13 +1359,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الأنبياء: 89] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[الأنبياء: 89]",
+      "quranRef": {
+        "surah": 21,
+        "ayat": [
+          89
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-017",
@@ -1165,7 +1392,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَّبِّ أَعُوذُ بِكَ مِنْ هَمَزَٰتِ ٱلشَّيَٰطِينِ ۝ وَأَعُوذُ بِكَ رَبِّ أَن يَحْضُرُونِ",
+        "ar": "رَّبِّ أَعُوذُ بِكَ مِنۡ هَمَزَٰتِ ٱلشَّيَٰطِينِ ﱠ وَأَعُوذُ بِكَ رَبِّ أَن يَحۡضُرُونِ",
         "en": ""
       },
       "tagsAr": [
@@ -1190,13 +1417,28 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [المؤمنون: 97، 98] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[المؤمنون: 97، 98]",
+      "quranRef": {
+        "surah": 23,
+        "ayat": [
+          97,
+          98
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-018",
@@ -1209,7 +1451,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا ٱصْرِفْ عَنَّا عَذَابَ جَهَنَّمَۖ إِنَّ عَذَابَهَا كَانَ غَرَامًا ۝ إِنَّهَا سَآءَتْ مُسْتَقَرًّا وَمُقَامًا",
+        "ar": "رَبَّنَا ٱصۡرِفۡ عَنَّا عَذَابَ جَهَنَّمَۖ إِنَّ عَذَابَهَا كَانَ غَرَامًا ﱀ إِنَّهَا سَآءَتۡ مُسۡتَقَرّٗا وَمُقَامٗا",
         "en": ""
       },
       "tagsAr": [
@@ -1234,13 +1476,28 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الفرقان: 65، 66] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[الفرقان: 65، 66]",
+      "quranRef": {
+        "surah": 25,
+        "ayat": [
+          65,
+          66
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-019",
@@ -1253,7 +1510,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا هَبْ لَنَا مِنْ أَزْوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعْيُنٍ وَٱجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
+        "ar": "رَبَّنَا هَبۡ لَنَا مِنۡ أَزۡوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعۡيُنٖ وَٱجۡعَلۡنَا لِلۡمُتَّقِينَ إِمَامًا",
         "en": ""
       },
       "tagsAr": [
@@ -1279,13 +1536,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الفرقان: 74] — صفحة 96",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[الفرقان: 74]",
+      "quranRef": {
+        "surah": 25,
+        "ayat": [
+          74
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-020",
@@ -1298,7 +1569,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ أَوْزِعْنِيٓ أَنْ أَشْكُرَ نِعْمَتَكَ ٱلَّتِيٓ أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَٰلِدَيَّ وَأَنْ أَعْمَلَ صَٰلِحًا تَرْضَىٰهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ ٱلصَّٰلِحِينَ",
+        "ar": "رَبِّ أَوۡزِعۡنِيٓ أَنۡ أَشۡكُرَ نِعۡمَتَكَ ٱلَّتِيٓ أَنۡعَمۡتَ عَلَيَّ وَعَلَىٰ وَٰلِدَيَّ وَأَنۡ أَعۡمَلَ صَٰلِحٗا تَرۡضَىٰهُ وَأَدۡخِلۡنِي بِرَحۡمَتِكَ فِي عِبَادِكَ ٱلصَّٰلِحِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -1324,13 +1595,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [النمل: 19] — صفحتا 96-97",
       "printedPage": 96,
       "isGeneralSupplication": true,
-      "quranRef": "[النمل: 19]",
+      "quranRef": {
+        "surah": 27,
+        "ayat": [
+          19
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر. حُلَّت الملاحظة U2: الآية تبدأ في أسفل صفحة 96 وتنتهي في أعلى صفحة 97؛ وتأكّد الفصل بينها وبين [الأحقاف: 15].",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-021",
@@ -1343,7 +1628,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبِّ أَوْزِعْنِيٓ أَنْ أَشْكُرَ نِعْمَتَكَ ٱلَّتِيٓ أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَٰلِدَيَّ وَأَنْ أَعْمَلَ صَٰلِحًا تَرْضَىٰهُ وَأَصْلِحْ لِي فِي ذُرِّيَّتِيٓۖ إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ ٱلْمُسْلِمِينَ",
+        "ar": "رَبِّ أَوۡزِعۡنِيٓ أَنۡ أَشۡكُرَ نِعۡمَتَكَ ٱلَّتِيٓ أَنۡعَمۡتَ عَلَيَّ وَعَلَىٰ وَٰلِدَيَّ وَأَنۡ أَعۡمَلَ صَٰلِحٗا تَرۡضَىٰهُ وَأَصۡلِحۡ لِي فِي ذُرِّيَّتِيٓۖ إِنِّي تُبۡتُ إِلَيۡكَ وَإِنِّي مِنَ ٱلۡمُسۡلِمِينَ",
         "en": ""
       },
       "tagsAr": [
@@ -1369,13 +1654,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الأحقاف: 15] — صفحة 97",
       "printedPage": 97,
       "isGeneralSupplication": true,
-      "quranRef": "[الأحقاف: 15]",
+      "quranRef": {
+        "surah": 46,
+        "ayat": [
+          15
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-022",
@@ -1388,7 +1687,7 @@
         "en": ""
       },
       "text": {
-        "ar": "رَبَّنَا ٱغْفِرْ لَنَا وَلِإِخْوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلْإِيمَٰنِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِّلَّذِينَ ءَامَنُوا۟ رَبَّنَآ إِنَّكَ رَءُوفٌ رَّحِيمٌ",
+        "ar": "رَبَّنَا ٱغۡفِرۡ لَنَا وَلِإِخۡوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلۡإِيمَٰنِ وَلَا تَجۡعَلۡ فِي قُلُوبِنَا غِلّٗا لِّلَّذِينَ ءَامَنُواْ رَبَّنَآ إِنَّكَ رَءُوفٞ رَّحِيمٌ",
         "en": ""
       },
       "tagsAr": [
@@ -1414,13 +1713,27 @@
       "sourceSection": "أدعية عامة مختارة من الكتاب والسنة — [الحشر: 10] — صفحة 97",
       "printedPage": 97,
       "isGeneralSupplication": true,
-      "quranRef": "[الحشر: 10]",
+      "quranRef": {
+        "surah": 59,
+        "ayat": [
+          10
+        ]
+      },
       "verifiedAt": null,
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-mukhtasar-1446-general-023",
@@ -3362,7 +3675,7 @@
         "en": "Recited at Maqam Ibrahim"
       },
       "text": {
-        "ar": "وَٱتَّخِذُواْ مِن مَّقَامِ إِبْرَٰهِـۧمَ مُصَلًّى",
+        "ar": "وَٱتَّخِذُواْ مِن مَّقَامِ إِبۡرَٰهِـۧمَ مُصَلّٗىۖ",
         "en": ""
       },
       "tagsAr": [
@@ -3392,7 +3705,22 @@
       "reviewNotes": "[البقرة: 125]. تُقرأ عند التقدم للمقام بعد إتمام سبعة أشواط (ص71).",
       "visuallyUncertain": [
         "نص قرآني بالرسم العثماني — «إِبْرَٰهِـۧمَ» تحتوي ياءً صغيرة فوق السطر؛ نُقلت كما رُسمت وتحتاج تدقيقًا حرفيًّا"
-      ]
+      ],
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "textRiwayah": "حفص عن عاصم",
+      "textRasm": "الرسم العثماني",
+      "textEdition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "textEditionDate": "2022-09-07",
+      "isPortionOfAyah": true,
+      "quranRef": {
+        "surah": 2,
+        "ayat": [
+          125
+        ]
+      },
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     },
     {
       "duaId": "moia-1446-maqam-rakatayn",
