@@ -211,7 +211,8 @@ caller — no separate service-account credential is held by the Worker.
 `FIRESTORE_PROJECT_ID` unset, no caller token, or any Firestore error all
 degrade to an **empty** retrieval result — never a fabricated answer.
 
-**No officially-approved religious source content ships with this repo.**
+**No approved religious source text ships in this repo** (it lives in the
+live `supplications` collection instead — see "Approved source registry").
 In non-production environments only, `DEV_FIXTURE_DOCS` (two small,
 explicitly `[DEV FIXTURE — NOT RELIGIOUS CONTENT]`-labeled, non-religious
 entries — visitor-center hours and lost-and-found) are used so the
@@ -368,6 +369,96 @@ on.
    test-harness work; the ritual/zone logic was verified by code review
    only, not by an automated test in this round.
 
+## Approved source registry (where the official sources actually live)
+
+**No religious source text is stored in this repository, by design.** The
+approved content lives only in the project's live Firestore database and is
+curated through the in-app admin console. Nothing below exposes credentials
+or copies source text into Git.
+
+### Where the sources are stored
+
+The live registry is the Firestore collection **`supplications`**. It is:
+
+- written by the admin console (`lib/Screens/Admin/Manage Supplications/`),
+- read by the Flutter home screen for location-aware duas
+  (`HomeDuaController` → `SupplicationService`),
+- and, as of this change, read by the Worker RAG path.
+
+Access is controlled by `firestore.rules`: signed-in read, admin-only
+create/delete, and update restricted to admins except that a pilgrim may
+increment `usage_count` only. A pilgrim therefore cannot mark anything
+verified.
+
+There is also a `knowledge_documents` / `knowledge_chunks` pair, added by
+this feature as a purpose-built RAG schema. **It is empty in this project**
+— no code path in the Flutter app reads or writes it. It is retained for a
+possible future migration and is selectable via `KNOWLEDGE_COLLECTION`, but
+the default and the real registry is `supplications`.
+
+### Schema
+
+Legacy fields (pre-existing, written by the admin console):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `duaId` | string | Stable document id → retrieval `documentId` |
+| `zoneId` | string | Zone this belongs to → citation `section` fallback |
+| `title` | map `{ar,en}` | Localized title → citation `title` |
+| `text` | map `{ar,en}` | Localized body → retrieval `content` |
+| `tagsAr` / `tagsEn` | string[] | Search keywords → retrieval match |
+| `languageCodes` | string[] | Languages this record covers |
+| `isActive` | bool | Only active records are retrieved |
+| `audioMode`, `audioUrl`, `usage_count`, `updatedAt` | — | Unrelated to RAG |
+
+Provenance fields (**added by this change**, required for citation):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `authority` | string | The issuing/approving body — the name shown in the citation |
+| `verificationStatus` | string | Must be exactly `"verified"` to be citable |
+| `sourceUrl` | string | Official reference link → citation `url` |
+| `sourceVersion` | string | Edition/date of the approved source |
+| `section` | string | Optional explicit section (else falls back to `zoneId`) |
+
+### The provenance gate
+
+A record becomes citable by the assistant **only** when it has a non-empty
+`authority` **and** `verificationStatus == "verified"`. Anything else is
+skipped by retrieval, which means the question falls through to the
+deterministic "no approved source" response.
+
+This is deliberate and is the crux of the religious-safety design: a
+citation names an authority to the pilgrim. If we emitted a citation for a
+record that carries no recorded approving body, the app would be asserting
+an endorsement nobody actually gave — the same fabrication risk as an
+invented URL, just laundered through real content. Content without
+provenance is still perfectly usable as a location dua; it is simply not
+something the assistant will cite.
+
+### Verification process (admin)
+
+1. Open the admin console → Manage Supplications → add/edit a supplication.
+2. Enter the content and tags as usual.
+3. Fill **Issuing authority**, **Source URL**, and **Version** from the
+   official published source.
+4. Turn on **"مصدر معتمد وموثّق"** (approved & verified source) only after
+   confirming the text against that official source. This writes
+   `verificationStatus: "verified"`.
+5. Leave it off for anything not yet checked — the record still works as a
+   location dua, it just will not be cited by the assistant.
+
+Only an admin can set this (enforced in `firestore.rules`); the toggle is
+not reachable by pilgrims.
+
+### Migration note
+
+Records created before this change have **no** provenance fields, so they
+are currently not citable and every assistant question will take the safe
+no-answer path until the fields are populated. This is a data task, not a
+code change. Backfilling `authority` / `verificationStatus` on existing
+approved records is what switches the grounded path on.
+
 ## Verification status
 
 Both sides are now actually executed and verified.
@@ -406,12 +497,19 @@ files. The step still fails if any feature-owned file is misformatted.
 - **Live retrieval** has never run against a real Firestore project (no
   credentials available), so `queryFirestoreKnowledge` is exercised only
   through unit tests and dev fixtures.
-- **No officially approved religious source content exists in this
-  repository.** Only non-religious dev fixtures are bundled, and they are
-  disabled outside non-production environments. Until real approved
-  content is ingested via `scripts/ingest_knowledge.mjs`, every
-  religious/ritual question hits the safe no-retrieval path by design —
-  online *and* offline.
+- **No approved religious source text is committed to this repository** —
+  deliberately. The real approved content lives in the live Firestore
+  `supplications` collection (see "Approved source registry" above), which
+  is curated through the admin console and has been exercised in the field.
+  Only non-religious dev fixtures are bundled in Git, and they are disabled
+  outside non-production environments.
+- **The provenance backfill has not been done.** The Worker now reads the
+  live `supplications` registry, but only cites records carrying
+  `authority` + `verificationStatus == "verified"` — fields this change
+  introduces. Existing records predate them, so until an admin backfills
+  them the grounded path stays closed and every ritual question takes the
+  safe no-answer route. Verified here only against metadata fixtures, not
+  against the live collection (no credentials in this environment).
 
 ## What needs external credentials / approved content / paid infra
 

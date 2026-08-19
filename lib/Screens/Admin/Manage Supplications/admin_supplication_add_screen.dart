@@ -29,6 +29,15 @@ class _AdminSupplicationAddScreenState
   final _textEnController = TextEditingController();
   final _tagsArController = TextEditingController();
   final _tagsEnController = TextEditingController();
+  // ── Approved-source provenance (required for assistant citations) ──────
+  // The assistant may only cite a supplication that carries a named issuing
+  // authority AND verificationStatus == 'verified'. Records without these
+  // stay usable as location duas but are NOT citable by the assistant, so it
+  // can never name an approving body nobody actually vouched for.
+  final _authorityController = TextEditingController();
+  final _sourceUrlController = TextEditingController();
+  final _sourceVersionController = TextEditingController();
+  bool _isVerifiedSource = false;
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
   bool _zonesLoading = true;
@@ -63,6 +72,9 @@ class _AdminSupplicationAddScreenState
     _textEnController.dispose();
     _tagsArController.dispose();
     _tagsEnController.dispose();
+    _authorityController.dispose();
+    _sourceUrlController.dispose();
+    _sourceVersionController.dispose();
     _formEntranceController.dispose();
     super.dispose();
   }
@@ -162,6 +174,10 @@ class _AdminSupplicationAddScreenState
         'audioUrl': _audioMode == 'file' ? audioUrl : null,
         'tagsAr': _splitTags(_tagsArController.text),
         'tagsEn': _splitTags(_tagsEnController.text),
+        'authority': _authorityController.text.trim(),
+        'sourceUrl': _sourceUrlController.text.trim(),
+        'sourceVersion': _sourceVersionController.text.trim(),
+        'verificationStatus': _isVerifiedSource ? 'verified' : 'unverified',
         'languageCodes': ['ar', 'en'],
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -328,6 +344,37 @@ class _AdminSupplicationAddScreenState
               controller: _tagsEnController,
               label: s.adminSupplicationTagsEn,
               hint: s.adminSupplicationTagsEnHint,
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _authorityController,
+              label: 'الجهة المُصدِرة / المعتمِدة (Issuing authority)',
+              hint: 'مثال: الرئاسة العامة لشؤون المسجد الحرام',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceUrlController,
+              label: 'رابط المصدر الرسمي (Source URL)',
+              hint: 'https://…',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceVersionController,
+              label: 'إصدار/تاريخ المصدر (Version)',
+              hint: '2026-01',
+            ),
+            const SizedBox(height: 12),
+            _SwitchCard(
+              title: 'مصدر معتمد وموثّق',
+              subtitle: _isVerifiedSource
+                  ? 'موثّق — يجوز للمساعد الذكي الاستشهاد به مع ذكر الجهة'
+                  : 'غير موثّق — يظهر كدعاء للموقع فقط، ولا يستشهد به المساعد',
+              value: _isVerifiedSource,
+              onChanged: (value) {
+                setState(() {
+                  _isVerifiedSource = value;
+                });
+              },
             ),
             const SizedBox(height: 12),
             _SwitchCard(

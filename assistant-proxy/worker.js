@@ -581,7 +581,12 @@ function buildSystemPrompt(language, context, retrieved) {
 //     `firestore.rules` must allow signed-in reads on these two
 //     collections (mirroring the existing `zones`/`supplications` pattern)
 //     for this to succeed.
-//   - **No officially-approved religious source content is bundled with
+//   - The live registry is the `supplications` collection (the one the
+//     admin console already curates and the Flutter app already reads);
+//     `KNOWLEDGE_COLLECTION` selects it, and only records carrying
+//     `authority` + `verificationStatus == "verified"` are citable. See
+//     queryFirestoreSupplications and docs/ARCHITECTURE.md.
+//   - **No approved religious source text is bundled with
 //     this repo** (per the hard constraint against fabricating religious
 //     sources). `FIRESTORE_PROJECT_ID` unset, no token, or a Firestore
 //     error all safely degrade to an EMPTY result — never a fabricated
@@ -623,7 +628,19 @@ async function retrieveKnowledge(question, language, env, token) {
 
   if (env.FIRESTORE_PROJECT_ID && token) {
     try {
-      return await queryFirestoreKnowledge(keywords, language, env.FIRESTORE_PROJECT_ID, token);
+      // KNOWLEDGE_COLLECTION selects which live registry to read.
+      //   "supplications" (default) — the collection this app has ACTUALLY
+      //     been curating in production via the admin console, and which the
+      //     Flutter app already reads for location-aware duas. This is the
+      //     real approved-source registry; see queryFirestoreSupplications.
+      //   "knowledge_chunks" — the purpose-built RAG schema created for this
+      //     feature. Empty in this project today; kept for a future migration.
+      const collection = env.KNOWLEDGE_COLLECTION || "supplications";
+      const docs =
+        collection === "knowledge_chunks"
+          ? await queryFirestoreKnowledge(keywords, language, env.FIRESTORE_PROJECT_ID, token)
+          : await queryFirestoreSupplications(keywords, language, env.FIRESTORE_PROJECT_ID, token);
+      return docs;
     } catch (_) {
       // Fail safe: retrieval error → no grounded content, never a crash and
       // never a fabricated fallback.
@@ -637,6 +654,136 @@ async function retrieveKnowledge(question, language, env, token) {
   }
 
   return [];
+}
+
+// ── Live registry adapter: `supplications` ───────────────────────────────
+//
+// This is the collection the project actually curates in production (the
+// admin console writes it; the Flutter home screen already reads it for
+// location-aware duas). Its schema predates this RAG feature, so it does NOT
+// match `knowledge_chunks` — this adapter maps between them:
+//
+//   supplications field   →  retrieval field
+//   ------------------------------------------------
+//   duaId                 →  documentId
+//   title{ar,en}          →  title       (per reply language)
+//   text{ar,en}           →  content     (per reply language)
+//   tagsAr / tagsEn       →  keywords    (per reply language)
+//   languageCodes[]       →  language    (array membership, filtered here)
+//   zoneId                →  section     (fallback when no explicit section)
+//
+// PROVENANCE GATE — the important part.
+// The legacy `supplications` schema carries no provenance fields, so a record
+// can be perfectly good religious content and still be uncitable *as a
+// verified citation*, because we cannot name who approved it. A citation
+// asserting an authority we do not actually have on record would be exactly
+// the fabrication this whole pipeline exists to prevent.
+//
+// So a record is returned (i.e. becomes citable, and can make an answer
+// `grounded`) ONLY when the admin has filled in real provenance:
+//   - `authority`        non-empty string — the issuing/approving body
+//   - `verificationStatus` === "verified"
+// Optional: `sourceUrl`, `sourceVersion`, `section`, `lastVerifiedAt`.
+//
+// Records without that metadata are skipped, which means the question falls
+// through to the deterministic "no approved source" response rather than
+// producing an answer citing an authority nobody vouched for. Populating
+// these fields is an admin/data task, not a code change — see
+// docs/ARCHITECTURE.md ("Approved source registry").
+const VERIFICATION_STATUS_VERIFIED = "verified";
+
+async function queryFirestoreSupplications(keywords, language, projectId, token) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+  // Firestore permits only one array-contains/array-contains-any clause per
+  // query, so we match on the language-appropriate tag field and filter
+  // languageCodes membership here in the Worker.
+  const tagField = language === "ar" ? "tagsAr" : "tagsEn";
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: "supplications" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: tagField },
+                op: "ARRAY_CONTAINS_ANY",
+                value: {
+                  arrayValue: {
+                    values: keywords.slice(0, 10).map((k) => ({ stringValue: k })),
+                  },
+                },
+              },
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: "isActive" },
+                op: "EQUAL",
+                value: { booleanValue: true },
+              },
+            },
+          ],
+        },
+      },
+      limit: 5,
+    },
+  };
+  const resp = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    },
+    FIRESTORE_TIMEOUT_MS
+  );
+  if (!resp.ok) throw new Error(`Firestore query failed: ${resp.status}`);
+  const rows = await resp.json();
+  return mapSupplicationRows(rows, language);
+}
+
+/// Pure mapping + provenance gate, split out so it is testable without a
+/// live Firestore. Input is the raw `documents:runQuery` response shape.
+function mapSupplicationRows(rows, language) {
+  const docs = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const fields = row && row.document && row.document.fields;
+    if (!fields) continue;
+
+    // Language membership (languageCodes is an array in this schema).
+    const langValues = fields.languageCodes?.arrayValue?.values || [];
+    const langs = langValues.map((v) => v.stringValue).filter(Boolean);
+    if (langs.length > 0 && !langs.includes(language)) continue;
+
+    // Provenance gate — no verified authority, not citable.
+    const authority = (fields.authority?.stringValue || "").trim();
+    const status = (fields.verificationStatus?.stringValue || "").trim();
+    if (!authority || status !== VERIFICATION_STATUS_VERIFIED) continue;
+
+    const localized = (mapField) => {
+      const m = fields[mapField]?.mapValue?.fields;
+      if (!m) return "";
+      return (m[language]?.stringValue || m.ar?.stringValue || m.en?.stringValue || "").trim();
+    };
+
+    const documentId = (fields.duaId?.stringValue || "").trim();
+    const title = localized("title");
+    const content = localized("text");
+    if (!documentId || !title || !content) continue;
+
+    docs.push({
+      documentId,
+      title,
+      authority,
+      section:
+        (fields.section?.stringValue || fields.zoneId?.stringValue || "").trim(),
+      url: (fields.sourceUrl?.stringValue || "").trim(),
+      version: (fields.sourceVersion?.stringValue || "").trim(),
+      content,
+    });
+  }
+  return docs;
 }
 
 async function queryFirestoreKnowledge(keywords, language, projectId, token) {
@@ -1010,6 +1157,8 @@ export const __testing__ = {
   noApprovedSourceAnswer,
   utf8ByteLength,
   verifyFirebaseIdToken,
+  mapSupplicationRows,
+  VERIFICATION_STATUS_VERIFIED,
   GROQ_TIMEOUT_MS,
   GEMINI_TIMEOUT_MS,
   JWKS_TIMEOUT_MS,

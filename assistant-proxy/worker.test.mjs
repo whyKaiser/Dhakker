@@ -892,3 +892,303 @@ test("noApprovedSourceAnswer is localized (distinct per language, not English ev
   assert.equal(new Set(answers).size, answers.length, "each language must have its own text");
   assert.match(noApprovedSourceAnswer("ar"), /[؀-ۿ]/, "Arabic must be in Arabic script");
 });
+
+// ── Live registry integration: `supplications` ────────────────────────────
+//
+// These fixtures deliberately contain NO religious text. Every `text` value
+// is an obvious placeholder. What is being tested is the SCHEMA MAPPING and
+// the PROVENANCE GATE, neither of which depends on the body content — so
+// there is no reason to copy approved religious material into this repo.
+
+const { mapSupplicationRows, VERIFICATION_STATUS_VERIFIED } = __testing__;
+
+/// Builds a Firestore `documents:runQuery` row from plain values.
+function supplicationRow({
+  duaId = "dua-1",
+  titleAr = "PLACEHOLDER TITLE AR",
+  titleEn = "PLACEHOLDER TITLE EN",
+  textAr = "PLACEHOLDER BODY AR",
+  textEn = "PLACEHOLDER BODY EN",
+  languageCodes = ["ar", "en"],
+  isActive = true,
+  authority,
+  verificationStatus,
+  sourceUrl,
+  sourceVersion,
+  section,
+  zoneId = "zone-haram",
+} = {}) {
+  const fields = {
+    duaId: { stringValue: duaId },
+    title: {
+      mapValue: { fields: { ar: { stringValue: titleAr }, en: { stringValue: titleEn } } },
+    },
+    text: {
+      mapValue: { fields: { ar: { stringValue: textAr }, en: { stringValue: textEn } } },
+    },
+    languageCodes: {
+      arrayValue: { values: languageCodes.map((l) => ({ stringValue: l })) },
+    },
+    isActive: { booleanValue: isActive },
+    zoneId: { stringValue: zoneId },
+  };
+  if (authority !== undefined) fields.authority = { stringValue: authority };
+  if (verificationStatus !== undefined) {
+    fields.verificationStatus = { stringValue: verificationStatus };
+  }
+  if (sourceUrl !== undefined) fields.sourceUrl = { stringValue: sourceUrl };
+  if (sourceVersion !== undefined) fields.sourceVersion = { stringValue: sourceVersion };
+  if (section !== undefined) fields.section = { stringValue: section };
+  return { document: { fields } };
+}
+
+test("supplications adapter maps the legacy schema onto the retrieval shape", () => {
+  const rows = [
+    supplicationRow({
+      duaId: "dua-42",
+      titleEn: "PLACEHOLDER TITLE",
+      textEn: "PLACEHOLDER BODY",
+      authority: "Example Approving Authority",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+      sourceUrl: "https://example.org/ref/42",
+      sourceVersion: "2026-01",
+      section: "section-3",
+    }),
+  ];
+  const docs = mapSupplicationRows(rows, "en");
+  assert.equal(docs.length, 1);
+  assert.deepEqual(docs[0], {
+    documentId: "dua-42",
+    title: "PLACEHOLDER TITLE",
+    authority: "Example Approving Authority",
+    section: "section-3",
+    url: "https://example.org/ref/42",
+    version: "2026-01",
+    content: "PLACEHOLDER BODY",
+  });
+});
+
+test("supplications adapter selects title/text for the requested language", () => {
+  const rows = [
+    supplicationRow({
+      titleAr: "PLACEHOLDER AR TITLE",
+      titleEn: "PLACEHOLDER EN TITLE",
+      textAr: "PLACEHOLDER AR BODY",
+      textEn: "PLACEHOLDER EN BODY",
+      authority: "Example Authority",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    }),
+  ];
+  assert.equal(mapSupplicationRows(rows, "ar")[0].title, "PLACEHOLDER AR TITLE");
+  assert.equal(mapSupplicationRows(rows, "ar")[0].content, "PLACEHOLDER AR BODY");
+  assert.equal(mapSupplicationRows(rows, "en")[0].title, "PLACEHOLDER EN TITLE");
+  assert.equal(mapSupplicationRows(rows, "en")[0].content, "PLACEHOLDER EN BODY");
+});
+
+test("supplications adapter falls back to zoneId as section when none is set", () => {
+  const rows = [
+    supplicationRow({
+      zoneId: "zone-mina",
+      authority: "Example Authority",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    }),
+  ];
+  assert.equal(mapSupplicationRows(rows, "en")[0].section, "zone-mina");
+});
+
+test("PROVENANCE GATE: a record with no authority is not citable", () => {
+  // The legacy schema has no provenance fields at all — this is what an
+  // un-migrated production record looks like today.
+  const rows = [supplicationRow({})];
+  assert.deepEqual(mapSupplicationRows(rows, "en"), []);
+});
+
+test("PROVENANCE GATE: authority without verificationStatus=verified is not citable", () => {
+  for (const status of [undefined, "", "draft", "pending", "unverified", "VERIFIED "]) {
+    const rows = [
+      supplicationRow({ authority: "Example Authority", verificationStatus: status }),
+    ];
+    assert.deepEqual(
+      mapSupplicationRows(rows, "en"),
+      [],
+      `verificationStatus ${JSON.stringify(status)} must not be citable`
+    );
+  }
+});
+
+test("PROVENANCE GATE: verificationStatus=verified with a blank authority is not citable", () => {
+  const rows = [
+    supplicationRow({ authority: "   ", verificationStatus: VERIFICATION_STATUS_VERIFIED }),
+  ];
+  assert.deepEqual(mapSupplicationRows(rows, "en"), []);
+});
+
+test("supplications adapter drops records that do not carry the reply language", () => {
+  const rows = [
+    supplicationRow({
+      languageCodes: ["ar"],
+      authority: "Example Authority",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    }),
+  ];
+  assert.deepEqual(mapSupplicationRows(rows, "fr"), []);
+  assert.equal(mapSupplicationRows(rows, "ar").length, 1);
+});
+
+test("supplications adapter drops records missing id, title, or body", () => {
+  const base = {
+    authority: "Example Authority",
+    verificationStatus: VERIFICATION_STATUS_VERIFIED,
+  };
+  assert.deepEqual(mapSupplicationRows([supplicationRow({ ...base, duaId: "" })], "en"), []);
+  assert.deepEqual(
+    mapSupplicationRows([supplicationRow({ ...base, titleEn: "", titleAr: "" })], "en"),
+    []
+  );
+  assert.deepEqual(
+    mapSupplicationRows([supplicationRow({ ...base, textEn: "", textAr: "" })], "en"),
+    []
+  );
+});
+
+test("supplications adapter tolerates malformed/empty query responses", () => {
+  assert.deepEqual(mapSupplicationRows([], "en"), []);
+  assert.deepEqual(mapSupplicationRows(null, "en"), []);
+  assert.deepEqual(mapSupplicationRows([{}], "en"), []);
+  assert.deepEqual(mapSupplicationRows([{ document: {} }], "en"), []);
+  // A Firestore "readTime only" row (no document) must not crash the mapper.
+  assert.deepEqual(mapSupplicationRows([{ readTime: "2026-01-01T00:00:00Z" }], "en"), []);
+});
+
+test("mixed registry: only provenance-bearing records survive to become citations", () => {
+  const rows = [
+    supplicationRow({ duaId: "legacy-no-provenance" }),
+    supplicationRow({ duaId: "draft-only", authority: "A", verificationStatus: "draft" }),
+    supplicationRow({
+      duaId: "approved-1",
+      authority: "Example Approving Authority",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    }),
+  ];
+  const docs = mapSupplicationRows(rows, "en");
+  assert.equal(docs.length, 1);
+  assert.equal(docs[0].documentId, "approved-1");
+});
+
+test("end-to-end: an un-migrated registry yields the safe no-approved-source response", async () => {
+  // Simulates production TODAY: supplications records exist and match the
+  // query, but none carry provenance yet. The pipeline must fall through to
+  // the deterministic safe answer and never call the LLM.
+  const realFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("firestore.googleapis.com")) {
+      return new Response(JSON.stringify([supplicationRow({ duaId: "legacy-1" })]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    providerCalls += 1;
+    return new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer t" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "some question about the ritual" }],
+        language: "en",
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      FIRESTORE_PROJECT_ID: "test-project",
+    });
+    const body = await res.json();
+    assert.equal(providerCalls, 0, "no provenance ⇒ no retrieval ⇒ no LLM call");
+    assert.equal(body.grounded, false);
+    assert.deepEqual(body.citations, []);
+    assert.equal(body.requiresHumanGuide, true);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("end-to-end: a provenance-bearing registry produces a grounded, canonicalized citation", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("firestore.googleapis.com")) {
+      return new Response(
+        JSON.stringify([
+          supplicationRow({
+            duaId: "approved-7",
+            titleEn: "PLACEHOLDER TITLE",
+            textEn: "PLACEHOLDER BODY",
+            authority: "Example Approving Authority",
+            verificationStatus: VERIFICATION_STATUS_VERIFIED,
+            sourceUrl: "https://example.org/ref/7",
+          }),
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    // Model cites the right id but fabricates the metadata around it.
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "Answer grounded in the retrieved record.",
+                grounded: true,
+                confidence: "high",
+                citations: [
+                  {
+                    documentId: "approved-7",
+                    title: "FAKE TITLE",
+                    authority: "FAKE AUTHORITY",
+                    url: "https://attacker.example",
+                  },
+                ],
+                requiresHumanGuide: false,
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer t" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "some question about the ritual" }],
+        language: "en",
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      FIRESTORE_PROJECT_ID: "test-project",
+    });
+    const body = await res.json();
+    assert.equal(body.grounded, true);
+    assert.equal(body.citations.length, 1);
+    // Canonicalized from the registry record, not from model output.
+    assert.equal(body.citations[0].documentId, "approved-7");
+    assert.equal(body.citations[0].title, "PLACEHOLDER TITLE");
+    assert.equal(body.citations[0].authority, "Example Approving Authority");
+    assert.equal(body.citations[0].url, "https://example.org/ref/7");
+    assert.notEqual(body.citations[0].authority, "FAKE AUTHORITY");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

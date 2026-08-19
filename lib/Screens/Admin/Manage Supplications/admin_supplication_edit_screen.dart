@@ -29,6 +29,15 @@ class _AdminSupplicationEditScreenState
   final _textEnController = TextEditingController();
   final _tagsArController = TextEditingController();
   final _tagsEnController = TextEditingController();
+  // ── Approved-source provenance (required for assistant citations) ──────
+  // The assistant may only cite a supplication that carries a named issuing
+  // authority AND verificationStatus == 'verified'. Records without these
+  // stay usable as location duas but are NOT citable by the assistant, so it
+  // can never name an approving body nobody actually vouched for.
+  final _authorityController = TextEditingController();
+  final _sourceUrlController = TextEditingController();
+  final _sourceVersionController = TextEditingController();
+  bool _isVerifiedSource = false;
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
 
@@ -64,6 +73,9 @@ class _AdminSupplicationEditScreenState
     _textEnController.dispose();
     _tagsArController.dispose();
     _tagsEnController.dispose();
+    _authorityController.dispose();
+    _sourceUrlController.dispose();
+    _sourceVersionController.dispose();
     _editEntranceController.dispose();
     super.dispose();
   }
@@ -102,6 +114,12 @@ class _AdminSupplicationEditScreenState
 
       _tagsArController.text = tagsAr is List ? tagsAr.join(', ') : '';
       _tagsEnController.text = tagsEn is List ? tagsEn.join(', ') : '';
+
+      _authorityController.text = (data['authority'] ?? '').toString();
+      _sourceUrlController.text = (data['sourceUrl'] ?? '').toString();
+      _sourceVersionController.text = (data['sourceVersion'] ?? '').toString();
+      _isVerifiedSource =
+          (data['verificationStatus'] ?? '').toString().trim() == 'verified';
 
       _selectedZoneId = (data['zoneId'] ?? '').toString().trim();
       _audioMode = (data['audioMode'] ?? 'tts').toString().trim();
@@ -202,6 +220,10 @@ class _AdminSupplicationEditScreenState
         'audioUrl': finalAudioUrl,
         'tagsAr': _splitTags(_tagsArController.text),
         'tagsEn': _splitTags(_tagsEnController.text),
+        'authority': _authorityController.text.trim(),
+        'sourceUrl': _sourceUrlController.text.trim(),
+        'sourceVersion': _sourceVersionController.text.trim(),
+        'verificationStatus': _isVerifiedSource ? 'verified' : 'unverified',
         'languageCodes': ['ar', 'en'],
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -372,6 +394,37 @@ class _AdminSupplicationEditScreenState
               controller: _tagsEnController,
               label: s.adminSupplicationTagsEn,
               hint: s.adminSupplicationTagsEnHint,
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _authorityController,
+              label: 'الجهة المُصدِرة / المعتمِدة (Issuing authority)',
+              hint: 'مثال: الرئاسة العامة لشؤون المسجد الحرام',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceUrlController,
+              label: 'رابط المصدر الرسمي (Source URL)',
+              hint: 'https://…',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceVersionController,
+              label: 'إصدار/تاريخ المصدر (Version)',
+              hint: '2026-01',
+            ),
+            const SizedBox(height: 12),
+            _SwitchCard(
+              title: 'مصدر معتمد وموثّق',
+              subtitle: _isVerifiedSource
+                  ? 'موثّق — يجوز للمساعد الذكي الاستشهاد به مع ذكر الجهة'
+                  : 'غير موثّق — يظهر كدعاء للموقع فقط، ولا يستشهد به المساعد',
+              value: _isVerifiedSource,
+              onChanged: (value) {
+                setState(() {
+                  _isVerifiedSource = value;
+                });
+              },
             ),
             const SizedBox(height: 12),
             _SwitchCard(
