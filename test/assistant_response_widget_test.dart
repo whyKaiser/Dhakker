@@ -1,68 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dhakker/services/assistant_service.dart';
+import 'package:dhakker/Screens/Assistant/assistant_screen.dart';
 
-/// A minimal standalone widget mirroring the citation/offline/human-guide
-/// badges rendered in `assistant_screen.dart`'s `_responseMeta`, so this can
-/// be verified without needing to boot the full app (Firebase, Bloc
-/// providers, etc.) that the real screen depends on.
-class _ResponseMetaBadges extends StatelessWidget {
-  final AssistantResponse response;
-  const _ResponseMetaBadges(this.response);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (response.isOffline) const Text('Offline', key: Key('badge-offline')),
-        if (!response.isOffline && response.grounded)
-          const Text('Grounded', key: Key('badge-grounded')),
-        if (response.requiresHumanGuide)
-          const Text('Consult an authorized guide', key: Key('badge-human-guide')),
-        for (final c in response.citations)
-          Text('${c.title} — ${c.authority}', key: const Key('citation')),
-      ],
+/// Widget tests against the REAL production widgets used by
+/// `AssistantScreen` — `AssistantResponseMeta` and `AssistantMetaChip`,
+/// extracted from `_AssistantScreenState` specifically so they can be
+/// exercised here without booting Firebase, speech-to-text, TTS, or Bloc
+/// providers (which the full `AssistantScreen` needs to build).
+void main() {
+  Widget harness(AssistantResponse response, {bool isRtl = false}) {
+    return MaterialApp(
+      home: Scaffold(
+        body: AssistantResponseMeta(
+          response: response,
+          isRtl: isRtl,
+          textSecondary: Colors.grey,
+        ),
+      ),
     );
   }
-}
 
-void main() {
-  testWidgets('shows the Grounded badge and citations for a grounded response', (tester) async {
-    final response = AssistantResponse.fromJson({
-      'answer': 'Tawaf is seven circuits.',
-      'grounded': true,
-      'confidence': 'high',
-      'citations': [
-        {'documentId': 'd1', 'title': 'Sample Guide', 'authority': 'Dev Fixture', 'section': '', 'url': ''},
-      ],
-      'requiresHumanGuide': false,
-    }, 'en');
+  group('AssistantResponseMeta — grounded state', () {
+    testWidgets('shows the Grounded chip and renders citations', (tester) async {
+      final response = AssistantResponse.fromJson({
+        'answer': 'Tawaf is seven circuits.',
+        'grounded': true,
+        'confidence': 'high',
+        'citations': [
+          {'documentId': 'd1', 'title': 'Sample Guide', 'authority': 'Dev Fixture', 'section': '', 'url': ''},
+        ],
+        'requiresHumanGuide': false,
+      }, 'en');
 
-    await tester.pumpWidget(MaterialApp(home: _ResponseMetaBadges(response)));
+      await tester.pumpWidget(harness(response));
 
-    expect(find.byKey(const Key('badge-grounded')), findsOneWidget);
-    expect(find.byKey(const Key('badge-offline')), findsNothing);
-    expect(find.byKey(const Key('badge-human-guide')), findsNothing);
-    expect(find.text('Sample Guide — Dev Fixture'), findsOneWidget);
+      expect(find.text('Grounded'), findsOneWidget);
+      expect(find.text('Sign-in required'), findsNothing);
+      expect(find.text('Offline'), findsNothing);
+      expect(find.textContaining('Sample Guide'), findsOneWidget);
+      expect(find.byType(AssistantMetaChip), findsOneWidget);
+    });
   });
 
-  testWidgets('shows the Offline badge and no citations for an offline response', (tester) async {
-    final response = AssistantResponse.offline('Basic ritual facts only.', 'en');
+  group('AssistantResponseMeta — ungrounded state', () {
+    testWidgets('shows the human-guide chip and zero citations', (tester) async {
+      final response = AssistantResponse.unverified('en', notice: 'no_retrieval');
 
-    await tester.pumpWidget(MaterialApp(home: _ResponseMetaBadges(response)));
+      await tester.pumpWidget(harness(response));
 
-    expect(find.byKey(const Key('badge-offline')), findsOneWidget);
-    expect(find.byKey(const Key('badge-grounded')), findsNothing);
-    expect(find.byKey(const Key('citation')), findsNothing);
+      expect(find.text('Consult an authorized guide'), findsOneWidget);
+      expect(find.text('Grounded'), findsNothing);
+      expect(find.textContaining(' — '), findsNothing);
+    });
+
+    testWidgets('a response claiming grounded:true with empty citations never shows Grounded', (tester) async {
+      // Server/Worker misbehavior simulation: raw JSON claims grounded:true
+      // with no valid citations. AssistantResponse.fromJson must have
+      // already forced grounded:false (defense in depth) — this asserts the
+      // widget layer reflects that safe state, not the raw claim.
+      final response = AssistantResponse.fromJson({
+        'answer': 'Some answer',
+        'grounded': true,
+        'confidence': 'high',
+        'citations': [],
+        'requiresHumanGuide': false,
+      }, 'en');
+
+      expect(response.grounded, isFalse);
+      expect(response.requiresHumanGuide, isTrue);
+
+      await tester.pumpWidget(harness(response));
+
+      expect(find.text('Grounded'), findsNothing);
+      expect(find.text('Consult an authorized guide'), findsOneWidget);
+    });
   });
 
-  testWidgets('shows the human-guide badge with zero citations for an ungrounded response', (tester) async {
-    final response = AssistantResponse.unverified('en', notice: 'no_retrieval');
+  group('AssistantResponseMeta — offline state', () {
+    testWidgets('shows the Offline chip and no citations', (tester) async {
+      final response = AssistantResponse.offline('Basic ritual facts only.', 'en');
 
-    await tester.pumpWidget(MaterialApp(home: _ResponseMetaBadges(response)));
+      await tester.pumpWidget(harness(response));
 
-    expect(find.byKey(const Key('badge-human-guide')), findsOneWidget);
-    expect(find.byKey(const Key('citation')), findsNothing);
+      expect(find.text('Offline'), findsOneWidget);
+      expect(find.text('Grounded'), findsNothing);
+      expect(find.text('Sign-in required'), findsNothing);
+    });
+  });
+
+  group('AssistantResponseMeta — sign-in-required state', () {
+    testWidgets('shows a distinct Sign-in required chip, not a generic error', (tester) async {
+      final response = AssistantResponse.signInRequired('en');
+
+      await tester.pumpWidget(harness(response));
+
+      expect(find.text('Sign-in required'), findsOneWidget);
+      expect(find.text('Offline'), findsNothing);
+      expect(find.text('Grounded'), findsNothing);
+      // Sign-in-required is not itself an "escalate to a human guide" state.
+      expect(find.text('Consult an authorized guide'), findsNothing);
+    });
+
+    testWidgets('renders the Arabic label under RTL', (tester) async {
+      final response = AssistantResponse.signInRequired('ar');
+
+      await tester.pumpWidget(harness(response, isRtl: true));
+
+      expect(find.text('يلزم تسجيل الدخول'), findsOneWidget);
+    });
+  });
+
+  group('AssistantMetaChip', () {
+    testWidgets('renders its icon and label', (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: AssistantMetaChip(icon: Icons.verified_rounded, label: 'Grounded', color: Colors.green),
+        ),
+      ));
+
+      expect(find.text('Grounded'), findsOneWidget);
+      expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
+    });
   });
 }

@@ -224,6 +224,16 @@ export default {
       structured.citations = structured.citations.filter((c) => retrievedIds.has(c.documentId));
     }
 
+    // Final, unconditional invariant (defense in depth, does not rely on the
+    // branches above being exhaustive): a response can NEVER be grounded
+    // when its final, validated citations list ends up empty, regardless of
+    // what the model/raw JSON claimed.
+    if (structured.citations.length === 0 && structured.grounded === true) {
+      structured.grounded = false;
+      structured.confidence = "low";
+      structured.requiresHumanGuide = true;
+    }
+
     return new Response(JSON.stringify(structured), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -626,14 +636,23 @@ function parseModelJson(raw, language) {
         }))
     : [];
 
+  // A response can NEVER be grounded when its citations list is empty,
+  // regardless of what the model claimed — enforced here too (defense in
+  // depth; also re-enforced as a final invariant in the fetch handler after
+  // retrieval-based citation filtering).
+  const claimedGrounded = parsed.grounded === true;
+  const grounded = claimedGrounded && citations.length > 0;
+
   return {
     answer: parsed.answer.trim(),
     language: SUPPORTED_LANGUAGES.includes(parsed.language) ? parsed.language : language,
-    grounded: parsed.grounded === true,
-    confidence: ["high", "medium", "low"].includes(parsed.confidence) ? parsed.confidence : "low",
+    grounded,
+    confidence: grounded
+      ? (["high", "medium", "low"].includes(parsed.confidence) ? parsed.confidence : "low")
+      : "low",
     citations,
     recommendedAction: typeof parsed.recommendedAction === "string" ? parsed.recommendedAction : null,
-    requiresHumanGuide: parsed.requiresHumanGuide === true || (citations.length === 0 && parsed.grounded !== true && false),
+    requiresHumanGuide: grounded ? parsed.requiresHumanGuide === true : true,
     safetyNotice: typeof parsed.safetyNotice === "string" ? parsed.safetyNotice : null,
   };
 }

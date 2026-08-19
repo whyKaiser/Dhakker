@@ -38,6 +38,15 @@ class HomeDuaController extends ChangeNotifier {
   Position? currentPosition;
   ZoneModel? currentZone;
 
+  /// Static, in-memory mirror of the latest coarse [currentZone] detected by
+  /// ANY live [HomeDuaController] instance. This is the single existing
+  /// source of truth for "which coarse zone is the pilgrim in" — it is NOT a
+  /// second GPS/zone stream, just a process-wide read-only snapshot of the
+  /// same value this controller already computes, so other screens (e.g. the
+  /// assistant) can consult it without owning their own location tracking.
+  /// Never holds raw coordinates — only the already-coarsened [ZoneModel].
+  static ZoneModel? lastKnownZone;
+
   // يُستدعى عند كل تحديث موقع، لتغذية عدّاد الأشواط في الكيوبيت أيضاً
   // (تغطية إضافية فوق خط الكيوبيت المستقل). حاجز الهيستيريسيس يمنع العدّ المزدوج.
   void Function(Position position)? onPositionUpdate;
@@ -223,6 +232,7 @@ class HomeDuaController extends ChangeNotifier {
       // خرج المستخدم من كل النطاقات: نصفّر حالة "تم التشغيل" في الذاكرة والكاش
       // حتى لو رجع لنفس النطاق مرة ثانية يشتغل الدعاء من جديد.
       currentZone = null;
+      lastKnownZone = null;
       currentDuasList = []; // تصفير القائمة
       _isCurrentZoneHandled = false;
       _lastFetchedZoneId = null; // العودة للنطاق لاحقاً = جلب جديد للأدعية
@@ -234,6 +244,7 @@ class HomeDuaController extends ChangeNotifier {
 
     final previousZoneId = currentZone?.zoneId;
     currentZone = detectedZone;
+    lastKnownZone = detectedZone;
 
     // تحديث حالة التواجد في حساب المستخدم (للكثافة وألوان الخريطة الحقيقية)
     await _writeUserCurrentZone(detectedZone.zoneId);

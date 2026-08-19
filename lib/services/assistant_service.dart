@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../data/offline_knowledge_repository.dart';
+
 /// A single citation returned by the assistant for a grounded answer.
 class AssistantCitation {
   final String documentId;
@@ -47,6 +49,7 @@ class AssistantResponse {
   final bool requiresHumanGuide;
   final String? safetyNotice;
   final bool isOffline;
+  final bool signInRequired;
 
   const AssistantResponse({
     required this.answer,
@@ -58,6 +61,7 @@ class AssistantResponse {
     required this.requiresHumanGuide,
     this.safetyNotice,
     this.isOffline = false,
+    this.signInRequired = false,
   });
 
   factory AssistantResponse.fromJson(Map<String, dynamic> json, String requestedLanguage) {
@@ -72,16 +76,29 @@ class AssistantResponse {
       }
     }
     final answer = (json['answer'] as String?)?.trim() ?? '';
+
+    // Defense in depth (mirrors the Worker-side invariant): a response can
+    // NEVER end up grounded when its final, validated citations list is
+    // empty — regardless of what the raw JSON claimed. If the network layer
+    // or a misbehaving/compromised proxy ever sent grounded:true with no
+    // valid citations, force the safe state here too.
+    final claimedGrounded = json['grounded'] == true;
+    final grounded = claimedGrounded && citations.isNotEmpty;
+    final confidence = !grounded
+        ? 'low'
+        : (const ['high', 'medium', 'low'].contains(json['confidence'])
+            ? json['confidence'] as String
+            : 'low');
+    final requiresHumanGuide = !grounded ? true : (json['requiresHumanGuide'] == true);
+
     return AssistantResponse(
       answer: answer.isEmpty ? _unverifiedAnswer(requestedLanguage) : answer,
       language: (json['language'] as String?) ?? requestedLanguage,
-      grounded: json['grounded'] == true,
-      confidence: const ['high', 'medium', 'low'].contains(json['confidence'])
-          ? json['confidence'] as String
-          : 'low',
+      grounded: grounded,
+      confidence: confidence,
       citations: citations,
       recommendedAction: json['recommendedAction'] as String?,
-      requiresHumanGuide: json['requiresHumanGuide'] == true,
+      requiresHumanGuide: requiresHumanGuide,
       safetyNotice: json['safetyNotice'] as String?,
     );
   }
@@ -108,6 +125,38 @@ class AssistantResponse {
       requiresHumanGuide: true,
       safetyNotice: notice,
     );
+  }
+
+  /// Distinct state: no authenticated user (or the server rejected the
+  /// token as expired/invalid). The UI must show this differently from a
+  /// generic failure — e.g. a "please sign in" prompt, not a red error toast.
+  factory AssistantResponse.signInRequired(String language) {
+    return AssistantResponse(
+      answer: _signInRequiredAnswer(language),
+      language: language,
+      grounded: false,
+      confidence: 'low',
+      citations: const [],
+      requiresHumanGuide: false,
+      signInRequired: true,
+    );
+  }
+
+  static String _signInRequiredAnswer(String language) {
+    switch (language) {
+      case 'ar':
+        return 'يرجى تسجيل الدخول لاستخدام المساعد.';
+      case 'ur':
+        return 'معاون استعمال کرنے کے لیے براہ کرم سائن ان کریں۔';
+      case 'tr':
+        return 'Asistanı kullanmak için lütfen giriş yapın.';
+      case 'id':
+        return 'Silakan masuk untuk menggunakan asisten.';
+      case 'fr':
+        return "Veuillez vous connecter pour utiliser l'assistant.";
+      default:
+        return 'Please sign in to use the assistant.';
+    }
   }
 
   static String _unverifiedAnswer(String language) {
@@ -183,13 +232,39 @@ class AssistantService {
   // ASSISTANT_PROXY_URL so the key never ships inside the app binary.
   static const String _apiKey = String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
 
-  static const String _proxyUrl = String.fromEnvironment('ASSISTANT_PROXY_URL', defaultValue: '');
+  static const String _compiledProxyUrl = String.fromEnvironment('ASSISTANT_PROXY_URL', defaultValue: '');
+
+  /// The proxy URL actually used by this instance. Defaults to the
+  /// compile-time `ASSISTANT_PROXY_URL` define (the real production path);
+  /// overridable via the constructor purely so tests can force proxy mode
+  /// and an injected [http.Client] without needing a `--dart-define` build.
+  final String _proxyUrl;
+
+  final http.Client _client;
+
+  AssistantService({String? proxyUrl, http.Client? client})
+      : _proxyUrl = proxyUrl ?? _compiledProxyUrl,
+        _client = client ?? http.Client();
+
+  /// Compile-time (not a runtime-flippable settings toggle) release-build
+  /// flag — `dart.vm.product` is baked in by the Dart/Flutter build tool
+  /// itself for `flutter build ... --release`/`--profile` output, so it
+  /// cannot be silently left on by a stray runtime setting. Direct-key mode
+  /// is HARD-DISABLED whenever this is true, even if a build accidentally
+  /// still carries a `GROQ_API_KEY` define — release builds must always go
+  /// through the Worker proxy.
+  static const bool _isReleaseBuild = bool.fromEnvironment('dart.vm.product');
 
   /// Optional Firebase ID token supplier. Set by app startup once a signed-in
   /// user's token is available. The proxy requires this in production.
   Future<String?> Function()? idTokenProvider;
 
   bool get _useProxy => _proxyUrl.isNotEmpty;
+
+  /// True only in a non-release build with no proxy configured and a direct
+  /// key present. Production/release builds NEVER use direct mode, even if
+  /// a key was accidentally compiled in — see [_isReleaseBuild].
+  bool get _useDirectDevMode => !_useProxy && !_isReleaseBuild && _apiKey.isNotEmpty;
 
   static const String _directEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
   static const String _directModel = 'llama-3.3-70b-versatile';
@@ -198,7 +273,7 @@ class AssistantService {
 
   List<Map<String, String>> get history => List.unmodifiable(_history);
 
-  bool get isConfigured => _useProxy || _apiKey.isNotEmpty;
+  bool get isConfigured => _useProxy || _useDirectDevMode;
 
   /// Sends a message with the requested reply [language] (ISO code among
   /// ar/en/ur/tr/id/fr) and an optional consent-gated [context].
@@ -239,10 +314,23 @@ class AssistantService {
     String endpoint;
     if (_useProxy) {
       endpoint = _proxyUrl;
-      final token = await idTokenProvider?.call();
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
+      // Always fetch a FRESH Firebase ID token per request (force-refresh) —
+      // never reuse/cache a token across a long session, since a stale one
+      // can expire mid-session and would otherwise 401 forever.
+      String? token;
+      try {
+        token = await idTokenProvider?.call();
+      } catch (_) {
+        token = null;
       }
+      if (token == null || token.isEmpty) {
+        // No authenticated user (or the token provider isn't wired up):
+        // report this distinctly instead of attempting a request that the
+        // server will reject, and instead of a generic failure state.
+        _history.removeLast();
+        return AssistantResponse.signInRequired(language);
+      }
+      headers['Authorization'] = 'Bearer $token';
     } else {
       // Direct-mode (dev only) does not speak the structured contract —
       // it talks straight to Groq with a minimal local system prompt.
@@ -252,7 +340,7 @@ class AssistantService {
 
     http.Response response;
     try {
-      response = await http
+      response = await _client
           .post(
             Uri.parse(endpoint),
             headers: headers,
@@ -266,6 +354,14 @@ class AssistantService {
 
     final respBody = utf8.decode(response.bodyBytes);
 
+    if (response.statusCode == 401) {
+      _history.removeLast();
+      // Token was rejected as invalid/expired by the server: same distinct
+      // sign-in-required state as having no token at all, never a generic
+      // error — this also avoids a silent permanent 401 loop, since the UI
+      // can react by prompting a fresh sign-in rather than retrying blindly.
+      return AssistantResponse.signInRequired(language);
+    }
     if (response.statusCode != 200) {
       _history.removeLast();
       // Never surface raw provider errors/status/config to the user.
@@ -327,31 +423,11 @@ class AssistantService {
   // ─── Offline fixed-fact fallback ───────────────────────────────────────
   // Deterministic, non-generative answers for a handful of common topics —
   // used only when there is no network connectivity at all. Not a
-  // replacement for grounded retrieval; simply keeps basic ritual facts
-  // available offline.
+  // replacement for grounded retrieval; content lives in the versioned,
+  // language-aware `OfflineKnowledgeRepository` (lib/data), which labels
+  // every entry as unverified general knowledge (not citation-backed).
   String _offlineReply(String msg, String language) {
-    final q = msg.toLowerCase();
-
-    if (q.contains('طواف') || q.contains('tawaf') || q.contains('circumambulat')) {
-      return 'Tawaf is seven circuits around the Kaaba, counter-clockwise, '
-          'starting and ending level with the Black Stone.';
-    }
-    if (q.contains('سعي') || q.contains('sai') || q.contains('safa') || q.contains('marwa')) {
-      return "Sa'i is seven circuits between Safa and Marwah, starting at Safa "
-          'and ending at Marwah.';
-    }
-    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat')) {
-      return 'Ihram: intention (niyyah) + wearing the ihram garments at the '
-          'miqat, followed by the Talbiyah.';
-    }
-    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning')) {
-      return 'Stoning the Jamarat: seven pebbles per pillar, starting the 10th day.';
-    }
-    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah')) {
-      return "Standing at Arafat is the greatest pillar of Hajj: 'Hajj is Arafah.'";
-    }
-    return 'You are offline right now. I can answer a few basic ritual facts '
-        '(Tawaf / Sai / Ihram / Jamarat / Arafat) from memory. For anything '
-        'else, please ask your on-site guide once connected.';
+    final topic = OfflineKnowledgeRepository.topicFor(msg);
+    return OfflineKnowledgeRepository.textFor(topic, language).text;
   }
 }
