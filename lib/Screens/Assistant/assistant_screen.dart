@@ -6,7 +6,9 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../bloc/cubit.dart';
 import '../../data/offline_knowledge_repository.dart';
+import '../../locale_controller.dart';
 import '../../services/assistant_service.dart';
+import '../../services/language_policy.dart';
 import '../../services/pilgrim_context_builder.dart';
 
 /// شاشة المساعد الصوتي الذكي للحج والعمرة.
@@ -100,7 +102,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final ScrollController _scroll = ScrollController();
 
   final List<_Msg> _messages = [];
+  // Initialised from the app locale in initState(); the picker may then
+  // override it for this conversation.
   _Lang _lang = _languages.first;
+
+  /// The picker entry matching the app's selected locale, falling back to
+  /// English rather than to whatever sits first in the list.
+  _Lang _langForAppLocale() {
+    final decision = LanguagePolicy.resolve(
+      userLocale: LocaleController.locale.value.toLanguageTag(),
+    );
+    return _languages.firstWhere(
+      (l) => l.code == decision.responseLanguage,
+      orElse: () => _languages.firstWhere((l) => l.code == 'en'),
+    );
+  }
   bool _speechReady = false;
   bool _listening = false;
   bool _sending = false;
@@ -109,6 +125,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
   @override
   void initState() {
     super.initState();
+    // Start on the language the app is actually set to, not on whichever
+    // entry happens to be first in the picker. Defaulting to Arabic meant an
+    // English-speaking pilgrim was answered in Arabic until they noticed the
+    // picker — the app already knew better, it just was not asked.
+    _lang = _langForAppLocale();
     _initSpeech();
     _initTts();
     // Provide a FRESH Firebase ID token per proxy request (force-refresh):
@@ -261,9 +282,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _scrollToEnd();
 
     try {
+      // One resolution point for the whole screen: the picker (an explicit
+      // setting) wins, the app locale is next, and the message itself is only
+      // consulted when neither is available.
+      final decision = LanguagePolicy.resolve(
+        responseLanguage: _lang.code,
+        userLocale: LocaleController.locale.value.toLanguageTag(),
+        latestUserMessage: msg,
+      );
       final reply = await _service.ask(
         msg,
-        language: _lang.code,
+        language: decision.responseLanguage,
+        userLocale: decision.userLocale,
         context: _buildPilgrimContext(),
       );
       if (!mounted) return;

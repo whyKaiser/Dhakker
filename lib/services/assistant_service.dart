@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../data/offline_knowledge_repository.dart';
+import 'language_policy.dart';
 
 /// A single citation returned by the assistant for a grounded answer.
 class AssistantCitation {
@@ -304,9 +305,27 @@ class AssistantService {
   /// ar/en/ur/tr/id/fr) and an optional consent-gated [context].
   /// Never throws for expected failure modes — always returns a safe
   /// [AssistantResponse] (offline fallback, or "cannot verify" fallback).
+  /// Sends a message. [language] is the RESOLVED reply language — callers
+  /// must pass what [LanguagePolicy] decided from app settings, never a
+  /// picker default and never the language they guessed from the message.
+  /// Sends a message and returns the structured reply.
+  ///
+  /// [language] must be the language [LanguagePolicy] RESOLVED from app
+  /// settings — not a picker default, and not a guess from the message.
+  /// Passing the app's locale in [userLocale] lets the server apply the same
+  /// precedence if a client ever disagrees.
+  ///
+  /// [contentLanguage] is the language of the religious CONTENT, which is
+  /// not the reply language: a French reply still quotes Arabic scripture.
+  /// [allowLanguageFallback] false means only content reviewed in
+  /// [contentLanguage] may be used — the server then returns the honest
+  /// no-approved-source reply rather than translating anything.
   Future<AssistantResponse> ask(
     String userMessage, {
     String language = 'en',
+    String? userLocale,
+    String? contentLanguage,
+    bool allowLanguageFallback = true,
     PilgrimContext context = PilgrimContext.none,
   }) async {
     final trimmed = userMessage.trim();
@@ -330,7 +349,17 @@ class AssistantService {
 
     final Map<String, dynamic> requestBody = {
       'messages': recentHistory,
+      // Explicit language contract. `language` stays as the field older
+      // deployments understand; the three below are the authoritative ones
+      // and the Worker resolves from them in that order. They are not
+      // competing duplicates — `language` is the legacy alias of
+      // `responseLanguage`, and the server treats it as the lowest-priority
+      // spelling of the same thing.
       'language': language,
+      'responseLanguage': language,
+      'userLocale': userLocale ?? LanguagePolicy.localeFor(language),
+      'contentLanguage': contentLanguage ?? language,
+      'allowLanguageFallback': allowLanguageFallback,
     };
     final contextJson = context.toJson();
     if (contextJson != null) requestBody['context'] = contextJson;
@@ -371,7 +400,7 @@ class AssistantService {
             headers: headers,
             body: utf8.encode(_useProxy
                 ? jsonEncode(requestBody)
-                : _directPayload(recentHistory)),
+                : _directPayload(recentHistory, language)),
           )
           .timeout(const Duration(seconds: 20));
     } catch (_) {
@@ -432,11 +461,26 @@ class AssistantService {
     );
   }
 
-  String _directPayload(List<Map<String, String>> recentHistory) {
-    const systemPrompt =
+  String _directPayload(
+    List<Map<String, String>> recentHistory,
+    String language,
+  ) {
+    // Internal prompts stay in English for consistency and model reliability,
+    // whatever language the reply is in.
+    //
+    // This previously said "reply in the same language as the user", which
+    // made the MODEL decide — the one thing the language policy forbids. The
+    // resolved language is injected instead, so the dev path cannot disagree
+    // with the production path.
+    final systemPrompt =
         "You are 'Dhakker', a Hajj/Umrah assistant (dev direct-mode, no retrieval). "
-        'Reply in the same language as the user. For disputed fiqh questions, '
-        'do not issue fatwas — recommend an authorized on-site guide.';
+        'LANGUAGE POLICY: reply in "$language". This was resolved from the '
+        "user's app settings, not from the language of their message; do not "
+        'switch languages because their message looks like another language. '
+        'Never translate, paraphrase, or alter Quranic verses, verified '
+        'supplications, or other religious quotations — quote them exactly or '
+        'not at all. For disputed fiqh questions, do not issue fatwas — '
+        'recommend an authorized on-site guide.';
     return jsonEncode({
       'model': _directModel,
       'messages': [
