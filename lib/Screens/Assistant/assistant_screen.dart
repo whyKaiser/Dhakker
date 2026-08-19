@@ -117,6 +117,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       orElse: () => _languages.firstWhere((l) => l.code == 'en'),
     );
   }
+
   bool _speechReady = false;
   bool _listening = false;
   bool _sending = false;
@@ -831,6 +832,79 @@ class _AssistantScreenState extends State<AssistantScreen> {
 }
 
 /// Renders the grounding/offline/sign-in/human-guide status chips and the
+/// Renders one verbatim verified text as its own card.
+///
+/// Kept deliberately plain and separate: the heading says the text is quoted
+/// as stored, the body is the stored string untouched, and the authority is
+/// named underneath. Nothing here is generated.
+class VerifiedExcerptCard extends StatelessWidget {
+  const VerifiedExcerptCard({
+    super.key,
+    required this.excerpt,
+    required this.isRtl,
+  });
+
+  final VerifiedExcerpt excerpt;
+  final bool isRtl;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF2E7D32);
+    // The text keeps its own direction: Arabic scripture stays RTL inside an
+    // English reply.
+    final textIsRtl =
+        excerpt.textLanguage == 'ar' || excerpt.textLanguage == 'ur';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.menu_book_rounded, size: 14, color: accent),
+              const SizedBox(width: 5),
+              Text(
+                isRtl
+                    ? 'نص موثّق — كما ورد في المصدر'
+                    : 'Verified text — as recorded in the source',
+                style: const TextStyle(
+                  color: accent,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Directionality(
+            textDirection: textIsRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: SelectableText(
+              excerpt.text,
+              style: const TextStyle(fontSize: 16, height: 1.9),
+            ),
+          ),
+          if (excerpt.authority.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              excerpt.title.isNotEmpty
+                  ? '${excerpt.title} — ${excerpt.authority}'
+                  : excerpt.authority,
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// citation list for one [AssistantResponse]. Extracted from
 /// [_AssistantScreenState] as a standalone, stateless widget so it can be
 /// unit-tested (citation display, grounded/ungrounded/offline/sign-in-required
@@ -906,7 +980,9 @@ class AssistantResponseMeta extends StatelessWidget {
         color: _danger,
       ));
     }
-    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
+    if (chips.isEmpty && r.citations.isEmpty && r.verifiedExcerpts.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -914,6 +990,17 @@ class AssistantResponseMeta extends StatelessWidget {
         children: [
           if (chips.isNotEmpty)
             Wrap(spacing: 6, runSpacing: 6, children: chips),
+
+          // The verified text, rendered from the SERVER's stored record and
+          // never from the model's answer. It gets its own card so a pilgrim
+          // can see at a glance which words are the source's and which are
+          // the assistant's explanation.
+          if (r.verifiedExcerpts.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...r.verifiedExcerpts.map(
+              (e) => VerifiedExcerptCard(excerpt: e, isRtl: isRtl),
+            ),
+          ],
           if (r.citations.isNotEmpty) ...[
             const SizedBox(height: 6),
             ...r.citations.map(
