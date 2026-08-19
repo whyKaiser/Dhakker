@@ -6,6 +6,7 @@ on:
       - "claude/dhakker-context-ai-upgrade-v0ilmk"
       - "claude/moia-umrah-source-pack"
       - "claude/quran-text-authority-u5-u12"
+      - "claude/import-staging-guards"
   pull_request:
     branches:
       - main
@@ -75,6 +76,12 @@ jobs:
       - name: Run Worker tests
         working-directory: assistant-proxy
         run: node --test worker.test.mjs
+
+      # Guards on the importer CLI: dry-run default, fixed destinations,
+      # --limit refused against production, confirmations required. These
+      # never touch a network.
+      - name: Run source-pack importer guard tests
+        run: node --test scripts/import_source_pack.test.mjs
 
   firestore-rules-tests:
     name: Firestore security rules tests (emulator)

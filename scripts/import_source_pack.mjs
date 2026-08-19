@@ -33,14 +33,31 @@
  *    labelled as general.
  *
  * ── Usage ───────────────────────────────────────────────────────────────
+ *
+ * DRY RUN IS THE DEFAULT. Without `--write` the script validates the pack,
+ * prints the plan, contacts nothing, and does not even read credentials:
+ *
+ *   node scripts/import_source_pack.mjs source_packs/<pack>.json
+ *
+ * A real write needs an explicit destination flag AND `--write`, plus
+ * confirmations that must match the printed plan:
+ *
  *   export FIREBASE_PROJECT_ID=your-project-id
  *   export FIREBASE_ADMIN_TOKEN=$(gcloud auth print-access-token)
- *   node scripts/import_source_pack.mjs source_packs/<pack>.json [--dry-run]
  *
- * `--dry-run` validates the pack and prints what would be written without
- * contacting Firestore. It needs no credentials, and is what CI/tests use.
- * The script is idempotent: the Firestore document id is the record's
- * `duaId`, so re-running updates rather than duplicates.
+ *   # try a single record in staging first
+ *   node scripts/import_source_pack.mjs source_packs/<pack>.json \
+ *     --staging --limit 1 --write --confirm-project=<id> --confirm-count=1
+ *
+ *   # the real thing
+ *   node scripts/import_source_pack.mjs source_packs/<pack>.json \
+ *     --production --write --confirm-project=<id> --confirm-count=<n>
+ *
+ * `--staging` always means `supplications_staging` and `--production`
+ * always means `supplications`; the collection is never taken from input.
+ * `--limit` is refused against production. The script is idempotent: the
+ * document id is the record's `duaId`, so re-running updates rather than
+ * duplicates.
  */
 
 import { readFileSync } from "node:fs";
@@ -170,50 +187,200 @@ function toFirestoreValue(value) {
   return { stringValue: String(value) };
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const dryRun = args.includes("--dry-run");
-  const inputPath = args.find((a) => !a.startsWith("--"));
+// ── Destinations ────────────────────────────────────────────────────────
+//
+// The collection is NEVER taken from user input. Two fixed destinations
+// exist, each behind its own explicit flag, so a typo can never invent a
+// collection and `--staging` can never silently become production.
+export const STAGING_COLLECTION = "supplications_staging";
+export const PRODUCTION_COLLECTION = "supplications";
 
-  if (!inputPath) {
+/**
+ * Turns argv into a validated plan, or throws with the reason.
+ *
+ * The safety rules, in one place so they can be tested without touching a
+ * network:
+ *
+ *   1. Dry-run is the DEFAULT. Without `--write` nothing is ever sent, and
+ *      no credentials are even read. `--dry-run` is accepted as an explicit
+ *      spelling of the default.
+ *   2. `--write` demands exactly one destination: `--staging` or
+ *      `--production`. "Write somewhere sensible by default" is how the
+ *      wrong collection gets filled.
+ *   3. `--limit` is a staging-only affordance for trying one record. It is
+ *      REFUSED against production: a partial production import leaves a
+ *      collection that is neither empty nor complete, which is the worst of
+ *      both.
+ *   4. A real write must restate what it is about to do:
+ *      `--confirm-project` must equal FIREBASE_PROJECT_ID and
+ *      `--confirm-count` must equal the number of records to be written.
+ *      A confirmation the operator has to type from the printed plan is the
+ *      point — it cannot be satisfied by muscle memory.
+ */
+export function resolvePlan(argv, env = {}) {
+  const flags = argv.filter((a) => a.startsWith("--"));
+  const positional = argv.filter((a) => !a.startsWith("--"));
+
+  const known = new Set([
+    "--dry-run", "--write", "--staging", "--production", "--limit",
+    "--confirm-project", "--confirm-count",
+  ]);
+  for (const f of flags) {
+    const name = f.split("=")[0];
+    if (!known.has(name)) throw new Error(`Unknown flag: ${name}`);
+  }
+
+  const has = (n) => flags.some((f) => f === n || f.startsWith(`${n}=`));
+  const valueOf = (n) => {
+    const hit = flags.find((f) => f.startsWith(`${n}=`));
+    if (hit) return hit.slice(n.length + 1);
+    const i = argv.indexOf(n);
+    return i !== -1 ? argv[i + 1] : undefined;
+  };
+
+  const inputPath = positional.find((a) => a.endsWith(".json"));
+  if (!inputPath) throw new Error("No source pack given.");
+
+  const write = has("--write");
+  const staging = has("--staging");
+  const production = has("--production");
+
+  if (staging && production) {
+    throw new Error("--staging and --production are mutually exclusive.");
+  }
+
+  let limit;
+  if (has("--limit")) {
+    const raw = valueOf("--limit");
+    limit = Number(raw);
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error(`--limit must be a positive integer, got "${raw}".`);
+    }
+    if (production) {
+      throw new Error(
+        "--limit cannot be used with --production. A partial production " +
+          "import leaves the collection neither empty nor complete.",
+      );
+    }
+    if (!staging) {
+      throw new Error("--limit is only meaningful with --staging.");
+    }
+  }
+
+  if (!write) {
+    // Dry run: destination is only informational, credentials are not read.
+    return {
+      mode: "dry-run",
+      inputPath,
+      limit,
+      collection: production
+        ? PRODUCTION_COLLECTION
+        : staging
+          ? STAGING_COLLECTION
+          : null,
+    };
+  }
+
+  if (!staging && !production) {
+    throw new Error(
+      "--write requires an explicit destination: --staging or --production.",
+    );
+  }
+
+  const collection = production ? PRODUCTION_COLLECTION : STAGING_COLLECTION;
+  const projectId = (env.FIREBASE_PROJECT_ID || "").trim();
+  const token = (env.FIREBASE_ADMIN_TOKEN || "").trim();
+  if (!projectId || !token) {
+    throw new Error("Set FIREBASE_PROJECT_ID and FIREBASE_ADMIN_TOKEN.");
+  }
+
+  return {
+    mode: "write",
+    inputPath,
+    limit,
+    collection,
+    projectId,
+    token,
+    database: "(default)",
+    confirmProject: valueOf("--confirm-project"),
+    confirmCount: valueOf("--confirm-count"),
+  };
+}
+
+/** Checks the operator's confirmations against the resolved plan. */
+export function assertConfirmations(plan, recordCount) {
+  if (plan.confirmProject !== plan.projectId) {
+    throw new Error(
+      `--confirm-project must equal FIREBASE_PROJECT_ID ("${plan.projectId}"), ` +
+        `got "${plan.confirmProject ?? "nothing"}".`,
+    );
+  }
+  if (String(plan.confirmCount) !== String(recordCount)) {
+    throw new Error(
+      `--confirm-count must equal the number of records to write ` +
+        `(${recordCount}), got "${plan.confirmCount ?? "nothing"}".`,
+    );
+  }
+}
+
+function printPlan(plan, records) {
+  console.log(`Pack:       ${plan.inputPath}`);
+  console.log(`Records:    ${records.length}  (zone-tied: ` +
+    `${records.filter((r) => r.zoneKey).length})`);
+  console.log(`Project:    ${plan.projectId ?? "(not read in dry-run)"}`);
+  console.log(`Database:   ${plan.database ?? "(not read in dry-run)"}`);
+  console.log(`Collection: ${plan.collection ?? "(none — dry-run)"}`);
+  if (plan.limit) console.log(`Limit:      ${plan.limit}`);
+  console.log("verificationStatus: unverified for every record.");
+}
+
+async function main() {
+  let plan;
+  try {
+    plan = resolvePlan(process.argv.slice(2), process.env);
+  } catch (err) {
+    console.error(err.message);
     console.error(
-      "Usage: node scripts/import_source_pack.mjs source_packs/<pack>.json [--dry-run]",
+      "\nUsage:\n" +
+        "  node scripts/import_source_pack.mjs <pack.json>            # dry run (default)\n" +
+        "  ... --staging --limit 1 --write --confirm-project=<id> --confirm-count=1\n" +
+        "  ... --production --write --confirm-project=<id> --confirm-count=<n>",
     );
     process.exit(1);
   }
 
-  const pack = JSON.parse(readFileSync(inputPath, "utf8"));
-  const records = buildRecords(pack);
+  const pack = JSON.parse(readFileSync(plan.inputPath, "utf8"));
+  const all = buildRecords(pack);
+  const records = plan.limit ? all.slice(0, plan.limit) : all;
 
-  const zoneTied = records.filter((r) => r.zoneKey).length;
-  console.log(`Pack: ${inputPath}`);
-  console.log(`Records: ${records.length}  (zone-tied: ${zoneTied})`);
-  console.log("All records will be written with verificationStatus=unverified.");
+  printPlan(plan, records);
 
-  if (dryRun) {
-    console.log("--dry-run: validated only, nothing written.");
+  if (plan.mode === "dry-run") {
+    console.log("\nDRY RUN — validated only. Nothing was sent anywhere.");
     return;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const token = process.env.FIREBASE_ADMIN_TOKEN;
-  if (!projectId || !token) {
-    console.error("Set FIREBASE_PROJECT_ID and FIREBASE_ADMIN_TOKEN.");
+  try {
+    assertConfirmations(plan, records.length);
+  } catch (err) {
+    console.error(`\n${err.message}`);
     process.exit(1);
   }
 
+  console.log(`\nWriting ${records.length} record(s) to ${plan.collection}...`);
   for (const record of records) {
     const fields = {};
     for (const [k, v] of Object.entries(record)) fields[k] = toFirestoreValue(v);
 
     const url =
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)` +
-      `/documents/supplications/${encodeURIComponent(record.duaId)}`;
+      `https://firestore.googleapis.com/v1/projects/${plan.projectId}` +
+      `/databases/${plan.database}/documents/${plan.collection}` +
+      `/${encodeURIComponent(record.duaId)}`;
 
     const res = await fetch(url, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${plan.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ fields }),
