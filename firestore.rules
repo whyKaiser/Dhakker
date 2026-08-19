@@ -99,6 +99,34 @@ service cloud.firestore {
       // لا update — الرسالة تُرسَل مرة واحدة ولا تُعدَّل
     }
 
+    // knowledge_documents / knowledge_chunks: سجلّ المصادر المعتمدة للمساعد
+    // الذكي (RAG). القراءة لأي مستخدم مسجّل فقط (الوسيط Cloudflare يستدعيها
+    // بتوكن هوية المستخدم نفسه)، والكتابة للأدمن فقط — لا يمكن لأي مستخدم أن
+    // "يوثّق" محتوى نفسه أو يزرع مصدراً غير معتمد.
+    match /knowledge_documents/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /knowledge_chunks/{chunkId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // assistant_feedback: تقييم اختياري (مفيد/غير مفيد) لردود المساعد.
+    // لا نص محادثة كامل يُحفظ افتراضياً — فقط عند includesMessageText==true
+    // بموافقة المستخدم الصريحة على نفس الوثيقة وقت الإنشاء. كل حاج يكتب
+    // تقييمه فقط ولا يقرأ/يعدّل تقييمات غيره؛ الأدمن يقرأ للتجميع فقط.
+    match /assistant_feedback/{feedbackId} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && (
+          request.resource.data.includesMessageText != true
+          || request.resource.data.consentToStoreText == true
+        );
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // الافتراضي: منع كل ما سوى ذلك صراحةً.
     match /{document=**} {
       allow read, write: if false;

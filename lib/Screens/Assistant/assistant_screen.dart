@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../../bloc/cubit.dart';
 import '../../services/assistant_service.dart';
+import '../../services/pilgrim_context_builder.dart';
 
 /// شاشة المساعد الصوتي الذكي للحج والعمرة.
 /// الحاج يختار لغته، يضغط الميكروفون ويتكلم، فيسمعه المساعد ويرد بصوت بنفس اللغة.
@@ -18,14 +20,16 @@ class _Msg {
   final String text;
   final bool fromUser;
   final bool isError;
-  _Msg(this.text, {this.fromUser = false, this.isError = false});
+  final AssistantResponse? response;
+  _Msg(this.text, {this.fromUser = false, this.isError = false, this.response});
 }
 
 class _Lang {
   final String label;
   final String sttLocale;
   final String ttsLocale;
-  const _Lang(this.label, this.sttLocale, this.ttsLocale);
+  final String code; // ar/en/ur/tr/id/fr — sent to the assistant proxy
+  const _Lang(this.label, this.sttLocale, this.ttsLocale, this.code);
 }
 
 class _AssistantPalette {
@@ -75,13 +79,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
   _AssistantPalette _p = _AssistantPalette.fromBrightness(true);
 
   static const List<_Lang> _languages = [
-    _Lang('العربية', 'ar_SA', 'ar-SA'),
-    _Lang('English', 'en_US', 'en-US'),
-    _Lang('اردو', 'ur_PK', 'ur-PK'),
-    _Lang('Türkçe', 'tr_TR', 'tr-TR'),
-    _Lang('Indonesia', 'id_ID', 'id-ID'),
-    _Lang('Français', 'fr_FR', 'fr-FR'),
+    _Lang('العربية', 'ar_SA', 'ar-SA', 'ar'),
+    _Lang('English', 'en_US', 'en-US', 'en'),
+    _Lang('اردو', 'ur_PK', 'ur-PK', 'ur'),
+    _Lang('Türkçe', 'tr_TR', 'tr-TR', 'tr'),
+    _Lang('Indonesia', 'id_ID', 'id-ID', 'id'),
+    _Lang('Français', 'fr_FR', 'fr-FR', 'fr'),
   ];
+
+  // Explicit opt-in for sharing pilgrim context (ritual/laps/mobility/zone)
+  // with the assistant. Off by default — never sent without this being true.
+  bool _contextConsent = false;
 
   final AssistantService _service = AssistantService();
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -241,31 +249,54 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _scrollToEnd();
 
     try {
-      final reply = await _service.ask(msg);
+      final reply = await _service.ask(
+        msg,
+        language: _lang.code,
+        context: _buildPilgrimContext(),
+      );
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg(reply));
+        _messages.add(_Msg(reply.answer, response: reply));
         _sending = false;
       });
       _scrollToEnd();
-      await _speak(reply);
+      await _speak(reply.answer);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg(_friendlyError(e), isError: true));
+        _messages.add(_Msg(_friendlyError(), isError: true));
         _sending = false;
       });
       _scrollToEnd();
     }
   }
 
-  String _friendlyError(Object e) {
-    final s = e.toString();
-    if (s.contains('GROQ_API_KEY')) {
-      return 'مفتاح المساعد غير مُفعّل بعد. يُشغَّل التطبيق بمفتاح Groq عبر '
-          '--dart-define=GROQ_API_KEY';
+  /// Builds the consent-gated [PilgrimContext] from the app's EXISTING
+  /// Tawaf/Sa'i counters via [AppCubit] — never a new/duplicate counter.
+  /// Falls back to no-context if AppCubit isn't reachable from this widget
+  /// tree (e.g. this screen shown standalone in a test) rather than
+  /// throwing.
+  PilgrimContext _buildPilgrimContext() {
+    if (!_contextConsent) return PilgrimContext.none;
+    try {
+      final cubit = AppCubit.get(context);
+      return PilgrimContextBuilder.build(
+        consent: true,
+        cubit: cubit,
+        currentZone: null, // zone wiring left to the Home screen's own
+        // HomeDuaController instance; not duplicated here to avoid a
+        // second location-detection stream (see docs/ARCHITECTURE.md).
+      );
+    } catch (_) {
+      return const PilgrimContext(consent: true);
     }
-    return 'تعذّر الوصول للمساعد الآن. تحقّق من الاتصال وحاول مرة أخرى.';
+  }
+
+  String _friendlyError() {
+    // Never surface raw exceptions/provider names to the user.
+    return _isRtl(_lang.label)
+        ? 'تعذّر الوصول للمساعد الآن. تحقّق من الاتصال وحاول مرة أخرى.'
+        : 'The assistant is unavailable right now. Please check your connection and try again.';
   }
 
   Future<void> _speak(String text) async {
@@ -288,6 +319,38 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String _ttsLocaleFor(String text) {
     if (_isRtl(text)) return _lang.ttsLocale;
     return _lang.ttsLocale == 'ar-SA' ? 'en-US' : _lang.ttsLocale;
+  }
+
+  Future<void> _toggleContextConsent() async {
+    final rtl = _isRtl(_lang.label);
+    if (_contextConsent) {
+      setState(() => _contextConsent = false);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _p.card,
+        title: Text(
+          rtl ? 'مشاركة سياقك مع المساعد؟' : 'Share your context with the assistant?',
+          style: TextStyle(color: _p.textPrimary),
+        ),
+        content: Text(
+          rtl
+              ? 'سيُرسَل نوع النسك الحالي وعدد الأشواط والمنطقة العامة (وليس موقعك '
+                  'الدقيق) لتخصيص الإجابات. لن يُرسَل شيء بدون موافقتك، ويمكنك إيقافها متى شئت.'
+              : 'The current ritual, lap count, and a coarse zone name (never your '
+                  'precise location) will be sent to personalize answers. Nothing is '
+                  'shared without this consent, and you can turn it off anytime.',
+          style: TextStyle(color: _p.textSecondary),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(rtl ? 'إلغاء' : 'Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(rtl ? 'موافق' : 'Allow')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) setState(() => _contextConsent = true);
   }
 
   void _clear() {
@@ -386,6 +449,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
               'المساعد الذكي',
               style: TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 20),
             ),
+          ),
+          // Explicit, visible opt-in for sharing pilgrim context (ritual,
+          // laps, mobility, coarse zone) — off by default, never sent
+          // silently. Tapping shows what is shared before enabling.
+          IconButton(
+            onPressed: _toggleContextConsent,
+            icon: Icon(
+              _contextConsent ? Icons.location_on_rounded : Icons.location_off_rounded,
+              color: _contextConsent ? _gold : _p.textSecondary,
+            ),
+            tooltip: _contextConsent ? 'مشاركة السياق مفعّلة' : 'مشاركة السياق معطّلة',
           ),
           if (_messages.isNotEmpty)
             IconButton(
@@ -557,9 +631,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
             Flexible(
               child: Directionality(
                 textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-                child: Text(
-                  m.text,
-                  style: TextStyle(color: color, fontSize: 15, height: 1.55),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      m.text,
+                      style: TextStyle(color: color, fontSize: 15, height: 1.55),
+                    ),
+                    if (m.response != null) _responseMeta(m.response!),
+                  ],
                 ),
               ),
             ),
@@ -579,6 +660,75 @@ class _AssistantScreenState extends State<AssistantScreen> {
         ),
       ),
     ));
+  }
+
+  /// Shows grounding/offline/human-guide indicators and citations, if any,
+  /// under an assistant reply — satisfies the "citations visible in app"
+  /// and "offline status indicator" acceptance criteria.
+  Widget _responseMeta(AssistantResponse r) {
+    final chips = <Widget>[];
+    if (r.isOffline) {
+      chips.add(_metaChip(Icons.wifi_off_rounded, _isRtl(_lang.label) ? 'غير متصل' : 'Offline', Colors.orange));
+    } else if (r.grounded) {
+      chips.add(_metaChip(Icons.verified_rounded, _isRtl(_lang.label) ? 'موثّق' : 'Grounded', Colors.green));
+    }
+    if (r.requiresHumanGuide) {
+      chips.add(_metaChip(
+        Icons.support_agent_rounded,
+        _isRtl(_lang.label) ? 'راجع مرشداً معتمداً' : 'Consult an authorized guide',
+        _danger,
+      ));
+    }
+    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: 6, children: chips),
+          if (r.citations.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ...r.citations.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.link_rounded, size: 13, color: _p.textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${c.title} — ${c.authority}',
+                        style: TextStyle(color: _p.textSecondary, fontSize: 11.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _metaChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
   }
 
   Widget _thinkingBar() {
