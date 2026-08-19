@@ -131,7 +131,7 @@ firebase deploy --only firestore           # الاثنان معاً
 ### اختبارات قواعد الأمان (محاكي Firebase)
 
 ```bash
-npm --prefix test_firestore_rules install
+npm --prefix test_firestore_rules ci
 npm --prefix test_firestore_rules test
 ```
 
@@ -150,11 +150,16 @@ node --test worker.test.mjs   # أو: npm test
 ### قواعد Firestore الجديدة
 
 أُضيفت في `firestore.rules`: `knowledge_documents` و`knowledge_chunks`
-(قراءة لأي مسجّل، كتابة للأدمن فقط — العميل لا يمكنه توثيق محتوى نفسه)،
-و`assistant_feedback` (اختياري، بدون نص المحادثة الكامل إلا بموافقة صريحة
-على نفس الوثيقة). فهرس مركّب مطلوب لاحقاً على `knowledge_chunks`
-(`keywords` array-contains-any + `language` equality) عند تفعيل الاسترجاع
-الحقيقي عبر `FIRESTORE_PROJECT_ID`.
+(قراءة لأي مسجّل، كتابة للأدمن فقط)، و`assistant_feedback` (اختياري، بدون نص
+المحادثة الكامل إلا بموافقة صريحة على نفس الوثيقة). كما شُدِّدت قواعد
+`supplications`: لا يستطيع المستخدم العادي كتابة أي حقل توثيق إطلاقاً، ولا
+يستطيع الأدمن وسم سجلّ بـ `verified` قبل استيفاء كل حقول التوثيق
+(`authority`, `sourceUrl` بـ https, `sourceVersion`, `sourceLanguage`,
+`verifiedBy`, `verifiedAt`).
+
+الفهارس المركّبة المطلوبة موجودة الآن في `firestore.indexes.json` ويشير إليها
+`firebase.json` — انظر أمر النشر أعلاه. وهذه القواعد مُغطّاة باختبارات فعلية
+على محاكي Firebase (٢١ اختباراً) تعمل كوظيفة مستقلة في CI.
 
 ### منفّذ فعلياً مقابل توضيحي/مستقبلي (Implemented vs Demo vs Future)
 
