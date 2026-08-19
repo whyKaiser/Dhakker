@@ -5,6 +5,7 @@ on:
     branches:
       - "claude/dhakker-context-ai-upgrade-v0ilmk"
       - "claude/moia-umrah-source-pack"
+      - "claude/quran-text-authority-u5-u12"
   pull_request:
     branches:
       - main
@@ -43,6 +44,7 @@ jobs:
             "lib/Screens/Piligram/Home/models/supplication_model.dart"
             "test/content_kind_classification_test.dart"
             "test/source_pack_integrity_test.dart"
+            "test/quran_text_authority_test.dart"
             "lib/data/offline_knowledge_repository.dart"
             "lib/services/assistant_service.dart"
             "lib/services/pilgrim_context_builder.dart"
