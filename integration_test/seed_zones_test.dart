@@ -10,7 +10,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
   });
 
   testWidgets('Seed Hajj zones to Firestore', (tester) async {
@@ -22,6 +23,7 @@ void main() {
     debugPrint('✅ Zones seeded: added=$added, skipped=$skipped, total=$total');
 
     expect(total, equals(HajjZonesSeed.zones.length),
-        reason: 'Total zones in Firestore should match seed list (${HajjZonesSeed.zones.length})');
+        reason:
+            'Total zones in Firestore should match seed list (${HajjZonesSeed.zones.length})');
   });
 }

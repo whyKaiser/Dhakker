@@ -43,7 +43,8 @@ class SupplicationService {
     return [];
   }
 
-  Future<void> _persistToCache(String zoneId, List<SupplicationModel> items) async {
+  Future<void> _persistToCache(
+      String zoneId, List<SupplicationModel> items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final json = jsonEncode(items.map((e) => e.toJson()).toList());
@@ -57,7 +58,8 @@ class SupplicationService {
       final raw = prefs.getString(_prefKey(zoneId));
       if (raw == null) return null;
       final list = (jsonDecode(raw) as List)
-          .map((e) => SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) =>
+              SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
       return list;
     } catch (_) {
@@ -72,7 +74,8 @@ class SupplicationService {
     if (items.isEmpty) return null;
 
     for (final item in items) {
-      if (item.supportsLanguage(langCode) && item.textByLanguage(langCode).trim().isNotEmpty) {
+      if (item.supportsLanguage(langCode) &&
+          item.textByLanguage(langCode).trim().isNotEmpty) {
         return item;
       }
     }

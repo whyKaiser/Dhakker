@@ -42,7 +42,8 @@ class OfflineKnowledgeEntry {
     required this.language,
     required this.text,
     this.isVerified = false,
-    this.sourceLabel = 'Unverified offline content — general knowledge, not a citation-backed ruling',
+    this.sourceLabel =
+        'Unverified offline content — general knowledge, not a citation-backed ruling',
     this.isFallbackTranslation = false,
   });
 }
@@ -54,7 +55,14 @@ class OfflineKnowledgeRepository {
   /// new reviewed translation is added, so callers/tests can detect drift.
   static const int version = 1;
 
-  static const List<String> supportedLanguages = ['ar', 'en', 'ur', 'tr', 'id', 'fr'];
+  static const List<String> supportedLanguages = [
+    'ar',
+    'en',
+    'ur',
+    'tr',
+    'id',
+    'fr'
+  ];
 
   /// Reviewed, source-of-truth English text per topic. English is the only
   /// language with reviewed coverage today for every topic below.
@@ -65,11 +73,14 @@ class OfflineKnowledgeRepository {
         'and ending at Marwah.',
     'ihram': 'Ihram: intention (niyyah) + wearing the ihram garments at the '
         'miqat, followed by the Talbiyah.',
-    'jamarat': 'Stoning the Jamarat: seven pebbles per pillar, starting the 10th day.',
-    'arafat': "Standing at Arafat is the greatest pillar of Hajj: 'Hajj is Arafah.'",
-    'fallback': 'You are offline right now. I can answer a few basic ritual facts '
-        '(Tawaf / Sai / Ihram / Jamarat / Arafat) from memory. For anything '
-        'else, please ask your on-site guide once connected.',
+    'jamarat':
+        'Stoning the Jamarat: seven pebbles per pillar, starting the 10th day.',
+    'arafat':
+        "Standing at Arafat is the greatest pillar of Hajj: 'Hajj is Arafah.'",
+    'fallback':
+        'You are offline right now. I can answer a few basic ritual facts '
+            '(Tawaf / Sai / Ihram / Jamarat / Arafat) from memory. For anything '
+            'else, please ask your on-site guide once connected.',
   };
 
   /// Reviewed translations. Only add a language here for a topic once an
@@ -79,7 +90,8 @@ class OfflineKnowledgeRepository {
     'ar': {
       'tawaf': 'الطواف هو سبعة أشواط حول الكعبة، عكس اتجاه عقارب الساعة، '
           'يبدأ وينتهي عند الحجر الأسود.',
-      'sai': 'السعي هو سبعة أشواط بين الصفا والمروة، يبدأ من الصفا وينتهي بالمروة.',
+      'sai':
+          'السعي هو سبعة أشواط بين الصفا والمروة، يبدأ من الصفا وينتهي بالمروة.',
       'ihram': 'الإحرام: النية + لبس ثياب الإحرام عند الميقات، ثم التلبية.',
       'jamarat': 'رمي الجمرات: سبع حصيات لكل جمرة، ابتداءً من اليوم العاشر.',
       'arafat': 'الوقوف بعرفة هو أعظم أركان الحج: "الحج عرفة".',
@@ -95,7 +107,8 @@ class OfflineKnowledgeRepository {
   static OfflineKnowledgeEntry textFor(String topicId, String language) {
     final reviewed = _reviewedTranslations[language]?[topicId];
     if (reviewed != null) {
-      return OfflineKnowledgeEntry(topicId: topicId, language: language, text: reviewed);
+      return OfflineKnowledgeEntry(
+          topicId: topicId, language: language, text: reviewed);
     }
     final en = _en[topicId] ?? _en['fallback']!;
     return OfflineKnowledgeEntry(
@@ -112,11 +125,19 @@ class OfflineKnowledgeRepository {
   /// topic matches.
   static String topicFor(String message) {
     final q = message.toLowerCase();
-    if (q.contains('طواف') || q.contains('tawaf') || q.contains('circumambulat')) return 'tawaf';
-    if (q.contains('سعي') || q.contains('sai') || q.contains('safa') || q.contains('marwa')) return 'sai';
-    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat')) return 'ihram';
-    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning')) return 'jamarat';
-    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah')) return 'arafat';
+    if (q.contains('طواف') ||
+        q.contains('tawaf') ||
+        q.contains('circumambulat')) return 'tawaf';
+    if (q.contains('سعي') ||
+        q.contains('sai') ||
+        q.contains('safa') ||
+        q.contains('marwa')) return 'sai';
+    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat'))
+      return 'ihram';
+    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning'))
+      return 'jamarat';
+    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah'))
+      return 'arafat';
     return 'fallback';
   }
 }

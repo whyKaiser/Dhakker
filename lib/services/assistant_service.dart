@@ -30,7 +30,8 @@ class AssistantCitation {
     );
   }
 
-  bool get isValid => documentId.isNotEmpty && title.isNotEmpty && authority.isNotEmpty;
+  bool get isValid =>
+      documentId.isNotEmpty && title.isNotEmpty && authority.isNotEmpty;
 }
 
 /// The structured response contract returned by the assistant proxy.
@@ -64,7 +65,8 @@ class AssistantResponse {
     this.signInRequired = false,
   });
 
-  factory AssistantResponse.fromJson(Map<String, dynamic> json, String requestedLanguage) {
+  factory AssistantResponse.fromJson(
+      Map<String, dynamic> json, String requestedLanguage) {
     final rawCitations = json['citations'];
     final citations = <AssistantCitation>[];
     if (rawCitations is List) {
@@ -89,7 +91,8 @@ class AssistantResponse {
         : (const ['high', 'medium', 'low'].contains(json['confidence'])
             ? json['confidence'] as String
             : 'low');
-    final requiresHumanGuide = !grounded ? true : (json['requiresHumanGuide'] == true);
+    final requiresHumanGuide =
+        !grounded ? true : (json['requiresHumanGuide'] == true);
 
     return AssistantResponse(
       answer: answer.isEmpty ? _unverifiedAnswer(requestedLanguage) : answer,
@@ -184,7 +187,8 @@ class AssistantResponse {
 /// — see `validateContext` in `assistant-proxy/worker.js`.
 class PilgrimContext {
   final bool consent;
-  final String? ritual; // e.g. tawaf, sai, ihram, arafat, muzdalifah, jamarat, tawaf_wadaa
+  final String?
+      ritual; // e.g. tawaf, sai, ihram, arafat, muzdalifah, jamarat, tawaf_wadaa
   final int? tawafLapsCompleted;
   final int? saiLapsCompleted;
   final String? mobility; // wheelchair, elderly, limited_walking
@@ -230,9 +234,11 @@ class PilgrimContext {
 class AssistantService {
   // Direct-key mode: development only. For production always configure
   // ASSISTANT_PROXY_URL so the key never ships inside the app binary.
-  static const String _apiKey = String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
+  static const String _apiKey =
+      String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
 
-  static const String _compiledProxyUrl = String.fromEnvironment('ASSISTANT_PROXY_URL', defaultValue: '');
+  static const String _compiledProxyUrl =
+      String.fromEnvironment('ASSISTANT_PROXY_URL', defaultValue: '');
 
   /// The proxy URL actually used by this instance. Defaults to the
   /// compile-time `ASSISTANT_PROXY_URL` define (the real production path);
@@ -264,9 +270,11 @@ class AssistantService {
   /// True only in a non-release build with no proxy configured and a direct
   /// key present. Production/release builds NEVER use direct mode, even if
   /// a key was accidentally compiled in — see [_isReleaseBuild].
-  bool get _useDirectDevMode => !_useProxy && !_isReleaseBuild && _apiKey.isNotEmpty;
+  bool get _useDirectDevMode =>
+      !_useProxy && !_isReleaseBuild && _apiKey.isNotEmpty;
 
-  static const String _directEndpoint = 'https://api.groq.com/openai/v1/chat/completions';
+  static const String _directEndpoint =
+      'https://api.groq.com/openai/v1/chat/completions';
   static const String _directModel = 'llama-3.3-70b-versatile';
 
   final List<Map<String, String>> _history = [];
@@ -344,12 +352,15 @@ class AssistantService {
           .post(
             Uri.parse(endpoint),
             headers: headers,
-            body: utf8.encode(_useProxy ? jsonEncode(requestBody) : _directPayload(recentHistory)),
+            body: utf8.encode(_useProxy
+                ? jsonEncode(requestBody)
+                : _directPayload(recentHistory)),
           )
           .timeout(const Duration(seconds: 20));
     } catch (_) {
       _history.removeLast();
-      return AssistantResponse.offline(_offlineReply(trimmed, language), language);
+      return AssistantResponse.offline(
+          _offlineReply(trimmed, language), language);
     }
 
     final respBody = utf8.decode(response.bodyBytes);
@@ -365,7 +376,8 @@ class AssistantService {
     if (response.statusCode != 200) {
       _history.removeLast();
       // Never surface raw provider errors/status/config to the user.
-      return AssistantResponse.unverified(language, notice: 'assistant_unavailable');
+      return AssistantResponse.unverified(language,
+          notice: 'assistant_unavailable');
     }
 
     Map<String, dynamic> data;
@@ -373,7 +385,8 @@ class AssistantService {
       data = jsonDecode(respBody) as Map<String, dynamic>;
     } catch (_) {
       _history.removeLast();
-      return AssistantResponse.unverified(language, notice: 'assistant_bad_response');
+      return AssistantResponse.unverified(language,
+          notice: 'assistant_bad_response');
     }
 
     if (_useProxy) {
@@ -389,7 +402,8 @@ class AssistantService {
         : '';
     if (content.isEmpty) {
       _history.removeLast();
-      return AssistantResponse.unverified(language, notice: 'assistant_bad_response');
+      return AssistantResponse.unverified(language,
+          notice: 'assistant_bad_response');
     }
     _history.add({'role': 'assistant', 'content': content});
     return AssistantResponse(

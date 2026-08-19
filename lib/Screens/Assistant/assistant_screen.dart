@@ -113,8 +113,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // Provide a FRESH Firebase ID token per proxy request (force-refresh):
     // never cache a token across the session, since a long-lived chat could
     // otherwise send an expired token and hit a permanent 401 loop.
-    _service.idTokenProvider = () =>
-        FirebaseAuth.instance.currentUser?.getIdToken(true);
+    _service.idTokenProvider = () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      return user.getIdToken(true);
+    };
   }
 
   Future<void> _initTts() async {
@@ -125,20 +128,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
     try {
       final voices = await _tts.getVoices as List?;
       if (voices != null) {
-        final arVoices = voices
-            .whereType<Map>()
-            .where((v) {
-              final locale = (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
-              return locale.startsWith('ar');
-            })
-            .toList();
+        final arVoices = voices.whereType<Map>().where((v) {
+          final locale =
+              (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
+          return locale.startsWith('ar');
+        }).toList();
         // نفضّل Google TTS ثم أي صوت عربي آخر.
         final best = arVoices.firstWhere(
           (v) => (v['name'] ?? '').toString().toLowerCase().contains('google'),
-          orElse: () => arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
+          orElse: () =>
+              arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
         );
         if (best.isNotEmpty == true && best['name'] != null) {
-          await _tts.setVoice({'name': best['name'], 'locale': best['locale'] ?? best['language'] ?? 'ar-SA'});
+          await _tts.setVoice({
+            'name': best['name'],
+            'locale': best['locale'] ?? best['language'] ?? 'ar-SA'
+          });
         }
       }
     } catch (_) {
@@ -333,7 +338,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: _p.card,
         title: Text(
-          rtl ? 'مشاركة سياقك مع المساعد؟' : 'Share your context with the assistant?',
+          rtl
+              ? 'مشاركة سياقك مع المساعد؟'
+              : 'Share your context with the assistant?',
           style: TextStyle(color: _p.textPrimary),
         ),
         content: Text(
@@ -346,8 +353,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
           style: TextStyle(color: _p.textSecondary),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(rtl ? 'إلغاء' : 'Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(rtl ? 'موافق' : 'Allow')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(rtl ? 'إلغاء' : 'Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(rtl ? 'موافق' : 'Allow')),
         ],
       ),
     );
@@ -417,7 +428,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _p = _AssistantPalette.fromBrightness(isDark);
 
     return Directionality(
-      textDirection: _isRtl(_lang.label) ? TextDirection.rtl : TextDirection.ltr,
+      textDirection:
+          _isRtl(_lang.label) ? TextDirection.rtl : TextDirection.ltr,
       child: Container(
         color: _p.bg,
         child: SafeArea(
@@ -448,7 +460,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
           const Expanded(
             child: Text(
               'المساعد الذكي',
-              style: TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 20),
+              style: TextStyle(
+                  color: _gold, fontWeight: FontWeight.w900, fontSize: 20),
             ),
           ),
           // Explicit, visible opt-in for sharing pilgrim context (ritual,
@@ -457,10 +470,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
           IconButton(
             onPressed: _toggleContextConsent,
             icon: Icon(
-              _contextConsent ? Icons.location_on_rounded : Icons.location_off_rounded,
+              _contextConsent
+                  ? Icons.location_on_rounded
+                  : Icons.location_off_rounded,
               color: _contextConsent ? _gold : _p.textSecondary,
             ),
-            tooltip: _contextConsent ? 'مشاركة السياق مفعّلة' : 'مشاركة السياق معطّلة',
+            tooltip: _contextConsent
+                ? 'مشاركة السياق مفعّلة'
+                : 'مشاركة السياق معطّلة',
           ),
           if (_messages.isNotEmpty)
             IconButton(
@@ -528,17 +545,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
             height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [_gold.withOpacity(.22), _gold2.withOpacity(.10)]),
+              gradient: LinearGradient(
+                  colors: [_gold.withOpacity(.22), _gold2.withOpacity(.10)]),
               border: Border.all(color: _gold.withOpacity(.4), width: 1.4),
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: _gold, size: 40),
+            child:
+                const Icon(Icons.auto_awesome_rounded, color: _gold, size: 40),
           ),
         ),
         const SizedBox(height: 18),
         Text(
           'اسألني عن مناسك الحج والعمرة',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _p.textPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+          style: TextStyle(
+              color: _p.textPrimary, fontSize: 18, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 8),
         Text(
@@ -552,7 +572,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: GestureDetector(
                 onTap: () => _send(q),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: _p.card,
                     borderRadius: BorderRadius.circular(14),
@@ -560,11 +581,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.help_outline_rounded, color: _gold, size: 18),
+                      const Icon(Icons.help_outline_rounded,
+                          color: _gold, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(q,
-                            style: TextStyle(color: _p.textPrimary, fontSize: 14)),
+                            style:
+                                TextStyle(color: _p.textPrimary, fontSize: 14)),
                       ),
                     ],
                   ),
@@ -615,7 +638,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 5),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(16),
@@ -638,7 +662,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   children: [
                     Text(
                       m.text,
-                      style: TextStyle(color: color, fontSize: 15, height: 1.55),
+                      style:
+                          TextStyle(color: color, fontSize: 15, height: 1.55),
                     ),
                     if (m.response != null) _responseMeta(m.response!),
                   ],
@@ -652,8 +677,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   child: _speakingText == m.text
-                      ? const Icon(Icons.stop_circle_rounded, color: _gold, size: 20, key: ValueKey('playing'))
-                      : Icon(Icons.volume_up_rounded, color: _p.textSecondary, size: 18, key: const ValueKey('stopped')),
+                      ? const Icon(Icons.stop_circle_rounded,
+                          color: _gold, size: 20, key: ValueKey('playing'))
+                      : Icon(Icons.volume_up_rounded,
+                          color: _p.textSecondary,
+                          size: 18,
+                          key: const ValueKey('stopped')),
                 ),
               ),
             ],
@@ -668,7 +697,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
   /// app" and "offline status indicator" acceptance criteria. Delegates to
   /// the standalone, independently-testable [AssistantResponseMeta] widget.
   Widget _responseMeta(AssistantResponse r) {
-    return AssistantResponseMeta(response: r, isRtl: _isRtl(_lang.label), textSecondary: _p.textSecondary);
+    return AssistantResponseMeta(
+        response: r,
+        isRtl: _isRtl(_lang.label),
+        textSecondary: _p.textSecondary);
   }
 
   Widget _thinkingBar() {
@@ -679,7 +711,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
         children: [
           const _TypingDots(),
           const SizedBox(width: 10),
-          Text('المساعد يكتب...', style: TextStyle(color: _p.textSecondary, fontSize: 13)),
+          Text('المساعد يكتب...',
+              style: TextStyle(color: _p.textSecondary, fontSize: 13)),
         ],
       ),
     );
@@ -714,7 +747,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     hintText: 'اكتب سؤالك...',
                     hintStyle: TextStyle(color: _p.textSecondary),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
@@ -725,7 +759,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: _p.card),
+                decoration:
+                    BoxDecoration(shape: BoxShape.circle, color: _p.card),
                 child: const Icon(Icons.send_rounded, color: _gold, size: 22),
               ),
             ),
@@ -738,7 +773,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: _listening ? [_danger, const Color(0xFFB23A35)] : [_gold, _gold2],
+                    colors: _listening
+                        ? [_danger, const Color(0xFFB23A35)]
+                        : [_gold, _gold2],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -818,7 +855,8 @@ class AssistantResponseMeta extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: 6, children: chips),
+          if (chips.isNotEmpty)
+            Wrap(spacing: 6, runSpacing: 6, children: chips),
           if (r.citations.isNotEmpty) ...[
             const SizedBox(height: 6),
             ...r.citations.map(
@@ -849,7 +887,11 @@ class AssistantResponseMeta extends StatelessWidget {
 /// A small labeled status pill (e.g. "Grounded", "Offline", "Sign-in
 /// required"). Extracted as a standalone widget for direct widget testing.
 class AssistantMetaChip extends StatelessWidget {
-  const AssistantMetaChip({super.key, required this.icon, required this.label, required this.color});
+  const AssistantMetaChip(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.color});
 
   final IconData icon;
   final String label;
@@ -869,7 +911,9 @@ class AssistantMetaChip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+          Text(label,
+              style: TextStyle(
+                  color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -886,9 +930,9 @@ class _TypingDots extends StatefulWidget {
 
 class _TypingDotsState extends State<_TypingDots>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
-        ..repeat();
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1100))
+    ..repeat();
 
   @override
   void dispose() {
@@ -906,7 +950,8 @@ class _TypingDotsState extends State<_TypingDots>
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
             final phase = (_c.value - i * 0.18) % 1.0;
-            final scale = 0.6 + 0.4 * (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
+            final scale =
+                0.6 + 0.4 * (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2.5),
               child: Transform.scale(
