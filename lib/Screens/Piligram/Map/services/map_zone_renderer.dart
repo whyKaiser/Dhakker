@@ -21,9 +21,7 @@ class MapZoneRenderer {
 
     for (final zone in zones) {
       if (!zone.isActive || zone.type != 'circle') continue;
-      if (zone.centerLat == null ||
-          zone.centerLng == null ||
-          zone.radiusM == null) continue;
+      if (zone.centerLat == null || zone.centerLng == null || zone.radiusM == null) continue;
 
       final isActiveZone = zone.zoneId == activeZoneId;
       final color = isActiveZone ? highlightColor : baseGold;
@@ -58,7 +56,9 @@ class MapZoneRenderer {
 
       items.add(
         Polygon(
-          points: zone.polygonPoints.map((e) => LatLng(e.lat, e.lng)).toList(),
+          points: zone.polygonPoints
+              .map((e) => LatLng(e.lat, e.lng))
+              .toList(),
           color: color.withOpacity(isActiveZone ? 0.18 : 0.09),
           borderColor: color.withOpacity(isActiveZone ? 0.95 : 0.42),
           borderStrokeWidth: isActiveZone ? 3 : 2,
@@ -76,17 +76,13 @@ class MapZoneRenderer {
   }) {
     LatLng? point;
 
-    if (zone.type == 'circle' &&
-        zone.centerLat != null &&
-        zone.centerLng != null) {
+    if (zone.type == 'circle' && zone.centerLat != null && zone.centerLng != null) {
       point = LatLng(zone.centerLat!, zone.centerLng!);
     } else if (zone.type == 'polygon' && zone.polygonPoints.isNotEmpty) {
       final avgLat =
-          zone.polygonPoints.map((e) => e.lat).reduce((a, b) => a + b) /
-              zone.polygonPoints.length;
+          zone.polygonPoints.map((e) => e.lat).reduce((a, b) => a + b) / zone.polygonPoints.length;
       final avgLng =
-          zone.polygonPoints.map((e) => e.lng).reduce((a, b) => a + b) /
-              zone.polygonPoints.length;
+          zone.polygonPoints.map((e) => e.lng).reduce((a, b) => a + b) / zone.polygonPoints.length;
       point = LatLng(avgLat, avgLng);
     }
 

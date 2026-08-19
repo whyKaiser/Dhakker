@@ -67,10 +67,8 @@ class HomeDuaController extends ChangeNotifier {
   String? _lastTriggeredDuaId;
   DateTime? _lastTriggerTimestamp;
   bool _isCurrentZoneHandled = false;
-  String?
-      _lastWrittenZoneId; // آخر نطاق كتبناه في حساب المستخدم (لحساب الكثافة الحقيقي)
-  String?
-      _lastFetchedZoneId; // آخر نطاق جلبنا أدعيته — يمنع إعادة الجلب كل تحديث موقع
+  String? _lastWrittenZoneId; // آخر نطاق كتبناه في حساب المستخدم (لحساب الكثافة الحقيقي)
+  String? _lastFetchedZoneId; // آخر نطاق جلبنا أدعيته — يمنع إعادة الجلب كل تحديث موقع
 
   String _zoneKey(String key) => '${key}_$userId';
 
@@ -190,8 +188,9 @@ class HomeDuaController extends ChangeNotifier {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     final permission = await Geolocator.checkPermission();
 
-    final hasPermission = permission == LocationPermission.always ||
-        permission == LocationPermission.whileInUse;
+    final hasPermission =
+        permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse;
 
     if (!serviceEnabled || !hasPermission) {
       errorMessage = 'location_unavailable';
@@ -269,9 +268,8 @@ class HomeDuaController extends ChangeNotifier {
     // حتى لا يطلع الدعاء صامتاً لو كان الأول بدون صوت ولا نص بهاللغة.
     SupplicationModel selected = currentDuasList.first;
     for (final d in currentDuasList) {
-      final playable =
-          (d.audioMode == 'file' && d.audioUrl.trim().isNotEmpty) ||
-              d.textByLanguage(langCode).trim().isNotEmpty;
+      final playable = (d.audioMode == 'file' && d.audioUrl.trim().isNotEmpty) ||
+          d.textByLanguage(langCode).trim().isNotEmpty;
       if (playable) {
         selected = d;
         break;
@@ -300,9 +298,7 @@ class HomeDuaController extends ChangeNotifier {
           title: isAr ? 'دخلت: $zoneName' : 'Entered: $zoneName',
           body: duaTitle.isNotEmpty
               ? duaTitle
-              : (isAr
-                  ? 'اضغط لقراءة دعاء المكان'
-                  : "Tap to read this place's supplication"),
+              : (isAr ? 'اضغط لقراءة دعاء المكان' : "Tap to read this place's supplication"),
         );
 
         // تأخير بسيط يمنح الحاج لحظة يستقر فيها قبل أن يبدأ الدعاء
@@ -346,6 +342,7 @@ class HomeDuaController extends ChangeNotifier {
       await _positionSubscription?.cancel();
       _positionSubscription = null;
       currentZone = null;
+      lastKnownZone = null;
       currentDuasList = []; // تصفير القائمة
       _isCurrentZoneHandled = false;
       await playbackService.stop();
@@ -368,10 +365,9 @@ class HomeDuaController extends ChangeNotifier {
 
     // تحديث عداد التشغيل في قاعدة البيانات
     try {
-      await firestore
-          .collection('supplications')
-          .doc(dua.duaId)
-          .update({'usage_count': FieldValue.increment(1)});
+      await firestore.collection('supplications').doc(dua.duaId).update({
+        'usage_count': FieldValue.increment(1)
+      });
       _log('تمت زيادة عداد التشغيل للدعاء: ${dua.duaId}');
     } catch (e) {
       _log('حدث خطأ أثناء تحديث عداد الاستخدام: $e');

@@ -112,8 +112,7 @@ class AppCubit extends Cubit<AppStates> {
   // نعيد استخدام نفس خط الموقع الموجود ونكتب كل ٤٥ ثانية فقط، فلا نستنزف
   // البطارية ولا نُكثر الكتابة على Firestore.
   final GroupService _groupService = GroupService();
-  String?
-      groupShareId; // معرّف المجموعة التي نشارك موقعنا معها (null = لا مشاركة)
+  String? groupShareId; // معرّف المجموعة التي نشارك موقعنا معها (null = لا مشاركة)
   bool groupSharing = false;
   int _lastGroupWriteMs = 0;
 
@@ -240,8 +239,7 @@ class AppCubit extends Cubit<AppStates> {
         for (final d in snap.docs) {
           final data = d.data();
           if ((data['type'] ?? 'circle').toString() != 'circle') continue;
-          final name =
-              '${data['nameEn'] ?? ''} ${data['nameAr'] ?? ''}'.toLowerCase();
+          final name = '${data['nameEn'] ?? ''} ${data['nameAr'] ?? ''}'.toLowerCase();
           if (name.contains('tawaf') ||
               name.contains('mataf') ||
               name.contains('طواف') ||
@@ -354,9 +352,8 @@ class AppCubit extends Cubit<AppStates> {
         accuracy: accuracy,
         distanceFilter: distanceFilter,
         foregroundNotificationConfig: ForegroundNotificationConfig(
-          notificationTitle: isAr
-              ? 'ذِكّر — عدّ الأشواط يعمل'
-              : 'Dhakker — lap counting active',
+          notificationTitle:
+              isAr ? 'ذِكّر — عدّ الأشواط يعمل' : 'Dhakker — lap counting active',
           notificationText: isAr
               ? 'نتابع موقعك لعدّ الطواف والسعي حتى مع إطفاء الشاشة'
               : "Tracking your location to count Tawaf/Sa'i even with the screen off",
@@ -407,15 +404,11 @@ class AppCubit extends Cubit<AppStates> {
     // نحدّث القرب من مناطق العدّ من القراءة الخام أولاً (قبل بوابة الدقة)، حتى
     // القراءات الأضعف بعيداً عن العدّ تكفي لكشف الاقتراب ورفع الدقة عند الحاجة.
     final wasHigh = _highAccuracyMode;
-    final rawTawaf = Geolocator.distanceBetween(
-            position.latitude, position.longitude, startLat, startLng) <=
-        _tawafProximityM;
-    final rawSai = Geolocator.distanceBetween(
-                position.latitude, position.longitude, safaLat, safaLng) <=
-            _saiProximityM ||
-        Geolocator.distanceBetween(
-                position.latitude, position.longitude, marwaLat, marwaLng) <=
-            _saiProximityM;
+    final rawTawaf =
+        Geolocator.distanceBetween(position.latitude, position.longitude, startLat, startLng) <= _tawafProximityM;
+    final rawSai =
+        Geolocator.distanceBetween(position.latitude, position.longitude, safaLat, safaLng) <= _saiProximityM ||
+            Geolocator.distanceBetween(position.latitude, position.longitude, marwaLat, marwaLng) <= _saiProximityM;
     _nearSai = rawSai;
     _highAccuracyMode = rawTawaf || _nearSai;
     // عند الانتقال بين قرب/بعيد نعيد ضبط خط الموقع بالدقة المناسبة.
@@ -465,8 +458,8 @@ class AppCubit extends Cubit<AppStates> {
     final acc = _locationFilter.accuracy;
 
     // بوابة القرب: نسمح بعدّ البوصلة فقط عندما نكون قرب المطاف فعلاً.
-    _nearTawaf = Geolocator.distanceBetween(lat, lng, startLat, startLng) <=
-        _tawafProximityM;
+    _nearTawaf =
+        Geolocator.distanceBetween(lat, lng, startLat, startLng) <= _tawafProximityM;
 
     _evaluateRound(lat, lng, acc);
     _evaluateSai(lat, lng, acc);
@@ -523,8 +516,7 @@ class AppCubit extends Cubit<AppStates> {
   // تبقى للتوافق مع شاشة الخريطة، لكنها لم تعد تقود العدّ: خط الكيوبيت
   // المنعّم (_onTrackingPosition) صار يملك احتساب الأشواط/السعي في كل التبويبات،
   // فنترك هذه فارغة لتفادي تلويث فلتر التنعيم بمصدر موقع ثانٍ.
-  void updateLocationAndCheckRounds(Position position,
-      {bool isInZone = false}) {}
+  void updateLocationAndCheckRounds(Position position, {bool isInZone = false}) {}
 
   void incrementRound() {
     if (roundCount < 7) {
@@ -701,8 +693,7 @@ class AppCubit extends Cubit<AppStates> {
         }
         for (final d in snap.docs) {
           final data = d.data();
-          final name =
-              '${data['nameEn'] ?? ''} ${data['nameAr'] ?? ''}'.toLowerCase();
+          final name = '${data['nameEn'] ?? ''} ${data['nameAr'] ?? ''}'.toLowerCase();
           if (keywords.any(name.contains)) return _centerOf(data);
         }
         return null;
@@ -792,8 +783,7 @@ class AppCubit extends Cubit<AppStates> {
           permission == LocationPermission.whileInUse;
       if (serviceEnabled && allowed) {
         pos = await Geolocator.getCurrentPosition(
-          locationSettings:
-              const LocationSettings(accuracy: LocationAccuracy.high),
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
         );
       }
     } catch (_) {}
@@ -812,9 +802,7 @@ class AppCubit extends Cubit<AppStates> {
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final n = userDoc.data()?['fullName'];
-        if (n != null && n.toString().trim().isNotEmpty) {
-          userName = n.toString();
-        }
+        if (n != null && n.toString().trim().isNotEmpty) userName = n.toString();
       }
     } catch (_) {}
 
@@ -837,8 +825,8 @@ class AppCubit extends Cubit<AppStates> {
     final String message = hasLoc
         ? "🆘 نداء استغاثة SOS! موقعي الحالي: $mapUrl"
         : "🆘 نداء استغاثة SOS! (تعذّر تحديد الموقع تلقائياً)";
-    final Uri url = Uri.parse(
-        "https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
+    final Uri url =
+        Uri.parse("https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}");
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -875,8 +863,7 @@ class AppCubit extends Cubit<AppStates> {
       try {
         adminStats['haramCrowd'] = event.docs.where((doc) {
           final data = doc.data();
-          return data.containsKey('currentZone') &&
-              data['currentZone'] == 'Al-Haram';
+          return data.containsKey('currentZone') && data['currentZone'] == 'Al-Haram';
         }).length;
       } catch (e) {
         debugPrint("Error counting crowd: $e");

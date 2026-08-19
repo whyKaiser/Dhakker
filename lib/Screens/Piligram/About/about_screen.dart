@@ -26,8 +26,7 @@ class AboutScreen extends StatelessWidget {
           backgroundColor: bg,
           elevation: 0,
           title: Text(isAr ? 'عن التطبيق والخصوصية' : 'About & Privacy',
-              style: const TextStyle(
-                  color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
+              style: const TextStyle(color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
           iconTheme: const IconThemeData(color: DhakkerColors.gold),
         ),
         body: SingleChildScrollView(
@@ -40,24 +39,17 @@ class AboutScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Container(
-                      width: 78,
-                      height: 78,
+                      width: 78, height: 78,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: DhakkerColors.gold.withOpacity(.12),
-                        border: Border.all(
-                            color: DhakkerColors.gold.withOpacity(.4),
-                            width: 1.4),
+                        border: Border.all(color: DhakkerColors.gold.withOpacity(.4), width: 1.4),
                       ),
-                      child: const Icon(Icons.mosque_rounded,
-                          color: DhakkerColors.gold, size: 38),
+                      child: const Icon(Icons.mosque_rounded, color: DhakkerColors.gold, size: 38),
                     ),
                     const SizedBox(height: 12),
                     Text('ذَكِّر',
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900)),
+                        style: TextStyle(color: textColor, fontSize: 26, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 4),
                     Text(isAr ? 'الإصدار $_appVersion' : 'Version $_appVersion',
                         style: TextStyle(color: muted, fontSize: 13)),
@@ -65,11 +57,8 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              _section(
-                  card,
-                  textColor,
-                  muted,
-                  isAr ? 'عن التطبيق' : 'About',
+
+              _section(card, textColor, muted, isAr ? 'عن التطبيق' : 'About',
                   isAr
                       ? 'تطبيق «ذكّر» مرشد ذكي لحجّاج ومعتمري بيت الله الحرام. يكتشف موقعك '
                           'داخل المشاعر تلقائياً ويعرض الدعاء المناسب للمكان، ويعدّ أشواط الطواف '
@@ -78,11 +67,8 @@ class AboutScreen extends StatelessWidget {
                           'your location within the holy sites and shows the matching supplication, '
                           'counts your Tawaf and Sa\'i rounds, offers a multilingual voice assistant, '
                           'and delivers safety alerts from the administration.'),
-              _section(
-                  card,
-                  textColor,
-                  muted,
-                  isAr ? 'البيانات التي نجمعها' : 'Data We Collect',
+
+              _section(card, textColor, muted, isAr ? 'البيانات التي نجمعها' : 'Data We Collect',
                   isAr
                       ? '• الموقع الجغرافي: يُستخدم فقط لتحديد منطقة المناسك وعرض الدعاء وعدّ '
                           'الأشواط. تُعالَج الإحداثيات على جهازك ولا نخزّن مسار تنقّلك.\n'
@@ -94,11 +80,8 @@ class AboutScreen extends StatelessWidget {
                           '• Email: for account creation and sign-in.\n'
                           '• Current zone: updated for crowd management and safety (without revealing '
                           'your identity to other pilgrims).'),
-              _section(
-                  card,
-                  textColor,
-                  muted,
-                  isAr ? 'كيف نحمي بياناتك' : 'How We Protect Your Data',
+
+              _section(card, textColor, muted, isAr ? 'كيف نحمي بياناتك' : 'How We Protect Your Data',
                   isAr
                       ? '• تُخزَّن البيانات في خوادم Firebase الآمنة من Google.\n'
                           '• قواعد صارمة تمنع أي مستخدم من الوصول لبيانات غيره.\n'
@@ -106,18 +89,17 @@ class AboutScreen extends StatelessWidget {
                       : '• Data is stored on Google\'s secure Firebase servers.\n'
                           '• Strict rules prevent any user from accessing others\' data.\n'
                           '• We never sell your data or share it with advertisers.'),
-              _section(
-                  card,
-                  textColor,
-                  muted,
-                  isAr ? 'صلاحياتك' : 'Your Rights',
+
+              _section(card, textColor, muted, isAr ? 'صلاحياتك' : 'Your Rights',
                   isAr
                       ? 'يمكنك إيقاف خدمة الموقع في أي وقت من الإعدادات، أو طلب حذف حسابك '
                           'وبياناتك عبر التواصل معنا.'
                       : 'You can disable location services anytime from Settings, or request '
                           'deletion of your account and data by contacting us.'),
-              _section(card, textColor, muted,
-                  isAr ? 'تواصل معنا' : 'Contact Us', 'support@dhakker.app'),
+
+              _section(card, textColor, muted, isAr ? 'تواصل معنا' : 'Contact Us',
+                  'support@dhakker.app'),
+
               const SizedBox(height: 8),
               Text(
                 isAr
@@ -133,8 +115,7 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _section(
-      Color card, Color textColor, Color muted, String title, String body) {
+  Widget _section(Color card, Color textColor, Color muted, String title, String body) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
@@ -148,15 +129,10 @@ class AboutScreen extends StatelessWidget {
         children: [
           Text(title,
               style: const TextStyle(
-                  color: DhakkerColors.gold,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900)),
+                  color: DhakkerColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(height: 10),
           Text(body,
-              style: TextStyle(
-                  color: textColor.withOpacity(.92),
-                  fontSize: 14,
-                  height: 1.7)),
+              style: TextStyle(color: textColor.withOpacity(.92), fontSize: 14, height: 1.7)),
         ],
       ),
     );

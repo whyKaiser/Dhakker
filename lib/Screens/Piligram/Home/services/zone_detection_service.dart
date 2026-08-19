@@ -10,9 +10,7 @@ class ZoneDetectionService {
     required double userLng,
     required ZoneModel zone,
   }) {
-    if (zone.centerLat == null ||
-        zone.centerLng == null ||
-        zone.radiusM == null) {
+    if (zone.centerLat == null || zone.centerLng == null || zone.radiusM == null) {
       return false;
     }
 
@@ -45,11 +43,7 @@ class ZoneDetectionService {
       final yj = zone.polygonPoints[j].lat;
 
       final intersect = ((yi > userLat) != (yj > userLat)) &&
-          (userLng <
-              (xj - xi) *
-                      (userLat - yi) /
-                      ((yj - yi) == 0 ? 0.0000001 : (yj - yi)) +
-                  xi);
+          (userLng < (xj - xi) * (userLat - yi) / ((yj - yi) == 0 ? 0.0000001 : (yj - yi)) + xi);
 
       if (intersect) {
         inside = !inside;
@@ -80,9 +74,7 @@ class ZoneDetectionService {
           zone: zone,
         );
       } else {
-        if (zone.centerLat != null &&
-            zone.centerLng != null &&
-            zone.radiusM != null) {
+        if (zone.centerLat != null && zone.centerLng != null && zone.radiusM != null) {
           final distance = Geolocator.distanceBetween(
             userLat,
             userLng,

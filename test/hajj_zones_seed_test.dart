@@ -32,22 +32,16 @@ void main() {
 
     test('every zone has required fields', () {
       for (final zone in HajjZonesSeed.zones) {
-        expect(zone['nameAr'], isA<String>(),
-            reason: '${zone['nameEn']} missing nameAr');
+        expect(zone['nameAr'], isA<String>(), reason: '${zone['nameEn']} missing nameAr');
         expect(zone['nameEn'], isA<String>(), reason: 'zone missing nameEn');
-        expect(zone['type'], anyOf('circle', 'polygon'),
-            reason: '${zone['nameEn']} bad type');
-        expect(zone['isActive'], isTrue,
-            reason: '${zone['nameEn']} should be active');
+        expect(zone['type'], anyOf('circle', 'polygon'), reason: '${zone['nameEn']} bad type');
+        expect(zone['isActive'], isTrue, reason: '${zone['nameEn']} should be active');
 
         if (zone['type'] == 'circle') {
-          expect(zone['center'], isNotNull,
-              reason: '${zone['nameEn']} circle needs center');
-          expect(zone['radiusM'], isA<double>(),
-              reason: '${zone['nameEn']} circle needs radiusM');
+          expect(zone['center'], isNotNull, reason: '${zone['nameEn']} circle needs center');
+          expect(zone['radiusM'], isA<double>(), reason: '${zone['nameEn']} circle needs radiusM');
         } else {
-          expect(zone['points'], isA<List>(),
-              reason: '${zone['nameEn']} polygon needs points');
+          expect(zone['points'], isA<List>(), reason: '${zone['nameEn']} polygon needs points');
           expect((zone['points'] as List).length, greaterThanOrEqualTo(3),
               reason: '${zone['nameEn']} polygon needs ≥3 points');
         }

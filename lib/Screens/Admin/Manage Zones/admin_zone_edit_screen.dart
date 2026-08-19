@@ -16,8 +16,7 @@ class AdminZoneEditScreen extends StatefulWidget {
   State<AdminZoneEditScreen> createState() => _AdminZoneEditScreenState();
 }
 
-class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
-    with SingleTickerProviderStateMixin {
+class _AdminZoneEditScreenState extends State<AdminZoneEditScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _nameArController = TextEditingController();
@@ -109,8 +108,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
               controller: _priorityController,
               label: s.adminZoneEditPriority,
               hint: s.adminZoneEditPriorityHint,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: false),
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return s.adminZoneEditPriorityRequired;
@@ -167,8 +165,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                       controller: _centerLatController,
                       label: s.adminZoneEditCenterLat,
                       hint: s.adminZoneEditCenterLatHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (_zoneType != 'circle') return null;
                         if (value == null || value.trim().isEmpty) {
@@ -188,8 +185,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                       controller: _centerLngController,
                       label: s.adminZoneEditCenterLng,
                       hint: s.adminZoneEditCenterLngHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (_zoneType != 'circle') return null;
                         if (value == null || value.trim().isEmpty) {
@@ -210,8 +206,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                 controller: _radiusController,
                 label: s.adminZoneEditRadius,
                 hint: s.adminZoneEditRadiusHint,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (_zoneType != 'circle') return null;
                   if (value == null || value.trim().isEmpty) {
@@ -245,8 +240,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                       controller: _pointLatController,
                       label: s.adminZoneEditPointLat,
                       hint: s.adminZoneEditPointLatHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -255,8 +249,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                       controller: _pointLngController,
                       label: s.adminZoneEditPointLng,
                       hint: s.adminZoneEditPointLngHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 ],
@@ -302,8 +295,7 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 disabledBackgroundColor: accent,
-                disabledForegroundColor:
-                    isDark ? DhakkerColors.bg : Colors.white,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -311,13 +303,13 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
               onPressed: null,
               icon: _isSaving
                   ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.3,
-                        color: isDark ? DhakkerColors.bg : Colors.white,
-                      ),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.3,
+                  color: isDark ? DhakkerColors.bg : Colors.white,
+                ),
+              )
                   : const Icon(Icons.save_rounded),
               label: Text(
                 _isSaving ? s.adminZoneEditSaving : s.adminZoneEditSave,
@@ -348,38 +340,37 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
         child: _isLoading
             ? _EditLoadingView(card: card)
             : Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(editSections.length, (index) {
-                      final double start = (index * 0.03).clamp(0.0, 1.0);
-                      final double end = (start + 0.30).clamp(0.0, 1.0);
+          key: _formKey,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: List.generate(editSections.length, (index) {
+                final double start = (index * 0.03).clamp(0.0, 1.0);
+                final double end = (start + 0.30).clamp(0.0, 1.0);
 
-                      return AnimatedBuilder(
-                        animation: _editEntranceController,
-                        builder: (context, child) {
-                          final curve = CurvedAnimation(
-                            parent: _editEntranceController,
-                            curve: Interval(start, end,
-                                curve: Curves.easeOutCubic),
-                          );
-                          return Transform.translate(
-                            offset: Offset(0, 20 * (1.0 - curve.value)),
-                            child: Opacity(
-                              opacity: curve.value,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: editSections[index],
-                      );
-                    }),
-                  ),
-                ),
-              ),
+                return AnimatedBuilder(
+                  animation: _editEntranceController,
+                  builder: (context, child) {
+                    final curve = CurvedAnimation(
+                      parent: _editEntranceController,
+                      curve: Interval(start, end, curve: Curves.easeOutCubic),
+                    );
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1.0 - curve.value)),
+                      child: Opacity(
+                        opacity: curve.value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: editSections[index],
+                );
+              }),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -505,22 +496,22 @@ class _AdminZoneEditScreenState extends State<AdminZoneEditScreen>
         'type': _zoneType,
         'center': _zoneType == 'circle'
             ? {
-                'lat': double.parse(_centerLatController.text.trim()),
-                'lng': double.parse(_centerLngController.text.trim()),
-              }
+          'lat': double.parse(_centerLatController.text.trim()),
+          'lng': double.parse(_centerLngController.text.trim()),
+        }
             : null,
         'radiusM': _zoneType == 'circle'
             ? double.parse(_radiusController.text.trim())
             : null,
         'points': _zoneType == 'polygon'
             ? _polygonPoints
-                .map(
-                  (e) => {
-                    'lat': e['lat'],
-                    'lng': e['lng'],
-                  },
-                )
-                .toList()
+            .map(
+              (e) => {
+            'lat': e['lat'],
+            'lng': e['lng'],
+          },
+        )
+            .toList()
             : [],
         'priority': int.parse(_priorityController.text.trim()),
         'isActive': _isActive,
@@ -780,8 +771,7 @@ class _AppField extends StatelessWidget {
             ),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -1173,9 +1163,8 @@ class _PolygonPointsPanel extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundColor:
-                      (isDark ? DhakkerColors.gold : DhakkerColors.gold2)
-                          .withOpacity(.14),
+                  backgroundColor: (isDark ? DhakkerColors.gold : DhakkerColors.gold2)
+                      .withOpacity(.14),
                   child: Text(
                     '${index + 1}',
                     style: TextStyle(

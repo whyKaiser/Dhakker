@@ -102,9 +102,7 @@ class _VoiceCommandDialogState extends State<VoiceCommandDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bg = isDark ? const Color(0xFF303030) : Colors.white;
-    final border = isDark
-        ? const Color(0xFFD4AF37).withOpacity(.18)
-        : const Color(0xFFD4AF37).withOpacity(.24);
+    final border = isDark ? const Color(0xFFD4AF37).withOpacity(.18) : const Color(0xFFD4AF37).withOpacity(.24);
     final text = isDark ? Colors.white : const Color(0xFF121316);
     final muted = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF667085);
 
@@ -220,17 +218,13 @@ class _VoiceDialogButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               gradient: isPrimary
                   ? const LinearGradient(
-                      colors: [
-                        Color(0xFFD4AF37),
-                        Color(0xFFB98B2E),
-                      ],
-                    )
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFB98B2E),
+                ],
+              )
                   : null,
-              color: isPrimary
-                  ? null
-                  : (isDark
-                      ? const Color(0xFF0B0D10)
-                      : const Color(0xFFF3F4F6)),
+              color: isPrimary ? null : (isDark ? const Color(0xFF0B0D10) : const Color(0xFFF3F4F6)),
               border: Border.all(
                 color: isPrimary
                     ? Colors.transparent
@@ -243,9 +237,7 @@ class _VoiceDialogButton extends StatelessWidget {
                 style: TextStyle(
                   color: isPrimary
                       ? const Color(0xFF14171C)
-                      : (isDark
-                          ? const Color(0xFFCBD5E1)
-                          : const Color(0xFF475467)),
+                      : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475467)),
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                 ),

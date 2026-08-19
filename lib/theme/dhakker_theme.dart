@@ -23,6 +23,7 @@ const PageTransitionsTheme _kSmoothPageTransitions = PageTransitionsTheme(
 );
 
 ThemeData dhakkerDarkTheme() {
+
   return ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: DhakkerColors.bg,
@@ -50,8 +51,7 @@ ThemeData dhakkerDarkTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide:
-            BorderSide(color: DhakkerColors.gold.withOpacity(.55), width: 1.4),
+        borderSide: BorderSide(color: DhakkerColors.gold.withOpacity(.55), width: 1.4),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),

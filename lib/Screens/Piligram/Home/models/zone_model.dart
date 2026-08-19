@@ -97,9 +97,7 @@ class ZoneModel {
       polygonPoints: points,
       priority: safeInt(data['priority']),
       isActive: data['isActive'] ?? true,
-      updatedAt: data['updatedAt'] is Timestamp
-          ? data['updatedAt'] as Timestamp
-          : null,
+      updatedAt: data['updatedAt'] is Timestamp ? data['updatedAt'] as Timestamp : null,
     );
   }
 

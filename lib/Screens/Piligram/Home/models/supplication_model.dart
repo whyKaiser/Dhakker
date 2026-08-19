@@ -25,14 +25,12 @@ class SupplicationModel {
     required this.usageCount, // 2. إضافته هنا
   });
 
-  factory SupplicationModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory SupplicationModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
 
     Map<String, String> safeTextMap(dynamic raw) {
       if (raw is Map<String, dynamic>) {
-        return raw
-            .map((key, value) => MapEntry(key.toString(), value.toString()));
+        return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
       }
       if (raw is Map) {
         return Map<String, String>.from(
@@ -59,9 +57,7 @@ class SupplicationModel {
       audioUrl: (data['audioUrl'] ?? '').toString(),
       languageCodes: langs,
       isActive: data['isActive'] ?? true,
-      updatedAt: data['updatedAt'] is Timestamp
-          ? data['updatedAt'] as Timestamp
-          : null,
+      updatedAt: data['updatedAt'] is Timestamp ? data['updatedAt'] as Timestamp : null,
       // 3. قراءة الحقل من قاعدة البيانات مع إعطائه قيمة 0 افتراضياً
       usageCount: (data['usage_count'] as num?)?.toInt() ?? 0,
     );
@@ -119,9 +115,7 @@ class SupplicationModel {
     final langs = <String>[];
     final rawLangs = data['languageCodes'];
     if (rawLangs is List) {
-      for (final item in rawLangs) {
-        langs.add(item.toString());
-      }
+      for (final item in rawLangs) { langs.add(item.toString()); }
     }
 
     return SupplicationModel(

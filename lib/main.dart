@@ -22,6 +22,7 @@ import 'locale_controller.dart';
 
 import 'theme/dhakker_theme.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

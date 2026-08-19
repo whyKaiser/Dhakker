@@ -19,8 +19,8 @@ class AdminSupplicationAddScreen extends StatefulWidget {
       _AdminSupplicationAddScreenState();
 }
 
-class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
-    with SingleTickerProviderStateMixin {
+class _AdminSupplicationAddScreenState
+    extends State<AdminSupplicationAddScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _titleArController = TextEditingController();
@@ -131,13 +131,13 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
     });
 
     try {
-      final docRef =
-          FirebaseFirestore.instance.collection('supplications').doc();
+      final docRef = FirebaseFirestore.instance.collection('supplications').doc();
       String? audioUrl;
 
       if (_audioMode == 'file' && _audioBytes != null) {
-        final storageRef =
-            FirebaseStorage.instance.ref().child('audio/duas/${docRef.id}.mp3');
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('audio/duas/${docRef.id}.mp3');
 
         final metadata = SettableMetadata(
           contentType: 'audio/mpeg',
@@ -365,8 +365,7 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 disabledBackgroundColor: accent,
-                disabledForegroundColor:
-                    isDark ? DhakkerColors.bg : Colors.white,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -374,13 +373,13 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
               onPressed: null,
               icon: _isSaving
                   ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.3,
-                        color: isDark ? DhakkerColors.bg : Colors.white,
-                      ),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.3,
+                  color: isDark ? DhakkerColors.bg : Colors.white,
+                ),
+              )
                   : const Icon(Icons.save_rounded),
               label: Text(
                 _isSaving ? s.adminSupplicationSaving : s.adminSupplicationSave,
@@ -411,38 +410,37 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
         child: _zonesLoading
             ? const _SupplicationFormLoadingView()
             : Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: List.generate(formSections.length, (index) {
-                      final double start = (index * 0.03).clamp(0.0, 1.0);
-                      final double end = (start + 0.30).clamp(0.0, 1.0);
+          key: _formKey,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: List.generate(formSections.length, (index) {
+                final double start = (index * 0.03).clamp(0.0, 1.0);
+                final double end = (start + 0.30).clamp(0.0, 1.0);
 
-                      return AnimatedBuilder(
-                        animation: _formEntranceController,
-                        builder: (context, child) {
-                          final curve = CurvedAnimation(
-                            parent: _formEntranceController,
-                            curve: Interval(start, end,
-                                curve: Curves.easeOutCubic),
-                          );
-                          return Transform.translate(
-                            offset: Offset(0, 20 * (1.0 - curve.value)),
-                            child: Opacity(
-                              opacity: curve.value,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: formSections[index],
-                      );
-                    }),
-                  ),
-                ),
-              ),
+                return AnimatedBuilder(
+                  animation: _formEntranceController,
+                  builder: (context, child) {
+                    final curve = CurvedAnimation(
+                      parent: _formEntranceController,
+                      curve: Interval(start, end, curve: Curves.easeOutCubic),
+                    );
+                    return Transform.translate(
+                      offset: Offset(0, 20 * (1.0 - curve.value)),
+                      child: Opacity(
+                        opacity: curve.value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: formSections[index],
+                );
+              }),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -499,8 +497,7 @@ class _ZoneDropdown extends StatelessWidget {
             ),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -650,8 +647,7 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
                     backgroundColor: accent,
                     foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
                     disabledBackgroundColor: accent,
-                    disabledForegroundColor:
-                        isDark ? DhakkerColors.bg : Colors.white,
+                    disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -779,8 +775,7 @@ class _AppField extends StatelessWidget {
             ),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -802,13 +797,11 @@ class _AppField extends StatelessWidget {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  const BorderSide(color: Color(0xFFDC2626), width: 1.1),
+              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  const BorderSide(color: Color(0xFFDC2626), width: 1.2),
+              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.2),
             ),
           ),
         ),
@@ -893,18 +886,13 @@ class _TypeCardState extends State<_TypeCard> {
               Text(
                 widget.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: text, fontWeight: FontWeight.w900, fontSize: 14),
+                style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
                 widget.subtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: muted,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11.8,
-                    height: 1.45),
+                style: TextStyle(color: muted, fontWeight: FontWeight.w700, fontSize: 11.8, height: 1.45),
               ),
             ],
           ),
@@ -950,17 +938,12 @@ class _SwitchCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                      color: text, fontWeight: FontWeight.w900, fontSize: 13.2),
+                  style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 13.2),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                      color: muted,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.2,
-                      height: 1.45),
+                  style: TextStyle(color: muted, fontWeight: FontWeight.w700, fontSize: 12.2, height: 1.45),
                 ),
               ],
             ),
@@ -988,19 +971,8 @@ class _SectionTitle extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(
-            child: Text(title,
-                style: TextStyle(
-                    color: text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: .1))),
-        Container(
-            width: 26,
-            height: 3,
-            decoration: BoxDecoration(
-                color: muted.withOpacity(.35),
-                borderRadius: BorderRadius.circular(99))),
+        Expanded(child: Text(title, style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: .1))),
+        Container(width: 26, height: 3, decoration: BoxDecoration(color: muted.withOpacity(.35), borderRadius: BorderRadius.circular(99))),
       ],
     );
   }
