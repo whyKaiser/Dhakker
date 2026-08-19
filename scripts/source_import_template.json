@@ -1,0 +1,78 @@
+{
+  "//": [
+    "IMPORT TEMPLATE — metadata and placeholders ONLY.",
+    "",
+    "READ THIS BEFORE USING THE FILE.",
+    "",
+    "1. This template contains NO religious text and none may be added to it",
+    "   in this repository. The `text` / `title` fields below are deliberate",
+    "   placeholders. Fill them in your own working copy against the official",
+    "   printed/published source, then import — do not commit the filled file.",
+    "",
+    "2. Nothing here is pre-approved. An entry becomes citable by the",
+    "   assistant only after a human has matched it, word for word, against an",
+    "   official published source and recorded that fact in the provenance",
+    "   fields. Copying a passage from memory, from a website of unknown",
+    "   provenance, or from a model is not verification.",
+    "",
+    "3. Existing `supplications` records are ordinary content records with no",
+    "   provenance. They stay unverified — and therefore uncitable — until",
+    "   each one is individually matched against an official source. There is",
+    "   no bulk 'mark everything verified' path, by design.",
+    "",
+    "4. The `authority` value must name the body that actually published the",
+    "   edition you checked, and `sourceUrl` must be the HTTPS link to that",
+    "   published edition. Do not enter a ministry or council name unless you",
+    "   are holding its publication.",
+    "",
+    "Import with:  node scripts/ingest_knowledge.mjs <your-filled-file>.json",
+    "See docs/ARCHITECTURE.md → 'Source registry' for the full field contract."
+  ],
+  "templateVersion": 2,
+  "entries": [
+    {
+      "//": "One entry per reviewed passage. Duplicate this object as needed.",
+
+      "duaId": "REPLACE-with-stable-id-e.g-mia-hajj-2026-0001",
+      "zoneId": "REPLACE-with-zone-id-from-the-zones-collection",
+
+      "title": {
+        "ar": "<<< PLACEHOLDER — أدخل العنوان من المصدر الرسمي >>>",
+        "en": "<<< PLACEHOLDER — enter the title from the official source >>>"
+      },
+      "text": {
+        "ar": "<<< PLACEHOLDER — لا تنسخ أي نص ديني إلى المستودع. املأ هذا الحقل في نسختك المحلية من المصدر الرسمي المطبوع/المنشور فقط >>>",
+        "en": "<<< PLACEHOLDER — do not copy religious text into this repository. Fill this in your local working copy, from the official published source only >>>"
+      },
+
+      "tagsAr": ["REPLACE", "بكلمات", "بحث"],
+      "tagsEn": ["replace", "with", "search", "keywords"],
+      "languageCodes": ["ar", "en"],
+      "isActive": true,
+
+      "//provenance": [
+        "ALL of the following are REQUIRED before verificationStatus may be",
+        "set to 'verified'. The Worker retrieval gate, firestore.rules, and",
+        "the admin UI each enforce this independently."
+      ],
+      "verificationStatus": "unverified",
+      "authority": "REPLACE — exact name of the body that published the edition you checked",
+      "sourceUrl": "https://REPLACE-with-the-official-https-link-to-that-edition",
+      "sourceVersion": "REPLACE — edition or publication date, e.g. 1447H / 2026-01",
+      "sourceLanguage": "ar",
+      "sourceSection": "REPLACE — page or section reference within the source, e.g. p. 42",
+
+      "//lifecycle": [
+        "verifiedAt / verifiedBy / contentHash are written by the admin",
+        "console at the moment of verification. Leave them null here.",
+        "revokedAt is set to withdraw a source; a revoked record is excluded",
+        "from retrieval immediately, regardless of verificationStatus."
+      ],
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "contentHash": null,
+      "revokedAt": null,
+      "reviewNotes": "REPLACE — which edition was consulted, by whom, and how the text was matched"
+    }
+  ]
+}

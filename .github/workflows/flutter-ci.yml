@@ -1,0 +1,94 @@
+name: Flutter CI
+
+on:
+  push:
+    branches:
+      - "claude/dhakker-context-ai-upgrade-v0ilmk"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  analyze-and-test:
+    name: Format, analyze, and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.2"
+          channel: "stable"
+          cache: true
+
+      # This repo's pre-existing files were never run through `dart format`
+      # on a case-sensitive filesystem, so `dart format .` across the whole
+      # tree fails on ~60 files unrelated to this feature. Until the whole
+      # repo is formatted in its own dedicated change, only check the Dart
+      # files this feature fully owns (new files, or files where every line
+      # in the diff is this feature's own addition) — this must still fail
+      # if any of them is incorrectly formatted. Files where this feature
+      # only inserted a small, surgical diff into a pre-existing, not-yet-
+      # formatted file (lib/bloc/cubit.dart, home_dua_controller.dart) are
+      # deliberately excluded: formatting them would force an unrelated
+      # full-file reflow, which is exactly what this check exists to avoid.
+      - name: Verify formatting (feature-owned files only)
+        run: |
+          FEATURE_DART_FILES=(
+            "lib/Screens/Assistant/assistant_screen.dart"
+            "lib/data/offline_knowledge_repository.dart"
+            "lib/services/assistant_service.dart"
+            "lib/services/pilgrim_context_builder.dart"
+            "test/assistant_response_widget_test.dart"
+            "test/assistant_service_test.dart"
+            "test/offline_knowledge_repository_test.dart"
+          )
+          dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+  worker-tests:
+    name: Assistant proxy Worker tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run Worker tests
+        working-directory: assistant-proxy
+        run: node --test worker.test.mjs
+
+  firestore-rules-tests:
+    name: Firestore security rules tests (emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # The Firestore emulator is a Java process.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # `npm ci` (not `npm install`) — installs exactly the committed
+      # package-lock.json and fails loudly if package.json and the lockfile
+      # ever drift apart, so CI stays deterministic.
+      - name: Install rules-test dependencies
+        working-directory: test_firestore_rules
+        run: npm ci --no-audit --no-fund
+      # `firebase emulators:exec` boots the emulator, runs the suite, and
+      # tears it down — no long-lived emulator and no real project involved.
+      - name: Run Firestore rules tests
+        working-directory: test_firestore_rules
+        run: npm test

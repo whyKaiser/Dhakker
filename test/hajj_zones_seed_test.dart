@@ -48,8 +48,8 @@ void main() {
       }
     });
 
-    test('zone count matches expected 21', () {
-      expect(HajjZonesSeed.zones.length, equals(21));
+    test('zone count matches expected 19', () {
+      expect(HajjZonesSeed.zones.length, equals(19));
     });
   });
 }

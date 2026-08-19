@@ -1,9 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../../bloc/cubit.dart';
+import '../../data/offline_knowledge_repository.dart';
 import '../../services/assistant_service.dart';
+import '../../services/pilgrim_context_builder.dart';
 
 /// شاشة المساعد الصوتي الذكي للحج والعمرة.
 /// الحاج يختار لغته، يضغط الميكروفون ويتكلم، فيسمعه المساعد ويرد بصوت بنفس اللغة.
@@ -18,14 +22,16 @@ class _Msg {
   final String text;
   final bool fromUser;
   final bool isError;
-  _Msg(this.text, {this.fromUser = false, this.isError = false});
+  final AssistantResponse? response;
+  _Msg(this.text, {this.fromUser = false, this.isError = false, this.response});
 }
 
 class _Lang {
   final String label;
   final String sttLocale;
   final String ttsLocale;
-  const _Lang(this.label, this.sttLocale, this.ttsLocale);
+  final String code; // ar/en/ur/tr/id/fr — sent to the assistant proxy
+  const _Lang(this.label, this.sttLocale, this.ttsLocale, this.code);
 }
 
 class _AssistantPalette {
@@ -75,13 +81,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
   _AssistantPalette _p = _AssistantPalette.fromBrightness(true);
 
   static const List<_Lang> _languages = [
-    _Lang('العربية', 'ar_SA', 'ar-SA'),
-    _Lang('English', 'en_US', 'en-US'),
-    _Lang('اردو', 'ur_PK', 'ur-PK'),
-    _Lang('Türkçe', 'tr_TR', 'tr-TR'),
-    _Lang('Indonesia', 'id_ID', 'id-ID'),
-    _Lang('Français', 'fr_FR', 'fr-FR'),
+    _Lang('العربية', 'ar_SA', 'ar-SA', 'ar'),
+    _Lang('English', 'en_US', 'en-US', 'en'),
+    _Lang('اردو', 'ur_PK', 'ur-PK', 'ur'),
+    _Lang('Türkçe', 'tr_TR', 'tr-TR', 'tr'),
+    _Lang('Indonesia', 'id_ID', 'id-ID', 'id'),
+    _Lang('Français', 'fr_FR', 'fr-FR', 'fr'),
   ];
+
+  // Explicit opt-in for sharing pilgrim context (ritual/laps/mobility/zone)
+  // with the assistant. Off by default — never sent without this being true.
+  bool _contextConsent = false;
 
   final AssistantService _service = AssistantService();
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -101,6 +111,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
     super.initState();
     _initSpeech();
     _initTts();
+    // Provide a FRESH Firebase ID token per proxy request (force-refresh):
+    // never cache a token across the session, since a long-lived chat could
+    // otherwise send an expired token and hit a permanent 401 loop.
+    _service.idTokenProvider = () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      return user.getIdToken(true);
+    };
   }
 
   Future<void> _initTts() async {
@@ -111,20 +129,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
     try {
       final voices = await _tts.getVoices as List?;
       if (voices != null) {
-        final arVoices = voices
-            .whereType<Map>()
-            .where((v) {
-              final locale = (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
-              return locale.startsWith('ar');
-            })
-            .toList();
+        final arVoices = voices.whereType<Map>().where((v) {
+          final locale =
+              (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
+          return locale.startsWith('ar');
+        }).toList();
         // نفضّل Google TTS ثم أي صوت عربي آخر.
         final best = arVoices.firstWhere(
           (v) => (v['name'] ?? '').toString().toLowerCase().contains('google'),
-          orElse: () => arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
+          orElse: () =>
+              arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
         );
         if (best.isNotEmpty == true && best['name'] != null) {
-          await _tts.setVoice({'name': best['name'], 'locale': best['locale'] ?? best['language'] ?? 'ar-SA'});
+          await _tts.setVoice({
+            'name': best['name'],
+            'locale': best['locale'] ?? best['language'] ?? 'ar-SA'
+          });
         }
       }
     } catch (_) {
@@ -241,31 +261,49 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _scrollToEnd();
 
     try {
-      final reply = await _service.ask(msg);
+      final reply = await _service.ask(
+        msg,
+        language: _lang.code,
+        context: _buildPilgrimContext(),
+      );
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg(reply));
+        _messages.add(_Msg(reply.answer, response: reply));
         _sending = false;
       });
       _scrollToEnd();
-      await _speak(reply);
+      await _speak(reply.answer);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg(_friendlyError(e), isError: true));
+        _messages.add(_Msg(_friendlyError(), isError: true));
         _sending = false;
       });
       _scrollToEnd();
     }
   }
 
-  String _friendlyError(Object e) {
-    final s = e.toString();
-    if (s.contains('GROQ_API_KEY')) {
-      return 'مفتاح المساعد غير مُفعّل بعد. يُشغَّل التطبيق بمفتاح Groq عبر '
-          '--dart-define=GROQ_API_KEY';
+  /// Builds the consent-gated [PilgrimContext] from the app's EXISTING
+  /// Tawaf/Sa'i counters via [AppCubit] and the coarse zone via
+  /// [HomeDuaController.lastKnownZone] — never a new/duplicate counter or
+  /// location stream. Falls back to no-context if AppCubit isn't reachable
+  /// from this widget tree (e.g. this screen shown standalone in a test)
+  /// rather than throwing.
+  PilgrimContext _buildPilgrimContext() {
+    if (!_contextConsent) return PilgrimContext.none;
+    try {
+      final cubit = AppCubit.get(context);
+      return PilgrimContextBuilder.build(consent: true, cubit: cubit);
+    } catch (_) {
+      return const PilgrimContext(consent: true);
     }
-    return 'تعذّر الوصول للمساعد الآن. تحقّق من الاتصال وحاول مرة أخرى.';
+  }
+
+  String _friendlyError() {
+    // Never surface raw exceptions/provider names to the user.
+    return _isRtl(_lang.label)
+        ? 'تعذّر الوصول للمساعد الآن. تحقّق من الاتصال وحاول مرة أخرى.'
+        : 'The assistant is unavailable right now. Please check your connection and try again.';
   }
 
   Future<void> _speak(String text) async {
@@ -288,6 +326,44 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String _ttsLocaleFor(String text) {
     if (_isRtl(text)) return _lang.ttsLocale;
     return _lang.ttsLocale == 'ar-SA' ? 'en-US' : _lang.ttsLocale;
+  }
+
+  Future<void> _toggleContextConsent() async {
+    final rtl = _isRtl(_lang.label);
+    if (_contextConsent) {
+      setState(() => _contextConsent = false);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _p.card,
+        title: Text(
+          rtl
+              ? 'مشاركة سياقك مع المساعد؟'
+              : 'Share your context with the assistant?',
+          style: TextStyle(color: _p.textPrimary),
+        ),
+        content: Text(
+          rtl
+              ? 'سيُرسَل نوع النسك الحالي وعدد الأشواط والمنطقة العامة (وليس موقعك '
+                  'الدقيق) لتخصيص الإجابات. لن يُرسَل شيء بدون موافقتك، ويمكنك إيقافها متى شئت.'
+              : 'The current ritual, lap count, and a coarse zone name (never your '
+                  'precise location) will be sent to personalize answers. Nothing is '
+                  'shared without this consent, and you can turn it off anytime.',
+          style: TextStyle(color: _p.textSecondary),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(rtl ? 'إلغاء' : 'Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(rtl ? 'موافق' : 'Allow')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) setState(() => _contextConsent = true);
   }
 
   void _clear() {
@@ -353,7 +429,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _p = _AssistantPalette.fromBrightness(isDark);
 
     return Directionality(
-      textDirection: _isRtl(_lang.label) ? TextDirection.rtl : TextDirection.ltr,
+      textDirection:
+          _isRtl(_lang.label) ? TextDirection.rtl : TextDirection.ltr,
       child: Container(
         color: _p.bg,
         child: SafeArea(
@@ -384,8 +461,24 @@ class _AssistantScreenState extends State<AssistantScreen> {
           const Expanded(
             child: Text(
               'المساعد الذكي',
-              style: TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 20),
+              style: TextStyle(
+                  color: _gold, fontWeight: FontWeight.w900, fontSize: 20),
             ),
+          ),
+          // Explicit, visible opt-in for sharing pilgrim context (ritual,
+          // laps, mobility, coarse zone) — off by default, never sent
+          // silently. Tapping shows what is shared before enabling.
+          IconButton(
+            onPressed: _toggleContextConsent,
+            icon: Icon(
+              _contextConsent
+                  ? Icons.location_on_rounded
+                  : Icons.location_off_rounded,
+              color: _contextConsent ? _gold : _p.textSecondary,
+            ),
+            tooltip: _contextConsent
+                ? 'مشاركة السياق مفعّلة'
+                : 'مشاركة السياق معطّلة',
           ),
           if (_messages.isNotEmpty)
             IconButton(
@@ -453,17 +546,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
             height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [_gold.withOpacity(.22), _gold2.withOpacity(.10)]),
+              gradient: LinearGradient(
+                  colors: [_gold.withOpacity(.22), _gold2.withOpacity(.10)]),
               border: Border.all(color: _gold.withOpacity(.4), width: 1.4),
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: _gold, size: 40),
+            child:
+                const Icon(Icons.auto_awesome_rounded, color: _gold, size: 40),
           ),
         ),
         const SizedBox(height: 18),
         Text(
           'اسألني عن مناسك الحج والعمرة',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _p.textPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+          style: TextStyle(
+              color: _p.textPrimary, fontSize: 18, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 8),
         Text(
@@ -477,7 +573,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: GestureDetector(
                 onTap: () => _send(q),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: _p.card,
                     borderRadius: BorderRadius.circular(14),
@@ -485,11 +582,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.help_outline_rounded, color: _gold, size: 18),
+                      const Icon(Icons.help_outline_rounded,
+                          color: _gold, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(q,
-                            style: TextStyle(color: _p.textPrimary, fontSize: 14)),
+                            style:
+                                TextStyle(color: _p.textPrimary, fontSize: 14)),
                       ),
                     ],
                   ),
@@ -540,7 +639,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 5),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(16),
@@ -557,9 +657,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
             Flexible(
               child: Directionality(
                 textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-                child: Text(
-                  m.text,
-                  style: TextStyle(color: color, fontSize: 15, height: 1.55),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      m.text,
+                      style:
+                          TextStyle(color: color, fontSize: 15, height: 1.55),
+                    ),
+                    if (m.response != null) _responseMeta(m.response!),
+                  ],
                 ),
               ),
             ),
@@ -570,8 +678,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   child: _speakingText == m.text
-                      ? const Icon(Icons.stop_circle_rounded, color: _gold, size: 20, key: ValueKey('playing'))
-                      : Icon(Icons.volume_up_rounded, color: _p.textSecondary, size: 18, key: const ValueKey('stopped')),
+                      ? const Icon(Icons.stop_circle_rounded,
+                          color: _gold, size: 20, key: ValueKey('playing'))
+                      : Icon(Icons.volume_up_rounded,
+                          color: _p.textSecondary,
+                          size: 18,
+                          key: const ValueKey('stopped')),
                 ),
               ),
             ],
@@ -579,6 +691,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
         ),
       ),
     ));
+  }
+
+  /// Shows grounding/offline/sign-in/human-guide indicators and citations,
+  /// if any, under an assistant reply — satisfies the "citations visible in
+  /// app" and "offline status indicator" acceptance criteria. Delegates to
+  /// the standalone, independently-testable [AssistantResponseMeta] widget.
+  Widget _responseMeta(AssistantResponse r) {
+    return AssistantResponseMeta(
+        response: r,
+        isRtl: _isRtl(_lang.label),
+        textSecondary: _p.textSecondary);
   }
 
   Widget _thinkingBar() {
@@ -589,7 +712,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
         children: [
           const _TypingDots(),
           const SizedBox(width: 10),
-          Text('المساعد يكتب...', style: TextStyle(color: _p.textSecondary, fontSize: 13)),
+          Text('المساعد يكتب...',
+              style: TextStyle(color: _p.textSecondary, fontSize: 13)),
         ],
       ),
     );
@@ -624,7 +748,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     hintText: 'اكتب سؤالك...',
                     hintStyle: TextStyle(color: _p.textSecondary),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
@@ -635,7 +760,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: _p.card),
+                decoration:
+                    BoxDecoration(shape: BoxShape.circle, color: _p.card),
                 child: const Icon(Icons.send_rounded, color: _gold, size: 22),
               ),
             ),
@@ -648,7 +774,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: _listening ? [_danger, const Color(0xFFB23A35)] : [_gold, _gold2],
+                    colors: _listening
+                        ? [_danger, const Color(0xFFB23A35)]
+                        : [_gold, _gold2],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -672,6 +800,153 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 }
 
+/// Renders the grounding/offline/sign-in/human-guide status chips and the
+/// citation list for one [AssistantResponse]. Extracted from
+/// [_AssistantScreenState] as a standalone, stateless widget so it can be
+/// unit-tested (citation display, grounded/ungrounded/offline/sign-in-required
+/// states) without pumping the whole [AssistantScreen] (which needs speech,
+/// TTS, and Firebase plumbing to build).
+class AssistantResponseMeta extends StatelessWidget {
+  const AssistantResponseMeta({
+    super.key,
+    required this.response,
+    required this.isRtl,
+    required this.textSecondary,
+  });
+
+  final AssistantResponse response;
+  final bool isRtl;
+  final Color textSecondary;
+
+  static const _danger = Color(0xFFE0463F);
+
+  @override
+  Widget build(BuildContext context) {
+    final r = response;
+    final chips = <Widget>[];
+    if (r.signInRequired) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.login_rounded,
+        label: isRtl ? 'يلزم تسجيل الدخول' : 'Sign-in required',
+        color: _danger,
+      ));
+    } else if (r.isOffline) {
+      // Distinguish the three offline cases. Only genuinely approved,
+      // citation-backed cached guidance may be labelled verified; an
+      // ordinary connectivity notice and a "no approved source offline"
+      // referral must never look like verified religious guidance.
+      switch (r.offlineStatus) {
+        case OfflineContentStatus.approvedGuidance:
+          chips.add(AssistantMetaChip(
+            icon: Icons.verified_rounded,
+            label:
+                isRtl ? 'إرشاد معتمد دون اتصال' : 'Approved offline guidance',
+            color: Colors.green,
+          ));
+          break;
+        case OfflineContentStatus.noApprovedSourceOffline:
+          chips.add(AssistantMetaChip(
+            icon: Icons.wifi_off_rounded,
+            label: isRtl
+                ? 'غير متاح دون اتصال — لا يوجد مصدر معتمد'
+                : 'Unavailable offline — no approved source',
+            color: Colors.orange,
+          ));
+          break;
+        case OfflineContentStatus.operationalNotice:
+        case null:
+          chips.add(AssistantMetaChip(
+            icon: Icons.wifi_off_rounded,
+            label: isRtl ? 'غير متصل' : 'Offline',
+            color: Colors.orange,
+          ));
+          break;
+      }
+    } else if (r.grounded) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.verified_rounded,
+        label: isRtl ? 'موثّق' : 'Grounded',
+        color: Colors.green,
+      ));
+    }
+    if (r.requiresHumanGuide) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.support_agent_rounded,
+        label: isRtl ? 'راجع مرشداً معتمداً' : 'Consult an authorized guide',
+        color: _danger,
+      ));
+    }
+    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (chips.isNotEmpty)
+            Wrap(spacing: 6, runSpacing: 6, children: chips),
+          if (r.citations.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ...r.citations.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.link_rounded, size: 13, color: textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${c.title} — ${c.authority}',
+                        style: TextStyle(color: textSecondary, fontSize: 11.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A small labeled status pill (e.g. "Grounded", "Offline", "Sign-in
+/// required"). Extracted as a standalone widget for direct widget testing.
+class AssistantMetaChip extends StatelessWidget {
+  const AssistantMetaChip(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
 /// ثلاث نقاط ذهبية تنبض بالتتابع — مؤشّر «يكتب» حيّ بإحساس عصري.
 class _TypingDots extends StatefulWidget {
   const _TypingDots();
@@ -682,9 +957,9 @@ class _TypingDots extends StatefulWidget {
 
 class _TypingDotsState extends State<_TypingDots>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
-        ..repeat();
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1100))
+    ..repeat();
 
   @override
   void dispose() {
@@ -702,7 +977,8 @@ class _TypingDotsState extends State<_TypingDots>
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
             final phase = (_c.value - i * 0.18) % 1.0;
-            final scale = 0.6 + 0.4 * (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
+            final scale =
+                0.6 + 0.4 * (1 - (phase - 0.5).abs() * 2).clamp(0.0, 1.0);
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2.5),
               child: Transform.scale(

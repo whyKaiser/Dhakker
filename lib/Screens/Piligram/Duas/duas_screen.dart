@@ -5,9 +5,9 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../generated/l10n.dart';
-import '../home/models/supplication_model.dart';
-import '../home/models/zone_model.dart';
-import '../home/services/dua_playback_service.dart';
+import '../Home/models/supplication_model.dart';
+import '../Home/models/zone_model.dart';
+import '../Home/services/dua_playback_service.dart';
 import 'services/dua_search_service.dart';
 import 'services/voice_search_service.dart';
 import 'widgets/voice_command_dialog.dart';

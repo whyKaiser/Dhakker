@@ -1,0 +1,69 @@
+{
+  "//": [
+    "Composite indexes required by Dhakker.",
+    "",
+    "The assistant proxy (assistant-proxy/worker.js, queryFirestoreSupplications)",
+    "issues an ARRAY_CONTAINS_ANY query on the language-appropriate tag field",
+    "together with equality filters on isActive and verificationStatus.",
+    "Firestore requires a composite index for that combination, and the query",
+    "FAILS without it. Retrieval failure degrades safely (the assistant returns",
+    "its deterministic 'no approved source' response rather than erroring), so a",
+    "missing index looks like 'the assistant never finds anything' rather than a",
+    "crash — deploy these before expecting grounded answers.",
+    "",
+    "Field order matters: equality filters first, array-contains last.",
+    "",
+    "Deploy with:  firebase deploy --only firestore:indexes"
+  ],
+  "indexes": [
+    {
+      "//": "Arabic-language retrieval by the assistant proxy.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "tagsAr", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "//": "Non-Arabic (default en) retrieval by the assistant proxy.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "tagsEn", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "//": "Admin review queue: list records awaiting verification, newest first.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Admin audit: verified records by zone, most recently verified first.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "zoneId", "order": "ASCENDING" },
+        { "fieldPath": "verifiedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Future knowledge_chunks registry (empty today; see KNOWLEDGE_COLLECTION).",
+      "collectionGroup": "knowledge_chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "language", "order": "ASCENDING" },
+        { "fieldPath": "keywords", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

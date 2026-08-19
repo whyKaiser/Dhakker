@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +33,47 @@ class _AdminSupplicationEditScreenState
   final _textEnController = TextEditingController();
   final _tagsArController = TextEditingController();
   final _tagsEnController = TextEditingController();
+  // ── Approved-source provenance (required for assistant citations) ──────
+  // The assistant may only cite a supplication that carries a named issuing
+  // authority AND verificationStatus == 'verified'. Records without these
+  // stay usable as location duas but are NOT citable by the assistant, so it
+  // can never name an approving body nobody actually vouched for.
+  final _authorityController = TextEditingController();
+  final _sourceUrlController = TextEditingController();
+  final _sourceVersionController = TextEditingController();
+  final _sourceSectionController = TextEditingController();
+  final _reviewNotesController = TextEditingController();
+  String _sourceLanguage = 'ar';
+  bool _isVerifiedSource = false;
+
+  /// Every provenance field required before a record may be marked verified.
+  /// Mirrors the Worker gate (worker.js) and firestore.rules — all three
+  /// enforce the same contract independently; this one is only the earliest
+  /// and friendliest, never the authority.
+  String? _provenanceGapMessage() {
+    if (!_isVerifiedSource) return null;
+    final missing = <String>[];
+    if (_authorityController.text.trim().isEmpty) missing.add('الجهة المُصدِرة');
+    final url = _sourceUrlController.text.trim();
+    if (url.isEmpty || !url.startsWith('https://')) {
+      missing.add('رابط المصدر (https)');
+    }
+    if (_sourceVersionController.text.trim().isEmpty) {
+      missing.add('إصدار/تاريخ المصدر');
+    }
+    if (_sourceSectionController.text.trim().isEmpty) {
+      missing.add('الصفحة/القسم في المصدر');
+    }
+    if (missing.isEmpty) return null;
+    return 'لا يمكن توثيق السجلّ قبل إكمال: ${missing.join('، ')}';
+  }
+
+  /// Stable hash of the reviewed text, so a later edit to the content of a
+  /// verified record is detectable (the stored hash stops matching). Uses
+  /// sha256 over the ar+en bodies.
+  String _contentHash(String ar, String en) {
+    return sha256.convert(utf8.encode('$ar\u0000$en')).toString();
+  }
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
 
@@ -64,6 +109,11 @@ class _AdminSupplicationEditScreenState
     _textEnController.dispose();
     _tagsArController.dispose();
     _tagsEnController.dispose();
+    _authorityController.dispose();
+    _sourceUrlController.dispose();
+    _sourceVersionController.dispose();
+    _sourceSectionController.dispose();
+    _reviewNotesController.dispose();
     _editEntranceController.dispose();
     super.dispose();
   }
@@ -102,6 +152,18 @@ class _AdminSupplicationEditScreenState
 
       _tagsArController.text = tagsAr is List ? tagsAr.join(', ') : '';
       _tagsEnController.text = tagsEn is List ? tagsEn.join(', ') : '';
+
+      _authorityController.text = (data['authority'] ?? '').toString();
+      _sourceUrlController.text = (data['sourceUrl'] ?? '').toString();
+      _sourceVersionController.text = (data['sourceVersion'] ?? '').toString();
+      _sourceSectionController.text = (data['sourceSection'] ?? '').toString();
+      _reviewNotesController.text = (data['reviewNotes'] ?? '').toString();
+      final loadedLang = (data['sourceLanguage'] ?? 'ar').toString().trim();
+      _sourceLanguage = (loadedLang == 'en') ? 'en' : 'ar';
+      // A revoked record is never shown as verified, whatever its status says.
+      final isRevoked = data['revokedAt'] != null;
+      _isVerifiedSource = !isRevoked &&
+          (data['verificationStatus'] ?? '').toString().trim() == 'verified';
 
       _selectedZoneId = (data['zoneId'] ?? '').toString().trim();
       _audioMode = (data['audioMode'] ?? 'tts').toString().trim();
@@ -158,6 +220,15 @@ class _AdminSupplicationEditScreenState
       return;
     }
 
+    // Provenance completeness — a record may not be marked verified until
+    // every required field is present. Also enforced in firestore.rules and
+    // in the Worker retrieval gate; this is just the earliest check.
+    final provenanceGap = _provenanceGapMessage();
+    if (provenanceGap != null) {
+      _showSnack(provenanceGap, isError: true);
+      return;
+    }
+
     if (_audioMode == 'file' &&
         _newAudioBytes == null &&
         (_existingAudioUrl == null || _existingAudioUrl!.isEmpty)) {
@@ -202,6 +273,22 @@ class _AdminSupplicationEditScreenState
         'audioUrl': finalAudioUrl,
         'tagsAr': _splitTags(_tagsArController.text),
         'tagsEn': _splitTags(_tagsEnController.text),
+        'authority': _authorityController.text.trim(),
+        'sourceUrl': _sourceUrlController.text.trim(),
+        'sourceVersion': _sourceVersionController.text.trim(),
+        'sourceSection': _sourceSectionController.text.trim(),
+        'sourceLanguage': _sourceLanguage,
+        'reviewNotes': _reviewNotesController.text.trim(),
+        'verificationStatus': _isVerifiedSource ? 'verified' : 'unverified',
+        // Lifecycle stamps are written only alongside a real verification,
+        // and cleared when verification is withdrawn.
+        'verifiedAt': _isVerifiedSource ? FieldValue.serverTimestamp() : null,
+        'verifiedBy':
+            _isVerifiedSource ? FirebaseAuth.instance.currentUser?.uid : null,
+        'contentHash': _isVerifiedSource
+            ? _contentHash(
+                _textArController.text.trim(), _textEnController.text.trim())
+            : null,
         'languageCodes': ['ar', 'en'],
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -372,6 +459,69 @@ class _AdminSupplicationEditScreenState
               controller: _tagsEnController,
               label: s.adminSupplicationTagsEn,
               hint: s.adminSupplicationTagsEnHint,
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _authorityController,
+              label: 'الجهة المُصدِرة / المعتمِدة (Issuing authority)',
+              hint: 'مثال: الرئاسة العامة لشؤون المسجد الحرام',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceUrlController,
+              label: 'رابط المصدر الرسمي (Source URL)',
+              hint: 'https://…',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceVersionController,
+              label: 'إصدار/تاريخ المصدر (Version)',
+              hint: '2026-01',
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _sourceSectionController,
+              label: 'الصفحة / القسم في المصدر (Section or page)',
+              hint: 'مثال: ص ٤٢، الفصل الثالث',
+            ),
+            const SizedBox(height: 12),
+            _CardBox(
+              child: Row(
+                children: [
+                  const Text('لغة المصدر الرسمي',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  DropdownButton<String>(
+                    value: _sourceLanguage,
+                    items: const [
+                      DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => _sourceLanguage = v);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _AppField(
+              controller: _reviewNotesController,
+              label: 'ملاحظات المراجعة (Review notes)',
+              hint: 'كيف طوبق النص على المصدر الرسمي',
+            ),
+            const SizedBox(height: 12),
+            _SwitchCard(
+              title: 'مصدر معتمد وموثّق',
+              subtitle: _isVerifiedSource
+                  ? 'موثّق — يجوز للمساعد الذكي الاستشهاد به مع ذكر الجهة'
+                  : 'غير موثّق — يظهر كدعاء للموقع فقط، ولا يستشهد به المساعد',
+              value: _isVerifiedSource,
+              onChanged: (value) {
+                setState(() {
+                  _isVerifiedSource = value;
+                });
+              },
             ),
             const SizedBox(height: 12),
             _SwitchCard(
