@@ -1,30 +1,41 @@
 {
   "//": [
-    "مصفوفة تغطية مقترحة — 5 عناصر لكل منطقة.",
-    "قاعدة صارمة: العناصر المعلّمة general_dua/general_dhikr مقترحة للعرض فقط،",
-    "والمصدر لا ينص على تخصيصها بهذا الموضع. لا يجوز عرضها للحاج بصيغة",
-    "«الدعاء الوارد في هذا المكان». وحدها specific_text يربطها المصدر بموضع/نُسك.",
+    "مصفوفة تغطية — 5 عناصر لكل منطقة (19 منطقة = 95 خانة عرض).",
+    "تنبيه مهم: 95 خانة لا تعني 95 دعاءً مختلفًا. الأدعية العامة مُعاد استخدامها",
+    "عبر عدة مناطق، وهذا مقصود ومقبول، بشرط أن تُعرض للحاج بوسم «دعاء عام»",
+    "ولا تُنسب إلى المكان. الحقل basis يوضّح أساس الإدراج لكل عنصر.",
+    "وحدها العناصر basis=specific يربطها المصدر بالموضع.",
+    "basis=mosque_entry نص عام لكل المساجد بنص المصدر نفسه.",
     "جميع السجلات unverified ولا يستشهد بها المساعد قبل التوثيق اليدوي."
   ],
   "totalZones": 19,
   "itemsPerZone": 5,
-  "sourceHasNoSpecificTextFor": [
-    "الكعبة المشرفة",
-    "مقام إبراهيم",
-    "بئر زمزم",
-    "حجر إسماعيل (الحطيم)",
-    "المسعى (ممر السعي)",
-    "منى",
-    "جمرة العقبة الكبرى",
-    "الجمرة الوسطى",
-    "الجمرة الصغرى (الأولى)",
-    "مزدلفة",
-    "المشعر الحرام",
-    "عرفات",
-    "جبل الرحمة"
+  "totalSlots": 95,
+  "distinctDuasUsed": 57,
+  "reuseSummary": {
+    "reusedAcrossZones": 30,
+    "maxReuseCount": 8,
+    "note": "إعادة الاستخدام مقصورة على الأدعية العامة فقط؛ لم يُعَد استخدام أي نص خاص بمكان في مكان آخر."
+  },
+  "zonesWithNoSourceSpecificText": [
+    "kaaba",
+    "maqam_ibrahim",
+    "zamzam",
+    "hijr_ismail",
+    "masaa",
+    "mina",
+    "jamrat_aqabah",
+    "jamrat_wusta",
+    "jamrat_sughra",
+    "muzdalifah",
+    "mashar_haram",
+    "arafat",
+    "jabal_rahmah",
+    "masjid_namirah"
   ],
   "zones": [
     {
+      "zoneKey": "mataf",
       "zoneNameAr": "المطاف (منطقة الطواف)",
       "items": [
         {
@@ -32,39 +43,45 @@
           "contentKind": "specific_text",
           "title": "ما يقال بين الركن اليماني والحجر الأسود",
           "printedPage": 69,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
           "duaId": "moia-mukhtasar-1446-tawaf-touching",
           "contentKind": "procedural_guidance",
           "title": "ما يُستلم في الطواف",
           "printedPage": 69,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-umrah-entering-masjid",
+          "contentKind": "specific_text",
+          "title": "دعاء دخول المسجد",
+          "printedPage": 64,
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-001",
           "contentKind": "general_dua",
           "title": "دعاء عام ([البقرة: 201])",
           "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-002",
           "contentKind": "general_dua",
           "title": "دعاء عام ([البقرة: 286])",
           "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-003",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([آل عمران: 8])",
-          "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "kaaba",
       "zoneNameAr": "الكعبة المشرفة",
       "items": [
         {
@@ -72,39 +89,45 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-003",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([آل عمران: 8])",
+          "printedPage": 94,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-004",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 16])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-005",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 38])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-006",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 147])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-007",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([آل عمران: 193، 194])",
-          "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "maqam_ibrahim",
       "zoneNameAr": "مقام إبراهيم",
       "items": [
         {
@@ -112,39 +135,45 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-007",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([آل عمران: 193، 194])",
+          "printedPage": 95,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-008",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الأعراف: 23])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-009",
           "contentKind": "general_dhikr",
           "title": "ذكر عام ([التوبة: 129])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-010",
           "contentKind": "general_dua",
           "title": "دعاء عام ([إبراهيم: 35])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-011",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([إبراهيم: 40، 41])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "zamzam",
       "zoneNameAr": "بئر زمزم",
       "items": [
         {
@@ -152,39 +181,45 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-011",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([إبراهيم: 40، 41])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-012",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الكهف: 10])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-013",
           "contentKind": "general_dua",
           "title": "دعاء عام ([طه: 25، 26])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-014",
           "contentKind": "general_dua",
           "title": "دعاء عام ([طه: 114])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-015",
-          "contentKind": "general_dhikr",
-          "title": "ذكر عام ([الأنبياء: 87])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "hajar_aswad",
       "zoneNameAr": "الحجر الأسود",
       "items": [
         {
@@ -192,39 +227,45 @@
           "contentKind": "specific_text",
           "title": "التكبير عند الحجر الأسود",
           "printedPage": 69,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
           "duaId": "moia-mukhtasar-1446-tawaf-touching",
           "contentKind": "procedural_guidance",
           "title": "ما يُستلم في الطواف",
           "printedPage": 69,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-umrah-entering-masjid",
+          "contentKind": "specific_text",
+          "title": "دعاء دخول المسجد",
+          "printedPage": 64,
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-015",
+          "contentKind": "general_dhikr",
+          "title": "ذكر عام ([الأنبياء: 87])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-016",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الأنبياء: 89])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-017",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([المؤمنون: 97، 98])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-018",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([الفرقان: 65، 66])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "hijr_ismail",
       "zoneNameAr": "حجر إسماعيل (الحطيم)",
       "items": [
         {
@@ -232,39 +273,45 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-017",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([المؤمنون: 97، 98])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-018",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([الفرقان: 65، 66])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-019",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الفرقان: 74])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-020",
           "contentKind": "general_dua",
           "title": "دعاء عام ([النمل: 19])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-021",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([الأحقاف: 15])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-022",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([الحشر: 10])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "masaa",
       "zoneNameAr": "المسعى (ممر السعي)",
       "items": [
         {
@@ -272,359 +319,413 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-021",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([الأحقاف: 15])",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-022",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([الحشر: 10])",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-023",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-024",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "mina",
+      "zoneNameAr": "منى",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-025",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-026",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "منى",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-027",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-028",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-029",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "jamrat_aqabah",
+      "zoneNameAr": "جمرة العقبة الكبرى",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-030",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-031",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "جمرة العقبة الكبرى",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-032",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-033",
           "contentKind": "general_dhikr",
           "title": "ذكر عام (ذكر مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-034",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 99,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "jamrat_wusta",
+      "zoneNameAr": "الجمرة الوسطى",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-035",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 99,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-036",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 99,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "الجمرة الوسطى",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-037",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 99,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-038",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 99,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-039",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 100,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "jamrat_sughra",
+      "zoneNameAr": "الجمرة الصغرى (الأولى)",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-040",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 100,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-041",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 100,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "الجمرة الصغرى (الأولى)",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-042",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 100,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-043",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-044",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "muzdalifah",
+      "zoneNameAr": "مزدلفة",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-045",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-046",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "مزدلفة",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-047",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-048",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء القنوت المأثور)",
           "printedPage": 101,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-049",
           "contentKind": "general_dhikr",
           "title": "ذكر عام (ذكر مأثور)",
           "printedPage": 102,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "mashar_haram",
+      "zoneNameAr": "المشعر الحرام",
+      "items": [
+        {
+          "duaId": "moia-mukhtasar-1446-general-050",
+          "contentKind": "general_dua",
+          "title": "دعاء عام (مأثور)",
+          "printedPage": 99,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-001",
           "contentKind": "general_dua",
           "title": "دعاء عام ([البقرة: 201])",
           "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-002",
           "contentKind": "general_dua",
           "title": "دعاء عام ([البقرة: 286])",
           "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "المشعر الحرام",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-003",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 8])",
           "printedPage": 94,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-004",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 16])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "arafat",
+      "zoneNameAr": "عرفات",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-005",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 38])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-006",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 147])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-007",
           "contentKind": "general_dua",
           "title": "دعاء عام ([آل عمران: 193، 194])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "عرفات",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-008",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الأعراف: 23])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-009",
           "contentKind": "general_dhikr",
           "title": "ذكر عام ([التوبة: 129])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        }
+      ]
+    },
+    {
+      "zoneKey": "jabal_rahmah",
+      "zoneNameAr": "جبل الرحمة",
+      "items": [
         {
           "duaId": "moia-mukhtasar-1446-general-010",
           "contentKind": "general_dua",
           "title": "دعاء عام ([إبراهيم: 35])",
           "printedPage": 95,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-011",
           "contentKind": "general_dua",
           "title": "دعاء عام ([إبراهيم: 40، 41])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-012",
           "contentKind": "general_dua",
           "title": "دعاء عام ([الكهف: 10])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        }
-      ]
-    },
-    {
-      "zoneNameAr": "جبل الرحمة",
-      "items": [
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
         {
           "duaId": "moia-mukhtasar-1446-general-013",
           "contentKind": "general_dua",
           "title": "دعاء عام ([طه: 25، 26])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
           "duaId": "moia-mukhtasar-1446-general-014",
           "contentKind": "general_dua",
           "title": "دعاء عام ([طه: 114])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-015",
-          "contentKind": "general_dhikr",
-          "title": "ذكر عام ([الأنبياء: 87])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-016",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([الأنبياء: 89])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-017",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([المؤمنون: 97، 98])",
-          "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "masjid_namirah",
       "zoneNameAr": "مسجد نمرة",
       "items": [
         {
@@ -632,39 +733,45 @@
           "contentKind": "specific_text",
           "title": "دعاء دخول المسجد",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر — يُعرض كدخول مسجد لا كخصوصية للموضع"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
         },
         {
           "duaId": "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
           "contentKind": "specific_text",
           "title": "حديث دخول المسجد والخروج منه",
           "printedPage": 64,
-          "assignmentBasis": "عام لكل المساجد بنص المصدر — يُعرض كدخول مسجد لا كخصوصية للموضع"
+          "basis": "mosque_entry",
+          "note": "نص دخول المسجد — ينص المصدر أنه عام لكل المساجد، وليس خاصًّا بهذا الموضع"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-018",
-          "contentKind": "general_dua",
-          "title": "دعاء عام ([الفرقان: 65، 66])",
+          "duaId": "moia-mukhtasar-1446-general-015",
+          "contentKind": "general_dhikr",
+          "title": "ذكر عام ([الأنبياء: 87])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-019",
+          "duaId": "moia-mukhtasar-1446-general-016",
           "contentKind": "general_dua",
-          "title": "دعاء عام ([الفرقان: 74])",
+          "title": "دعاء عام ([الأنبياء: 89])",
           "printedPage": 96,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-020",
+          "duaId": "moia-mukhtasar-1446-general-017",
           "contentKind": "general_dua",
-          "title": "دعاء عام ([النمل: 19])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "title": "دعاء عام ([المؤمنون: 97، 98])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "miqat_dhul_hulayfah",
       "zoneNameAr": "ذو الحليفة (ميقات أهل المدينة)",
       "items": [
         {
@@ -672,39 +779,45 @@
           "contentKind": "specific_text",
           "title": "التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
           "duaId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
           "contentKind": "specific_text",
           "title": "الزيادة في التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-021",
+          "duaId": "moia-mukhtasar-1446-general-018",
           "contentKind": "general_dua",
-          "title": "دعاء عام ([الأحقاف: 15])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "title": "دعاء عام ([الفرقان: 65، 66])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-022",
+          "duaId": "moia-mukhtasar-1446-general-019",
           "contentKind": "general_dua",
-          "title": "دعاء عام ([الحشر: 10])",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "title": "دعاء عام ([الفرقان: 74])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-023",
+          "duaId": "moia-mukhtasar-1446-general-020",
           "contentKind": "general_dua",
-          "title": "دعاء عام (دعاء مأثور)",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "title": "دعاء عام ([النمل: 19])",
+          "printedPage": 96,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "miqat_yalamlam",
       "zoneNameAr": "يلملم (ميقات أهل اليمن)",
       "items": [
         {
@@ -712,39 +825,45 @@
           "contentKind": "specific_text",
           "title": "التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
           "duaId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
           "contentKind": "specific_text",
           "title": "الزيادة في التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-024",
+          "duaId": "moia-mukhtasar-1446-general-021",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([الأحقاف: 15])",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-022",
+          "contentKind": "general_dua",
+          "title": "دعاء عام ([الحشر: 10])",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-023",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-025",
-          "contentKind": "general_dua",
-          "title": "دعاء عام (دعاء مأثور)",
-          "printedPage": 97,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-026",
-          "contentKind": "general_dua",
-          "title": "دعاء عام (دعاء مأثور)",
-          "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     },
     {
+      "zoneKey": "miqat_qarn_manazil",
       "zoneNameAr": "قرن المنازل (ميقات أهل نجد)",
       "items": [
         {
@@ -752,35 +871,40 @@
           "contentKind": "specific_text",
           "title": "التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
           "duaId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
           "contentKind": "specific_text",
           "title": "الزيادة في التلبية",
           "printedPage": 59,
-          "assignmentBasis": "المصدر يربطه بهذا الموضع"
+          "basis": "specific",
+          "note": "المصدر يربط هذا النص بهذا الموضع/النُّسك"
         },
         {
-          "duaId": "moia-mukhtasar-1446-general-027",
+          "duaId": "moia-mukhtasar-1446-general-024",
+          "contentKind": "general_dua",
+          "title": "دعاء عام (دعاء مأثور)",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-025",
+          "contentKind": "general_dua",
+          "title": "دعاء عام (دعاء مأثور)",
+          "printedPage": 97,
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
+        },
+        {
+          "duaId": "moia-mukhtasar-1446-general-026",
           "contentKind": "general_dua",
           "title": "دعاء عام (دعاء مأثور)",
           "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-028",
-          "contentKind": "general_dua",
-          "title": "دعاء عام (دعاء مأثور)",
-          "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
-        },
-        {
-          "duaId": "moia-mukhtasar-1446-general-029",
-          "contentKind": "general_dua",
-          "title": "دعاء عام (دعاء مأثور)",
-          "printedPage": 98,
-          "assignmentBasis": "دعاء/ذكر عام — غير مخصّص لهذا الموضع في المصدر"
+          "basis": "general",
+          "note": "دعاء/ذكر عام — المصدر لا يخصّه بهذا الموضع؛ يُعرض كاختيار عام فقط"
         }
       ]
     }

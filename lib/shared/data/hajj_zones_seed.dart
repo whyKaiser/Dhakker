@@ -9,6 +9,7 @@ class HajjZonesSeed {
     // المسجد الحرام — Masjid Al-Haram
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'mataf',
       'nameAr': 'المطاف (منطقة الطواف)',
       'nameEn': 'Mataf – Tawaf Area',
       'type': 'circle',
@@ -19,6 +20,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'kaaba',
       'nameAr': 'الكعبة المشرفة',
       'nameEn': 'Kaaba',
       'type': 'circle',
@@ -29,6 +31,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'maqam_ibrahim',
       'nameAr': 'مقام إبراهيم',
       'nameEn': 'Maqam Ibrahim',
       'type': 'circle',
@@ -39,6 +42,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'zamzam',
       'nameAr': 'بئر زمزم',
       'nameEn': 'Zamzam Well',
       'type': 'circle',
@@ -49,6 +53,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'hajar_aswad',
       'nameAr': 'الحجر الأسود',
       'nameEn': 'Hajar Al-Aswad',
       'type': 'circle',
@@ -59,6 +64,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'hijr_ismail',
       'nameAr': 'حجر إسماعيل (الحطيم)',
       'nameEn': 'Hijr Ismail (Al-Hatim)',
       'type': 'circle',
@@ -73,6 +79,7 @@ class HajjZonesSeed {
     // ملاحظة: الصفا والمروة مُضافتان يدوياً كـ polygon في Firestore
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'masaa',
       'nameAr': 'المسعى (ممر السعي)',
       'nameEn': "Mas'a – Sa'i Corridor",
       'type': 'polygon',
@@ -92,6 +99,7 @@ class HajjZonesSeed {
     // مِنى — Mina
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'mina',
       'nameAr': 'منى',
       'nameEn': 'Mina',
       'type': 'polygon',
@@ -111,6 +119,7 @@ class HajjZonesSeed {
     // الجمرات — Jamarat
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'jamrat_aqabah',
       'nameAr': 'جمرة العقبة الكبرى',
       'nameEn': "Jamrat Al-Aqabah (Al-Kubra)",
       'type': 'circle',
@@ -121,6 +130,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'jamrat_wusta',
       'nameAr': 'الجمرة الوسطى',
       'nameEn': 'Jamrat Al-Wusta (Middle)',
       'type': 'circle',
@@ -131,6 +141,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'jamrat_sughra',
       'nameAr': 'الجمرة الصغرى (الأولى)',
       'nameEn': "Jamrat Al-Ula (Al-Sughra)",
       'type': 'circle',
@@ -144,6 +155,7 @@ class HajjZonesSeed {
     // مُزدَلِفة — Muzdalifah
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'muzdalifah',
       'nameAr': 'مزدلفة',
       'nameEn': 'Muzdalifah',
       'type': 'polygon',
@@ -160,6 +172,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'mashar_haram',
       'nameAr': 'المشعر الحرام',
       'nameEn': "Al-Mash'ar Al-Haram (Muzdalifah Mosque)",
       'type': 'circle',
@@ -173,6 +186,7 @@ class HajjZonesSeed {
     // عَرَفَة — Arafat
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'arafat',
       'nameAr': 'عرفات',
       'nameEn': 'Arafat',
       'type': 'polygon',
@@ -189,6 +203,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'jabal_rahmah',
       'nameAr': 'جبل الرحمة',
       'nameEn': "Jabal Al-Rahmah (Mount Arafah)",
       'type': 'circle',
@@ -199,6 +214,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'masjid_namirah',
       'nameAr': 'مسجد نمرة',
       'nameEn': 'Namirah Mosque',
       'type': 'circle',
@@ -212,6 +228,7 @@ class HajjZonesSeed {
     // مواقيت الإحرام — Miqat Zones
     // ─────────────────────────────────────────────
     {
+      'zoneKey': 'miqat_dhul_hulayfah',
       'nameAr': 'ذو الحليفة (ميقات أهل المدينة)',
       'nameEn': "Dhul Hulayfah – Abyar Ali (Madinah Miqat)",
       'type': 'circle',
@@ -222,6 +239,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'miqat_yalamlam',
       'nameAr': 'يلملم (ميقات أهل اليمن)',
       'nameEn': 'Yalamlam (Yemen Miqat)',
       'type': 'circle',
@@ -232,6 +250,7 @@ class HajjZonesSeed {
       'updatedAt': FieldValue.serverTimestamp(),
     },
     {
+      'zoneKey': 'miqat_qarn_manazil',
       'nameAr': 'قرن المنازل (ميقات أهل نجد)',
       'nameEn': 'Qarn Al-Manazil (Najd Miqat)',
       'type': 'circle',
