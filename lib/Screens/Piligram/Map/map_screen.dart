@@ -16,8 +16,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../generated/l10n.dart';
 import '../../../../services/group_service.dart';
 import '../../../../shared/network/local/cash_helper.dart';
-import '../home/models/zone_model.dart';
-import '../home/services/zone_detection_service.dart';
+import '../Home/models/zone_model.dart';
+import '../Home/services/zone_detection_service.dart';
 import '../../../bloc/cubit.dart';
 import '../../../bloc/states.dart';
 

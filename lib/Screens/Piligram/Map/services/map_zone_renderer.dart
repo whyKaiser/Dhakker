@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../home/models/zone_model.dart';
+import '../../Home/models/zone_model.dart';
 
 class MapZoneRenderer {
   final Color baseGold;

@@ -45,3 +45,6 @@ tools/
 
 CLAUDE.md
 .claude/
+
+# Node dependencies (Firestore rules tests, Worker tooling)
+node_modules/

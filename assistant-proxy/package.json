@@ -1,0 +1,10 @@
+{
+  "name": "dhakker-assistant-proxy",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Cloudflare Worker: secured Dhakker assistant proxy (auth, rate limit, structured JSON contract).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test worker.test.mjs"
+  }
+}

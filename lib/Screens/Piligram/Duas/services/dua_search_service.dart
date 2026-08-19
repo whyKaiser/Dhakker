@@ -1,5 +1,5 @@
-import '../../home/models/supplication_model.dart';
-import '../../home/models/zone_model.dart';
+import '../../Home/models/supplication_model.dart';
+import '../../Home/models/zone_model.dart';
 
 class DuaSearchItem {
   final SupplicationModel dua;
