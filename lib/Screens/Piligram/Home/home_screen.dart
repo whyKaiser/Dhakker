@@ -153,10 +153,12 @@ class _HomeScreenState extends State<HomeScreen>
 
             String statusText() {
               if (_controller.isLoading) return s.homeStatusLoading;
-              if (!_controller.autoLocationEnabled)
+              if (!_controller.autoLocationEnabled) {
                 return s.homeStatusAutoLocationDisabled;
-              if (_controller.errorMessage == 'location_unavailable')
+              }
+              if (_controller.errorMessage == 'location_unavailable') {
                 return s.homeStatusLocationUnavailable;
+              }
               if (!_controller.hasDetectedZone) return s.homeStatusNoZone;
               return s.homeCurrentLocation;
             }

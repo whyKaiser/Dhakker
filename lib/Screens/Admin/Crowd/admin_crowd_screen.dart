@@ -137,8 +137,9 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
                     final at = data['currentZoneAt'];
                     // نستبعد التواجد القديم (أو بلا ختم زمني = غير موثوق).
                     if (at is! Timestamp) continue;
-                    if (now.difference(at.toDate()) > _freshnessWindow)
+                    if (now.difference(at.toDate()) > _freshnessWindow) {
                       continue;
+                    }
 
                     counts[zone] = (counts[zone] ?? 0) + 1;
                     totalPresent++;

@@ -812,8 +812,9 @@ class AppCubit extends Cubit<AppStates> {
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final n = userDoc.data()?['fullName'];
-        if (n != null && n.toString().trim().isNotEmpty)
+        if (n != null && n.toString().trim().isNotEmpty) {
           userName = n.toString();
+        }
       }
     } catch (_) {}
 
