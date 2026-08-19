@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
 class ThemeController {
-  static final ValueNotifier<ThemeMode> themeMode =
-      ValueNotifier(ThemeMode.dark);
+  static final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.dark);
 
   static void toggle() {
-    themeMode.value =
-        themeMode.value == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    themeMode.value = themeMode.value == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
   }
 
   static void setTheme(bool isDark) {

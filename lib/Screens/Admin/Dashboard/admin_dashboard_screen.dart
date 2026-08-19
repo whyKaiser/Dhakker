@@ -46,10 +46,7 @@ class AdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 4),
 
               // --- 1. إحصائيات المنظومة الذكية (SOS & Crowd) ---
-              _SectionTitle(
-                  title: isAr
-                      ? "إحصائيات المنظومة الذكية"
-                      : "Smart System Analytics"),
+              _SectionTitle(title: isAr ? "إحصائيات المنظومة الذكية" : "Smart System Analytics"),
               const SizedBox(height: 12),
 
               Row(
@@ -59,9 +56,7 @@ class AdminDashboardScreen extends StatelessWidget {
                       title: isAr ? "إجمالي الحجاج" : "Total Pilgrims",
                       icon: Icons.people_alt_rounded,
                       accent: Colors.blue,
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .snapshots(),
+                      stream: FirebaseFirestore.instance.collection('users').snapshots(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -70,22 +65,17 @@ class AdminDashboardScreen extends StatelessWidget {
                       title: isAr ? "نداءات SOS" : "SOS Alerts",
                       icon: Icons.warning_amber_rounded,
                       accent: Colors.redAccent,
-                      stream: FirebaseFirestore.instance
-                          .collection('sos_requests')
-                          .where('status', isEqualTo: 'active')
-                          .snapshots(),
+                      stream: FirebaseFirestore.instance.collection('sos_requests').where('status', isEqualTo: 'active').snapshots(),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               _CountCard(
-                title:
-                    isAr ? "المتواجدون في النطاقات الآن" : "Currently in Zones",
+                title: isAr ? "المتواجدون في النطاقات الآن" : "Currently in Zones",
                 icon: Icons.mosque_rounded,
                 accent: DhakkerColors.gold,
-                stream:
-                    FirebaseFirestore.instance.collection('users').snapshots(),
+                stream: FirebaseFirestore.instance.collection('users').snapshots(),
                 // تواجد حيّ فقط: نطاق غير فارغ + ختم زمني خلال آخر ٥ دقائق،
                 // وإلا تُحسب وثائق حجّاج أغلقوا التطبيق داخل النطاق قبل ساعات.
                 countWhere: (data) {
@@ -105,9 +95,7 @@ class AdminDashboardScreen extends StatelessWidget {
                       title: isAr ? "نشطون آخر ساعة" : "Active (1h)",
                       icon: Icons.online_prediction_rounded,
                       accent: const Color(0xFF38C793),
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .snapshots(),
+                      stream: FirebaseFirestore.instance.collection('users').snapshots(),
                       countWhere: (data) {
                         final at = data['currentZoneAt'];
                         if (at is! Timestamp) return false;
@@ -134,17 +122,14 @@ class AdminDashboardScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // --- إشعار جماعي ---
-              _SectionTitle(
-                  title:
-                      isAr ? "إشعار جماعي للحجاج" : "Broadcast Notification"),
+              _SectionTitle(title: isAr ? "إشعار جماعي للحجاج" : "Broadcast Notification"),
               const SizedBox(height: 12),
               _BroadcastButton(isAr: isAr, isDark: isDark),
 
               const SizedBox(height: 24),
 
               // --- 2. ميزة تحليلات الأدعية الأكثر تشغيلاً ---
-              _SectionTitle(
-                  title: isAr ? "الأدعية الأكثر تشغيلاً" : "Most Played Duas"),
+              _SectionTitle(title: isAr ? "الأدعية الأكثر تشغيلاً" : "Most Played Duas"),
               const SizedBox(height: 12),
 
               _LatestPanel(
@@ -156,18 +141,14 @@ class AdminDashboardScreen extends StatelessWidget {
                     .limit(3),
                 itemBuilder: (data) {
                   final titleMap = (data['title'] is Map) ? data['title'] : {};
-                  final title = isAr
-                      ? (titleMap['ar'] ?? 'دعاء')
-                      : (titleMap['en'] ?? 'Dua');
+                  final title = isAr ? (titleMap['ar'] ?? 'دعاء') : (titleMap['en'] ?? 'Dua');
                   final count = data['usage_count'] ?? 0;
 
                   return _OpenContainerTileWrapper(
                     duaId: (data['duaId'] ?? '').toString(),
                     child: _LatestTile(
                       title: title.toString(),
-                      subtitle: isAr
-                          ? "تم التشغيل $count مرة"
-                          : "Played $count times",
+                      subtitle: isAr ? "تم التشغيل $count مرة" : "Played $count times",
                       isActive: true,
                     ),
                   );
@@ -192,11 +173,8 @@ class AdminDashboardScreen extends StatelessWidget {
                         child: _CountCard(
                           title: s.adminDashTotalZones,
                           icon: Icons.location_on_rounded,
-                          accent:
-                              isDark ? DhakkerColors.gold : DhakkerColors.gold2,
-                          stream: FirebaseFirestore.instance
-                              .collection('zones')
-                              .snapshots(),
+                          accent: isDark ? DhakkerColors.gold : DhakkerColors.gold2,
+                          stream: FirebaseFirestore.instance.collection('zones').snapshots(),
                         ),
                       ),
                       SizedBox(width: gap),
@@ -204,11 +182,8 @@ class AdminDashboardScreen extends StatelessWidget {
                         child: _CountCard(
                           title: s.adminDashTotalSupplications,
                           icon: Icons.menu_book_rounded,
-                          accent:
-                              isDark ? DhakkerColors.gold : DhakkerColors.gold2,
-                          stream: FirebaseFirestore.instance
-                              .collection('supplications')
-                              .snapshots(),
+                          accent: isDark ? DhakkerColors.gold : DhakkerColors.gold2,
+                          stream: FirebaseFirestore.instance.collection('supplications').snapshots(),
                         ),
                       ),
                     ],
@@ -241,9 +216,7 @@ class AdminDashboardScreen extends StatelessWidget {
                   return _OpenContainerZoneWrapper(
                     zoneId: (data['zoneId'] ?? '').toString(),
                     child: _LatestTile(
-                      title: name.toString().trim().isEmpty
-                          ? '—'
-                          : name.toString(),
+                      title: name.toString().trim().isEmpty ? '—' : name.toString(),
                       subtitle: type.isEmpty ? '—' : type,
                       isActive: isActive,
                     ),
@@ -255,8 +228,7 @@ class AdminDashboardScreen extends StatelessWidget {
               const _LatestSupplicationsPanel(),
 
               const SizedBox(height: 28),
-              _SectionTitle(
-                  title: isAr ? 'إعداد مناطق الحج' : 'Hajj Zones Setup'),
+              _SectionTitle(title: isAr ? 'إعداد مناطق الحج' : 'Hajj Zones Setup'),
               const SizedBox(height: 12),
               const _SeedZonesButton(),
             ],
@@ -320,20 +292,17 @@ class _SeedZonesButtonState extends State<_SeedZonesButton> {
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
             : const Icon(Icons.download_rounded, color: Colors.white),
         label: Text(
           isAr ? 'تحميل مناطق الحج الافتراضية' : 'Initialize Hajj Zones',
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: DhakkerColors.gold,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -370,12 +339,10 @@ Future<void> _exportCsv(BuildContext context, bool isAr) async {
     }
 
     final dir = await getTemporaryDirectory();
-    final file = File(
-        '${dir.path}/dhakker_report_${DateTime.now().millisecondsSinceEpoch}.csv');
+    final file = File('${dir.path}/dhakker_report_${DateTime.now().millisecondsSinceEpoch}.csv');
     await file.writeAsString('﻿${rows.join('\n')}', encoding: utf8);
 
-    await Share.shareXFiles([XFile(file.path)],
-        text: isAr ? 'تقرير ذكّر' : 'Dhakker Report');
+    await Share.shareXFiles([XFile(file.path)], text: isAr ? 'تقرير ذكّر' : 'Dhakker Report');
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -503,24 +470,23 @@ class _CountCard extends StatelessWidget {
                       child: loading
                           ? const _SkeletonBar()
                           : TweenAnimationBuilder<double>(
-                              // إضافة عداد رقمي تصاعدي ذكي للإحصائيات الحية لإبهار اللجنة
-                              tween: Tween<double>(
-                                  begin: 0, end: count.toDouble()),
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, value, child) {
-                                return Text(
-                                  '${value.toInt()}',
-                                  key: ValueKey(count),
-                                  style: TextStyle(
-                                    color: text,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.0,
-                                  ),
-                                );
-                              },
+                        // إضافة عداد رقمي تصاعدي ذكي للإحصائيات الحية لإبهار اللجنة
+                        tween: Tween<double>(begin: 0, end: count.toDouble()),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Text(
+                            '${value.toInt()}',
+                            key: ValueKey(count),
+                            style: TextStyle(
+                              color: text,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              height: 1.0,
                             ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -614,13 +580,11 @@ class _LatestSupplicationsPanel extends StatelessWidget {
               }
 
               final zoneIds = <String>{
-                for (final d in docs)
-                  (d.data()['zoneId'] ?? '').toString().trim()
+                for (final d in docs) (d.data()['zoneId'] ?? '').toString().trim()
               }..removeWhere((e) => e.isEmpty);
 
               return FutureBuilder<Map<String, String>>(
-                future:
-                    _loadZoneNames(context, zoneIds.toList(growable: false)),
+                future: _loadZoneNames(context, zoneIds.toList(growable: false)),
                 builder: (context, zonesSnap) {
                   final zoneNameById = zonesSnap.data ?? {};
 
@@ -628,27 +592,18 @@ class _LatestSupplicationsPanel extends StatelessWidget {
                     children: docs.map((d) {
                       final data = d.data();
 
-                      final langCode =
-                          Localizations.localeOf(context).languageCode;
+                      final langCode = Localizations.localeOf(context).languageCode;
                       final isAr = langCode == 'ar';
 
-                      final titleMap =
-                          (data['title'] is Map) ? (data['title'] as Map) : {};
+                      final titleMap = (data['title'] is Map) ? (data['title'] as Map) : {};
                       final title = isAr
-                          ? (titleMap['ar'] ?? titleMap['en'] ?? '')
-                              .toString()
-                              .trim()
-                          : (titleMap['en'] ?? titleMap['ar'] ?? '')
-                              .toString()
-                              .trim();
+                          ? (titleMap['ar'] ?? titleMap['en'] ?? '').toString().trim()
+                          : (titleMap['en'] ?? titleMap['ar'] ?? '').toString().trim();
 
                       final zoneId = (data['zoneId'] ?? '').toString().trim();
-                      final zoneName = zoneId.isEmpty
-                          ? '—'
-                          : (zoneNameById[zoneId] ?? zoneId);
+                      final zoneName = zoneId.isEmpty ? '—' : (zoneNameById[zoneId] ?? zoneId);
 
-                      final audioMode =
-                          (data['audioMode'] ?? '').toString().trim();
+                      final audioMode = (data['audioMode'] ?? '').toString().trim();
                       final isActive = data['isActive'] == true;
 
                       return _OpenContainerTileWrapper(
@@ -671,17 +626,14 @@ class _LatestSupplicationsPanel extends StatelessWidget {
     );
   }
 
-  Future<Map<String, String>> _loadZoneNames(
-      BuildContext context, List<String> zoneIds) async {
+  Future<Map<String, String>> _loadZoneNames(BuildContext context, List<String> zoneIds) async {
     if (zoneIds.isEmpty) return {};
 
     final langCode = Localizations.localeOf(context).languageCode;
     final isAr = langCode == 'ar';
 
     final firestore = FirebaseFirestore.instance;
-    final futures = zoneIds
-        .map((id) => firestore.collection('zones').doc(id).get())
-        .toList();
+    final futures = zoneIds.map((id) => firestore.collection('zones').doc(id).get()).toList();
     final snaps = await Future.wait(futures);
 
     final map = <String, String>{};
@@ -719,8 +671,7 @@ class _LatestTile2 extends StatelessWidget {
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
-    final dotColor =
-        isActive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+    final dotColor = isActive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -914,8 +865,7 @@ class _LatestTile extends StatelessWidget {
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final accent = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
-    final dotColor =
-        isActive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+    final dotColor = isActive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -988,8 +938,7 @@ class _SkeletonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base =
-        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
+    final base = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1061,8 +1010,7 @@ class _OpenContainerTileWrapper extends StatelessWidget {
       transitionType: ContainerTransitionType.fadeThrough,
       closedColor: Colors.transparent,
       closedElevation: 0,
-      closedShape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       closedBuilder: (context, action) {
         return _HapticScaleWrapper(
           onTap: () {
@@ -1100,8 +1048,7 @@ class _OpenContainerZoneWrapper extends StatelessWidget {
       transitionType: ContainerTransitionType.fadeThrough,
       closedColor: Colors.transparent,
       closedElevation: 0,
-      closedShape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       closedBuilder: (context, action) {
         return _HapticScaleWrapper(
           onTap: () {
@@ -1218,8 +1165,7 @@ class _BroadcastButtonState extends State<_BroadcastButton> {
   Widget build(BuildContext context) {
     final card = widget.isDark ? DhakkerColors.card : DhakkerColors.lightCard;
     final textColor = widget.isDark ? Colors.white : DhakkerColors.lightText;
-    final muted =
-        widget.isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
+    final muted = widget.isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1299,8 +1245,8 @@ class _BroadcastButtonState extends State<_BroadcastButton> {
                   : const Icon(Icons.send_rounded, size: 20),
               label: Text(
                 widget.isAr ? 'إرسال للجميع' : 'Send to All',
-                style:
-                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w900, fontSize: 15),
               ),
             ),
           ),

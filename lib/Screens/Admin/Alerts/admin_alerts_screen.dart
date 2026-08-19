@@ -25,19 +25,10 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
   final _alerts = FirebaseFirestore.instance.collection('alerts');
 
   // ألوان وتسميات مستويات الخطورة.
-  static const Map<String, ({String label, Color color, IconData icon})>
-      _levels = {
+  static const Map<String, ({String label, Color color, IconData icon})> _levels = {
     'info': (label: 'عادي', color: Color(0xFF3B82F6), icon: Icons.info_rounded),
-    'warning': (
-      label: 'تحذير',
-      color: Color(0xFFE0A23C),
-      icon: Icons.warning_amber_rounded
-    ),
-    'critical': (
-      label: 'خطر',
-      color: Color(0xFFE0463F),
-      icon: Icons.report_rounded
-    ),
+    'warning': (label: 'تحذير', color: Color(0xFFE0A23C), icon: Icons.warning_amber_rounded),
+    'critical': (label: 'خطر', color: Color(0xFFE0463F), icon: Icons.report_rounded),
   };
 
   @override
@@ -122,8 +113,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
           backgroundColor: bg,
           elevation: 0,
           title: const Text('تنبيهات الحجّاج',
-              style: TextStyle(
-                  color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
+              style: TextStyle(color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
           iconTheme: const IconThemeData(color: DhakkerColors.gold),
         ),
         body: Column(
@@ -136,8 +126,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                 decoration: BoxDecoration(
                   color: card,
                   borderRadius: BorderRadius.circular(18),
-                  border:
-                      Border.all(color: DhakkerColors.gold.withOpacity(.18)),
+                  border: Border.all(color: DhakkerColors.gold.withOpacity(.18)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,8 +137,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                       minLines: 1,
                       style: TextStyle(color: textColor),
                       decoration: const InputDecoration(
-                        hintText:
-                            'اكتب التنبيه... مثل: ازدحام في المسعى، استخدموا المسار البديل',
+                        hintText: 'اكتب التنبيه... مثل: ازدحام في المسعى، استخدموا المسار البديل',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -164,9 +152,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                               margin: const EdgeInsets.symmetric(horizontal: 3),
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               decoration: BoxDecoration(
-                                color: sel
-                                    ? e.value.color.withOpacity(.16)
-                                    : Colors.transparent,
+                                color: sel ? e.value.color.withOpacity(.16) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: sel ? e.value.color : Colors.white12,
@@ -178,15 +164,11 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                                 children: [
                                   Icon(e.value.icon,
                                       size: 16,
-                                      color: sel
-                                          ? e.value.color
-                                          : DhakkerColors.muted),
+                                      color: sel ? e.value.color : DhakkerColors.muted),
                                   const SizedBox(width: 5),
                                   Text(e.value.label,
                                       style: TextStyle(
-                                        color: sel
-                                            ? e.value.color
-                                            : DhakkerColors.muted,
+                                        color: sel ? e.value.color : DhakkerColors.muted,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 13,
                                       )),
@@ -203,8 +185,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: DhakkerColors.gold.withOpacity(.18)),
+                        border: Border.all(color: DhakkerColors.gold.withOpacity(.18)),
                       ),
                       child: Row(
                         children: [
@@ -219,20 +200,16 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                                 dropdownColor: card,
                                 hint: Text('كل المناطق (بثّ عام)',
                                     style: TextStyle(color: textColor)),
-                                icon: const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded,
                                     color: DhakkerColors.gold),
-                                style: TextStyle(
-                                    color: textColor,
-                                    fontWeight: FontWeight.w700),
+                                style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
                                 items: [
                                   DropdownMenuItem<String?>(
                                     value: null,
                                     child: Text('كل المناطق (بثّ عام)',
                                         style: TextStyle(color: textColor)),
                                   ),
-                                  ..._zones.map((z) =>
-                                      DropdownMenuItem<String?>(
+                                  ..._zones.map((z) => DropdownMenuItem<String?>(
                                         value: z.id,
                                         child: Text(z.name,
                                             overflow: TextOverflow.ellipsis,
@@ -268,17 +245,13 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                         onPressed: _sending ? null : _send,
                         icon: _sending
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
+                                width: 18, height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: DhakkerColors.darkText),
+                                    strokeWidth: 2, color: DhakkerColors.darkText),
                               )
                             : const Icon(Icons.campaign_rounded),
-                        label: Text(
-                            _sending ? 'جارٍ الإرسال...' : 'إرسال التنبيه',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w900)),
+                        label: Text(_sending ? 'جارٍ الإرسال...' : 'إرسال التنبيه',
+                            style: const TextStyle(fontWeight: FontWeight.w900)),
                       ),
                     ),
                   ],
@@ -290,9 +263,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Text('التنبيهات الحالية',
-                    style: TextStyle(
-                        color: DhakkerColors.muted,
-                        fontWeight: FontWeight.w800)),
+                    style: TextStyle(color: DhakkerColors.muted, fontWeight: FontWeight.w800)),
               ),
             ),
             // --- قائمة التنبيهات الحالية ---
@@ -302,16 +273,13 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(
-                        child: CircularProgressIndicator(
-                            color: DhakkerColors.gold));
+                        child: CircularProgressIndicator(color: DhakkerColors.gold));
                   }
                   final docs = snapshot.data!.docs.toList()
                     ..sort((a, b) {
                       final ta = a.data()['createdAt'];
                       final tb = b.data()['createdAt'];
-                      if (ta is Timestamp && tb is Timestamp) {
-                        return tb.compareTo(ta);
-                      }
+                      if (ta is Timestamp && tb is Timestamp) return tb.compareTo(ta);
                       return 0;
                     });
                   if (docs.isEmpty) {
@@ -327,13 +295,11 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                       final d = docs[i];
                       final msg = (d.data()['message'] ?? '').toString();
                       final zoneName = (d.data()['zoneName'] ?? '').toString();
-                      final lvl = _levels[
-                              (d.data()['level'] ?? 'warning').toString()] ??
+                      final lvl = _levels[(d.data()['level'] ?? 'warning').toString()] ??
                           _levels['warning']!;
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
                           color: card,
                           borderRadius: BorderRadius.circular(16),
@@ -348,16 +314,14 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(msg,
-                                      style: TextStyle(
-                                          color: textColor, height: 1.5)),
+                                      style: TextStyle(color: textColor, height: 1.5)),
                                   if (zoneName.isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(Icons.place_rounded,
-                                            color: DhakkerColors.gold,
-                                            size: 13),
+                                            color: DhakkerColors.gold, size: 13),
                                         const SizedBox(width: 4),
                                         Text('يخصّ: $zoneName',
                                             style: const TextStyle(

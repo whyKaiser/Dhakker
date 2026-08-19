@@ -25,8 +25,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
-    with SingleTickerProviderStateMixin {
+class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   static const String _voiceKey = 'voice_notifications_enabled';
   static const String _autoLocationKey = 'auto_location_enabled';
   static const String _darkModeKey = 'dark_mode_enabled';
@@ -135,30 +134,17 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (c) {
         final ctrl = TextEditingController();
         return AlertDialog(
-          title: Text(
-              isAr ? 'اسم الدواء (اختياري)' : 'Medication name (optional)'),
-          content: TextField(
-              controller: ctrl,
-              decoration: InputDecoration(
-                  hintText:
-                      isAr ? 'مثل: ضغط، سكري...' : 'e.g. Blood pressure...')),
+          title: Text(isAr ? 'اسم الدواء (اختياري)' : 'Medication name (optional)'),
+          content: TextField(controller: ctrl, decoration: InputDecoration(hintText: isAr ? 'مثل: ضغط، سكري...' : 'e.g. Blood pressure...')),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(c),
-                child: Text(isAr ? 'تخطّ' : 'Skip')),
-            TextButton(
-                onPressed: () {
-                  label = ctrl.text.trim();
-                  Navigator.pop(c);
-                },
-                child: Text(isAr ? 'حفظ' : 'Save')),
+            TextButton(onPressed: () => Navigator.pop(c), child: Text(isAr ? 'تخطّ' : 'Skip')),
+            TextButton(onPressed: () { label = ctrl.text.trim(); Navigator.pop(c); }, child: Text(isAr ? 'حفظ' : 'Save')),
           ],
         );
       },
     );
     setState(() {
-      _medReminders
-          .add({'hour': picked.hour, 'minute': picked.minute, 'label': label});
+      _medReminders.add({'hour': picked.hour, 'minute': picked.minute, 'label': label});
     });
     await _saveMedReminders();
   }
@@ -479,8 +465,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const SplashScreen(0)),
-        (route) => false,
+        MaterialPageRoute(builder: (_) =>  const SplashScreen(0)),
+            (route) => false,
       );
     } catch (_) {
       if (!mounted) return;
@@ -520,9 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         final List<Widget> listItems = [
           _ActionTile(
             title: isAr ? "نداء استغاثة (SOS)" : "Emergency Call (SOS)",
-            subtitle: isAr
-                ? "إرسال موقعك الحالي عبر الواتساب للمساعدة"
-                : "Send current location via WhatsApp",
+            subtitle: isAr ? "إرسال موقعك الحالي عبر الواتساب للمساعدة" : "Send current location via WhatsApp",
             icon: Icons.cell_tower_rounded,
             palette: palette,
             isDanger: true,
@@ -533,11 +517,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const SizedBox(height: 10),
           _ActionTile(
-            title:
-                isAr ? "طوارئ الحج — 920000814" : "Hajj Emergency — 920000814",
-            subtitle: isAr
-                ? "اتصال مباشر بخدمة طوارئ الحج والعمرة"
-                : "Direct call to Hajj & Umrah emergency",
+            title: isAr ? "طوارئ الحج — 920000814" : "Hajj Emergency — 920000814",
+            subtitle: isAr ? "اتصال مباشر بخدمة طوارئ الحج والعمرة" : "Direct call to Hajj & Umrah emergency",
             icon: Icons.phone_rounded,
             palette: palette,
             isDanger: true,
@@ -550,33 +531,25 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "إعادة ضبط الأشواط" : "Reset Rounds",
-            subtitle: isAr
-                ? "تصفير عداد الأشواط الحالي لبدء طواف جديد"
-                : "Reset the round counter",
+            subtitle: isAr ? "تصفير عداد الأشواط الحالي لبدء طواف جديد" : "Reset the round counter",
             icon: Icons.refresh_rounded,
             palette: palette,
             onTap: () {
               HapticFeedback.mediumImpact();
               cubit.resetRounds();
-              _showSnackBar(isAr
-                  ? "تم تصفير عدّاد الأشواط بنجاح"
-                  : "Rounds reset successfully");
+              _showSnackBar(isAr ? "تم تصفير عدّاد الأشواط بنجاح" : "Rounds reset successfully");
             },
           ),
           const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "إعادة ضبط السعي" : "Reset Sa'i",
-            subtitle: isAr
-                ? "تصفير عداد أشواط السعي لبدء سعي جديد"
-                : "Reset the Sa'i counter",
+            subtitle: isAr ? "تصفير عداد أشواط السعي لبدء سعي جديد" : "Reset the Sa'i counter",
             icon: Icons.refresh_rounded,
             palette: palette,
             onTap: () {
               HapticFeedback.mediumImpact();
               cubit.resetSai();
-              _showSnackBar(isAr
-                  ? "تم تصفير عدّاد السعي بنجاح"
-                  : "Sa'i reset successfully");
+              _showSnackBar(isAr ? "تم تصفير عدّاد السعي بنجاح" : "Sa'i reset successfully");
             },
           ),
           const SizedBox(height: 10),
@@ -617,9 +590,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 10),
           _ActionTile(
             title: isAr ? "عن التطبيق والخصوصية" : "About & Privacy",
-            subtitle: isAr
-                ? "معلومات التطبيق وكيف نحمي بياناتك"
-                : "App info & how we protect your data",
+            subtitle: isAr ? "معلومات التطبيق وكيف نحمي بياناتك" : "App info & how we protect your data",
             icon: Icons.privacy_tip_rounded,
             palette: palette,
             onTap: () {
@@ -633,9 +604,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           // ─── تذكير الصلاة ────────────────────────────────────────────────
           _SettingTile(
             title: isAr ? "تذكير الصلاة" : "Prayer Reminders",
-            subtitle: isAr
-                ? "إشعار عند دخول وقت كل صلاة"
-                : "Notification at each prayer time",
+            subtitle: isAr ? "إشعار عند دخول وقت كل صلاة" : "Notification at each prayer time",
             palette: palette,
             isAr: isAr,
             value: _prayerReminder,
@@ -644,8 +613,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool(_prayerKey, v);
               if (v) {
-                PrayerReminderService.instance
-                    .start(lat: 21.3891, lng: 39.8579);
+                PrayerReminderService.instance.start(lat: 21.3891, lng: 39.8579);
               } else {
                 PrayerReminderService.instance.stop();
               }
@@ -670,14 +638,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 initialDate: _hajjDay8Date ?? DateTime.now(),
                 firstDate: DateTime(2025),
                 lastDate: DateTime(2030),
-                helpText: isAr
-                    ? 'اختر تاريخ اليوم الثامن من ذي الحجة'
-                    : 'Select Dhul-Hijjah 8',
+                helpText: isAr ? 'اختر تاريخ اليوم الثامن من ذي الحجة' : 'Select Dhul-Hijjah 8',
               );
               if (picked == null || !mounted) return;
               await HajjScheduleService.instance.saveDay8Date(picked);
               setState(() => _hajjDay8Date = picked);
-              HajjScheduleService.instance.start();
+                HajjScheduleService.instance.start();
             },
           ),
           const SizedBox(height: 10),
@@ -707,71 +673,68 @@ class _SettingsScreenState extends State<SettingsScreen>
             bottom: false,
             child: _isLoading
                 ? Center(
-                    child: CircularProgressIndicator(
-                      color: palette.gold,
-                    ),
-                  )
+              child: CircularProgressIndicator(
+                color: palette.gold,
+              ),
+            )
                 : SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: isAr
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Text(
-                            isAr ? "الإعدادات العامة" : "General Settings",
-                            style: TextStyle(
-                              color: palette.gold,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              fontFamily: 'AlamirBold',
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          height: 1,
-                          color: palette.divider.withOpacity(.16),
-                        ),
-                        const SizedBox(height: 18),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          primary: false,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: listItems.length,
-                          itemBuilder: (context, index) {
-                            final double start = (index * 0.05).clamp(0.0, 1.0);
-                            final double end = (start + 0.35).clamp(0.0, 1.0);
-
-                            return AnimatedBuilder(
-                              animation: _listAnimationController,
-                              builder: (context, child) {
-                                final animationCurve = CurvedAnimation(
-                                  parent: _listAnimationController,
-                                  curve: Interval(start, end,
-                                      curve: Curves.easeOutCubic),
-                                );
-
-                                return Transform.translate(
-                                  offset: Offset(
-                                      0, 24 * (1.0 - animationCurve.value)),
-                                  child: Opacity(
-                                    opacity: animationCurve.value,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: listItems[index],
-                            );
-                          },
-                        ),
-                      ],
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Text(
+                      isAr ? "الإعدادات العامة" : "General Settings",
+                      style: TextStyle(
+                        color: palette.gold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'AlamirBold',
+                        height: 1.1,
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Container(
+                    height: 1,
+                    color: palette.divider.withOpacity(.16),
+                  ),
+                  const SizedBox(height: 18),
+
+                  ListView.builder(
+                    shrinkWrap: true,
+                    primary: false,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: listItems.length,
+                    itemBuilder: (context, index) {
+                      final double start = (index * 0.05).clamp(0.0, 1.0);
+                      final double end = (start + 0.35).clamp(0.0, 1.0);
+
+                      return AnimatedBuilder(
+                        animation: _listAnimationController,
+                        builder: (context, child) {
+                          final animationCurve = CurvedAnimation(
+                            parent: _listAnimationController,
+                            curve: Interval(start, end, curve: Curves.easeOutCubic),
+                          );
+
+                          return Transform.translate(
+                            offset: Offset(0, 24 * (1.0 - animationCurve.value)),
+                            child: Opacity(
+                              opacity: animationCurve.value,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: listItems[index],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -949,8 +912,7 @@ class _ActionTileState extends State<_ActionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        widget.isDanger ? widget.palette.danger : widget.palette.gold;
+    final accent = widget.isDanger ? widget.palette.danger : widget.palette.gold;
 
     return GestureDetector(
       onTapDown: (_) {
@@ -984,10 +946,7 @@ class _ActionTileState extends State<_ActionTile> {
             color: widget.palette.card,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: (widget.isDanger
-                      ? widget.palette.danger
-                      : widget.palette.border)
-                  .withOpacity(.95),
+              color: (widget.isDanger ? widget.palette.danger : widget.palette.border).withOpacity(.95),
             ),
             boxShadow: [
               BoxShadow(
@@ -1110,8 +1069,8 @@ class _SettingsDialogButtonState extends State<_SettingsDialogButton> {
               borderRadius: BorderRadius.circular(16),
               gradient: widget.isPrimary
                   ? LinearGradient(
-                      colors: [primary1, primary2],
-                    )
+                colors: [primary1, primary2],
+              )
                   : null,
               color: widget.isPrimary ? null : widget.palette.bg,
               border: Border.all(
@@ -1173,12 +1132,7 @@ class _MedRemindersSection extends StatelessWidget {
         color: palette.card,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: palette.border.withOpacity(.95)),
-        boxShadow: [
-          BoxShadow(
-              color: palette.shadow.withOpacity(.08),
-              blurRadius: 12,
-              offset: const Offset(0, 7))
-        ],
+        boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.08), blurRadius: 12, offset: const Offset(0, 7))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1186,13 +1140,9 @@ class _MedRemindersSection extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: palette.gold.withOpacity(.12)),
-                child: Icon(Icons.medication_rounded,
-                    color: palette.gold, size: 20),
+                width: 38, height: 38,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+                child: Icon(Icons.medication_rounded, color: palette.gold, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1200,20 +1150,10 @@ class _MedRemindersSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(isAr ? 'تذكيرات الأدوية' : 'Medication Reminders',
-                        style: TextStyle(
-                            color: palette.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800)),
+                        style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 3),
-                    Text(
-                        isAr
-                            ? 'إشعار عند حلول موعد الدواء (حتى 3 مواعيد)'
-                            : 'Notification at medication time (up to 3)',
-                        style: TextStyle(
-                            color: palette.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4)),
+                    Text(isAr ? 'إشعار عند حلول موعد الدواء (حتى 3 مواعيد)' : 'Notification at medication time (up to 3)',
+                        style: TextStyle(color: palette.textSecondary, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4)),
                   ],
                 ),
               ),
@@ -1222,11 +1162,8 @@ class _MedRemindersSection extends StatelessWidget {
                   onTap: onAdd,
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: palette.gold.withOpacity(.12)),
-                    child:
-                        Icon(Icons.add_rounded, color: palette.gold, size: 20),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+                    child: Icon(Icons.add_rounded, color: palette.gold, size: 20),
                   ),
                 ),
             ],
@@ -1234,26 +1171,19 @@ class _MedRemindersSection extends StatelessWidget {
           if (reminders.isNotEmpty) ...[
             const SizedBox(height: 10),
             ...reminders.asMap().entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.alarm_rounded,
-                          color: palette.gold.withOpacity(.7), size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: Text(_fmt(e.value),
-                              style: TextStyle(
-                                  color: palette.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700))),
-                      GestureDetector(
-                        onTap: () => onRemove(e.key),
-                        child: Icon(Icons.close_rounded,
-                            color: palette.muted, size: 18),
-                      ),
-                    ],
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.alarm_rounded, color: palette.gold.withOpacity(.7), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_fmt(e.value), style: TextStyle(color: palette.textPrimary, fontSize: 13, fontWeight: FontWeight.w700))),
+                  GestureDetector(
+                    onTap: () => onRemove(e.key),
+                    child: Icon(Icons.close_rounded, color: palette.muted, size: 18),
                   ),
-                )),
+                ],
+              ),
+            )),
           ],
         ],
       ),

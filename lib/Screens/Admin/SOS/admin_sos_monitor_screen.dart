@@ -95,18 +95,14 @@ Future<void> _openMap(BuildContext context, String url, bool isAr) async {
   } catch (_) {}
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(isAr ? 'تعذّر فتح الخريطة' : 'Could not open map')),
+      SnackBar(content: Text(isAr ? 'تعذّر فتح الخريطة' : 'Could not open map')),
     );
   }
 }
 
 Future<void> _resolve(BuildContext context, String docId, bool isAr) async {
   try {
-    await FirebaseFirestore.instance
-        .collection('sos_requests')
-        .doc(docId)
-        .update({
+    await FirebaseFirestore.instance.collection('sos_requests').doc(docId).update({
       'status': 'resolved',
       'resolvedAt': FieldValue.serverTimestamp(),
     });
@@ -142,10 +138,7 @@ Future<void> _delete(BuildContext context, String docId, bool isAr) async {
   );
   if (confirmed != true) return;
   try {
-    await FirebaseFirestore.instance
-        .collection('sos_requests')
-        .doc(docId)
-        .delete();
+    await FirebaseFirestore.instance.collection('sos_requests').doc(docId).delete();
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -307,8 +300,9 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color =
         isResolved ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
-    final label =
-        isResolved ? (isAr ? 'محلول' : 'Resolved') : (isAr ? 'نشط' : 'Active');
+    final label = isResolved
+        ? (isAr ? 'محلول' : 'Resolved')
+        : (isAr ? 'نشط' : 'Active');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -317,8 +311,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-            color: color, fontWeight: FontWeight.w900, fontSize: 11.5),
+        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 11.5),
       ),
     );
   }
@@ -390,8 +383,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             isAr ? 'لا توجد نداءات استغاثة' : 'No SOS alerts',
-            style: TextStyle(
-                color: muted, fontSize: 16, fontWeight: FontWeight.w800),
+            style: TextStyle(color: muted, fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(

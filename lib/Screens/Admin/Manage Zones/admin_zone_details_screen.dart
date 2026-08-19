@@ -7,7 +7,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
-
 class AdminZoneDetailsScreen extends StatefulWidget {
   final String zoneId;
 
@@ -91,11 +90,11 @@ class _AdminZoneDetailsScreenState extends State<AdminZoneDetailsScreen> {
         child: _isLoading
             ? const _ZoneDetailsLoadingView()
             : _zoneData == null
-                ? const SizedBox.shrink()
-                : _ZoneDetailsBody(
-                    zoneId: widget.zoneId,
-                    data: _zoneData!,
-                  ),
+            ? const SizedBox.shrink()
+            : _ZoneDetailsBody(
+          zoneId: widget.zoneId,
+          data: _zoneData!,
+        ),
       ),
     );
   }
@@ -115,8 +114,7 @@ class _ZoneDetailsBody extends StatefulWidget {
   State<_ZoneDetailsBody> createState() => _ZoneDetailsBodyState();
 }
 
-class _ZoneDetailsBodyState extends State<_ZoneDetailsBody>
-    with SingleTickerProviderStateMixin {
+class _ZoneDetailsBodyState extends State<_ZoneDetailsBody> with SingleTickerProviderStateMixin {
   late AnimationController _entranceController;
 
   @override
@@ -147,12 +145,8 @@ class _ZoneDetailsBodyState extends State<_ZoneDetailsBody>
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
 
     final name = isAr
-        ? (widget.data['nameAr'] ?? widget.data['nameEn'] ?? '')
-            .toString()
-            .trim()
-        : (widget.data['nameEn'] ?? widget.data['nameAr'] ?? '')
-            .toString()
-            .trim();
+        ? (widget.data['nameAr'] ?? widget.data['nameEn'] ?? '').toString().trim()
+        : (widget.data['nameEn'] ?? widget.data['nameAr'] ?? '').toString().trim();
 
     final type = (widget.data['type'] ?? '').toString().trim().toLowerCase();
     final isActive = widget.data['isActive'] == true;
@@ -167,8 +161,8 @@ class _ZoneDetailsBodyState extends State<_ZoneDetailsBody>
     final typeLabel = type == 'circle'
         ? s.adminZoneDetailsTypeCircle
         : type == 'polygon'
-            ? s.adminZoneDetailsTypePolygon
-            : '—';
+        ? s.adminZoneDetailsTypePolygon
+        : '—';
 
     final statusLabel = isActive
         ? s.adminZoneDetailsStatusActive
@@ -294,8 +288,7 @@ class _ZoneDetailsBodyState extends State<_ZoneDetailsBody>
     return Container(
       color: bg,
       child: SingleChildScrollView(
-        physics:
-            const BouncingScrollPhysics(), // تمطيط وارتداد هيدروليكي فخم عند السحب للحدود
+        physics: const BouncingScrollPhysics(), // تمطيط وارتداد هيدروليكي فخم عند السحب للحدود
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -543,53 +536,52 @@ class _ZoneMapCard extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: hasValidMap
                 ? FlutterMap(
-                    options: MapOptions(
-                      initialCenter: mapCenter,
-                      initialZoom: _initialZoom(),
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.dhakker.app',
-                        maxZoom: 19,
-                      ),
-                      if (type == 'circle' &&
-                          centerLat != null &&
-                          centerLng != null &&
-                          radiusM != null)
-                        CircleLayer(
-                          circles: [
-                            CircleMarker(
-                              point: LatLng(centerLat!, centerLng!),
-                              radius: radiusM!,
-                              useRadiusInMeter: true,
-                              color: accent.withOpacity(.18),
-                              borderColor: accent,
-                              borderStrokeWidth: 2.4,
-                            ),
-                          ],
-                        ),
-                      if (type == 'polygon' && points.length >= 3)
-                        PolygonLayer(
-                          polygons: [
-                            Polygon(
-                              points: points,
-                              color: accent.withOpacity(.18),
-                              borderColor: accent,
-                              borderStrokeWidth: 2.6,
-                            ),
-                          ],
-                        ),
-                      MarkerLayer(
-                        markers: _markers(accent),
+              options: MapOptions(
+                initialCenter: mapCenter,
+                initialZoom: _initialZoom(),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.dhakker.app',
+                  maxZoom: 19,
+                ),
+                if (type == 'circle' &&
+                    centerLat != null &&
+                    centerLng != null &&
+                    radiusM != null)
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: LatLng(centerLat!, centerLng!),
+                        radius: radiusM!,
+                        useRadiusInMeter: true,
+                        color: accent.withOpacity(.18),
+                        borderColor: accent,
+                        borderStrokeWidth: 2.4,
                       ),
                     ],
-                  )
-                : _EmptyMapState(
-                    title: s.adminZoneDetailsMapUnavailableTitle,
-                    subtitle: s.adminZoneDetailsMapUnavailableSubtitle,
                   ),
+                if (type == 'polygon' && points.length >= 3)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: points,
+                        color: accent.withOpacity(.18),
+                        borderColor: accent,
+                        borderStrokeWidth: 2.6,
+                      ),
+                    ],
+                  ),
+                MarkerLayer(
+                  markers: _markers(accent),
+                ),
+              ],
+            )
+                : _EmptyMapState(
+              title: s.adminZoneDetailsMapUnavailableTitle,
+              subtitle: s.adminZoneDetailsMapUnavailableSubtitle,
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -850,8 +842,7 @@ class _PolygonPointsCard extends StatelessWidget {
         children: List.generate(points.length, (index) {
           final point = points[index];
           return Container(
-            margin:
-                EdgeInsets.only(bottom: index == points.length - 1 ? 0 : 10),
+            margin: EdgeInsets.only(bottom: index == points.length - 1 ? 0 : 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
@@ -905,8 +896,7 @@ class _RelatedSupplicationsCard extends StatefulWidget {
   });
 
   @override
-  State<_RelatedSupplicationsCard> createState() =>
-      _RelatedSupplicationsCardState();
+  State<_RelatedSupplicationsCard> createState() => _RelatedSupplicationsCardState();
 }
 
 class _RelatedSupplicationsCardState extends State<_RelatedSupplicationsCard> {

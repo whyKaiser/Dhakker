@@ -13,8 +13,7 @@ class AdminZoneAddScreen extends StatefulWidget {
   State<AdminZoneAddScreen> createState() => _AdminZoneAddScreenState();
 }
 
-class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
-    with SingleTickerProviderStateMixin {
+class _AdminZoneAddScreenState extends State<AdminZoneAddScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _nameArController = TextEditingController();
@@ -124,8 +123,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
               controller: _priorityController,
               label: s.adminZoneAddPriority,
               hint: s.adminZoneAddPriorityHint,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: false),
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return s.adminZoneAddPriorityRequired;
@@ -202,8 +200,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                       controller: _centerLatController,
                       label: s.adminZoneAddCenterLat,
                       hint: s.adminZoneAddCenterLatHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (_zoneType != 'circle') return null;
                         if (value == null || value.trim().isEmpty) {
@@ -223,8 +220,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                       controller: _centerLngController,
                       label: s.adminZoneAddCenterLng,
                       hint: s.adminZoneAddCenterLngHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         if (_zoneType != 'circle') return null;
                         if (value == null || value.trim().isEmpty) {
@@ -245,8 +241,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                 controller: _radiusController,
                 label: s.adminZoneAddRadius,
                 hint: s.adminZoneAddRadiusHint,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (_zoneType != 'circle') return null;
                   if (value == null || value.trim().isEmpty) {
@@ -287,8 +282,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
             children: [
               _HapticButton(
                 onTap: _pickPolygonFromMap,
-                label:
-                    isAr ? 'ارسم الحدود على الخريطة' : 'Draw boundary on map',
+                label: isAr ? 'ارسم الحدود على الخريطة' : 'Draw boundary on map',
                 icon: Icons.map_rounded,
                 color: accent,
                 textColor: isDark ? DhakkerColors.bg : Colors.white,
@@ -301,8 +295,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                       controller: _pointLatController,
                       label: s.adminZoneAddPointLat,
                       hint: s.adminZoneAddCenterLatHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -311,8 +304,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                       controller: _pointLngController,
                       label: s.adminZoneAddPointLng,
                       hint: s.adminZoneAddCenterLngHint,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 ],
@@ -358,8 +350,7 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 disabledBackgroundColor: accent,
-                disabledForegroundColor:
-                    isDark ? DhakkerColors.bg : Colors.white,
+                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -367,13 +358,13 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
               onPressed: null,
               icon: _isSaving
                   ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.3,
-                        color: isDark ? DhakkerColors.bg : Colors.white,
-                      ),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.3,
+                  color: isDark ? DhakkerColors.bg : Colors.white,
+                ),
+              )
                   : const Icon(Icons.save_rounded),
               label: Text(
                 _isSaving ? s.adminZoneAddSaving : s.adminZoneAddSave,
@@ -496,8 +487,9 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
 
   // فتح الخريطة لرسم نقاط حدود المضلّع بالضغط بالتسلسل
   Future<void> _pickPolygonFromMap() async {
-    final initial =
-        _polygonPoints.map((e) => LatLng(e['lat']!, e['lng']!)).toList();
+    final initial = _polygonPoints
+        .map((e) => LatLng(e['lat']!, e['lng']!))
+        .toList();
 
     final result = await Navigator.push<List<LatLng>>(
       context,
@@ -542,22 +534,22 @@ class _AdminZoneAddScreenState extends State<AdminZoneAddScreen>
         'type': _zoneType,
         'center': _zoneType == 'circle'
             ? {
-                'lat': double.parse(_centerLatController.text.trim()),
-                'lng': double.parse(_centerLngController.text.trim()),
-              }
+          'lat': double.parse(_centerLatController.text.trim()),
+          'lng': double.parse(_centerLngController.text.trim()),
+        }
             : null,
         'radiusM': _zoneType == 'circle'
             ? double.parse(_radiusController.text.trim())
             : null,
         'points': _zoneType == 'polygon'
             ? _polygonPoints
-                .map(
-                  (e) => {
-                    'lat': e['lat'],
-                    'lng': e['lng'],
-                  },
-                )
-                .toList()
+            .map(
+              (e) => {
+            'lat': e['lat'],
+            'lng': e['lng'],
+          },
+        )
+            .toList()
             : [],
         'priority': int.parse(_priorityController.text.trim()),
         'isActive': _isActive,
@@ -742,8 +734,7 @@ class _AppField extends StatelessWidget {
             ),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
@@ -1135,9 +1126,8 @@ class _PolygonPointsPanel extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundColor:
-                      (isDark ? DhakkerColors.gold : DhakkerColors.gold2)
-                          .withOpacity(.14),
+                  backgroundColor: (isDark ? DhakkerColors.gold : DhakkerColors.gold2)
+                      .withOpacity(.14),
                   child: Text(
                     '${index + 1}',
                     style: TextStyle(

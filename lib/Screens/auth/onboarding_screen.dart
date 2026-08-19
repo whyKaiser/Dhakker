@@ -25,20 +25,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OPage(
       icon: Icons.mosque_rounded,
       title: 'مرحباً بك في ذكّر',
-      subtitle:
-          'رفيقك الذكي في رحلة الحج والعمرة — أدعية وإرشادات حسب موقعك لحظة بلحظة',
+      subtitle: 'رفيقك الذكي في رحلة الحج والعمرة — أدعية وإرشادات حسب موقعك لحظة بلحظة',
     ),
     _OPage(
       icon: Icons.loop_rounded,
       title: 'عدّاد الطواف والسعي',
-      subtitle:
-          'يحسب أشواط الطواف والسعي تلقائياً بمجرد وجودك في المنطقة — بلا ضغط أي زر',
+      subtitle: 'يحسب أشواط الطواف والسعي تلقائياً بمجرد وجودك في المنطقة — بلا ضغط أي زر',
     ),
     _OPage(
       icon: Icons.auto_awesome_rounded,
       title: 'المساعد الذكي',
-      subtitle:
-          'اسأل عن مناسك الحج والعمرة بلغتك — عربي، إنجليزي، أردو، فرنسي وأكثر',
+      subtitle: 'اسأل عن مناسك الحج والعمرة بلغتك — عربي، إنجليزي، أردو، فرنسي وأكثر',
     ),
     _OPage(
       icon: Icons.campaign_rounded,
@@ -51,9 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     HapticFeedback.lightImpact();
     final totalPages = _pages.length + 1; // +1 for setup page
     if (_page < totalPages - 1) {
-      _ctrl.nextPage(
-          duration: const Duration(milliseconds: 380),
-          curve: Curves.easeInOutCubic);
+      _ctrl.nextPage(duration: const Duration(milliseconds: 380), curve: Curves.easeInOutCubic);
     } else {
       _finish();
     }
@@ -61,8 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     if (_page == _setupPageIndex) {
-      await CashHelper.saveCash(
-          key: 'pilgrim_name', value: _nameCtrl.text.trim());
+      await CashHelper.saveCash(key: 'pilgrim_name', value: _nameCtrl.text.trim());
       await CashHelper.saveCash(key: 'trip_type', value: _tripType);
     }
     await CashHelper.saveCash(key: 'onboarding_done', value: true);
@@ -101,8 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 alignment: Alignment.topLeft,
                 child: TextButton(
                   onPressed: _finish,
-                  child: Text('تخطّى',
-                      style: TextStyle(color: muted, fontSize: 14)),
+                  child: Text('تخطّى', style: TextStyle(color: muted, fontSize: 14)),
                 ),
               ),
               Expanded(
@@ -112,11 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   itemCount: _pages.length + 1,
                   itemBuilder: (_, i) {
                     if (i < _pages.length) {
-                      return _PageView(
-                          page: _pages[i],
-                          gold: gold,
-                          textColor: textColor,
-                          muted: muted);
+                      return _PageView(page: _pages[i], gold: gold, textColor: textColor, muted: muted);
                     }
                     return _SetupPage(
                       gold: gold,
@@ -156,10 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
                       gradient: LinearGradient(
-                        colors: [
-                          gold,
-                          isDark ? DhakkerColors.gold2 : DhakkerColors.gold
-                        ],
+                        colors: [gold, isDark ? DhakkerColors.gold2 : DhakkerColors.gold],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -199,11 +185,7 @@ class _PageView extends StatelessWidget {
   final Color textColor;
   final Color muted;
 
-  const _PageView(
-      {required this.page,
-      required this.gold,
-      required this.textColor,
-      required this.muted});
+  const _PageView({required this.page, required this.gold, required this.textColor, required this.muted});
 
   @override
   Widget build(BuildContext context) {
@@ -213,8 +195,7 @@ class _PageView extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (_, t, child) => Opacity(
         opacity: t,
-        child:
-            Transform.translate(offset: Offset(0, (1 - t) * 18), child: child),
+        child: Transform.translate(offset: Offset(0, (1 - t) * 18), child: child),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -267,8 +248,7 @@ class _OPage {
   final IconData icon;
   final String title;
   final String subtitle;
-  const _OPage(
-      {required this.icon, required this.title, required this.subtitle});
+  const _OPage({required this.icon, required this.title, required this.subtitle});
 }
 
 class _SetupPage extends StatelessWidget {
@@ -300,28 +280,20 @@ class _SetupPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            width: 90,
-            height: 90,
+            width: 90, height: 90,
             margin: const EdgeInsets.only(bottom: 24),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                  colors: [gold.withOpacity(.22), gold.withOpacity(.08)]),
+              gradient: LinearGradient(colors: [gold.withOpacity(.22), gold.withOpacity(.08)]),
               border: Border.all(color: gold.withOpacity(.4), width: 1.5),
             ),
             child: Icon(Icons.waving_hand_rounded, color: gold, size: 44),
           ),
-          Text('أخبرنا عنك',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: textColor,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'AlamirBold')),
+          Text('أخبرنا عنك', textAlign: TextAlign.center,
+              style: TextStyle(color: textColor, fontSize: 26, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold')),
           const SizedBox(height: 8),
-          Text('حتى نُهيّئ التجربة لك',
-              textAlign: TextAlign.center,
+          Text('حتى نُهيّئ التجربة لك', textAlign: TextAlign.center,
               style: TextStyle(color: muted, fontSize: 15)),
           const SizedBox(height: 32),
           // حقل الاسم
@@ -335,40 +307,21 @@ class _SetupPage extends StatelessWidget {
               filled: true,
               fillColor: cardColor,
               prefixIcon: Icon(Icons.person_outline_rounded, color: gold),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
           ),
           const SizedBox(height: 20),
           // نوع الرحلة
-          Text('نوع رحلتك',
-              style: TextStyle(color: muted, fontSize: 14),
-              textAlign: TextAlign.right),
+          Text('نوع رحلتك', style: TextStyle(color: muted, fontSize: 14), textAlign: TextAlign.right),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                  child: _TripTypeBtn(
-                      label: 'حج',
-                      icon: Icons.mosque_rounded,
-                      selected: tripType == 'hajj',
-                      gold: gold,
-                      cardColor: cardColor,
-                      textColor: textColor,
-                      onTap: () => onTripTypeChanged('hajj'))),
+              Expanded(child: _TripTypeBtn(label: 'حج', icon: Icons.mosque_rounded, selected: tripType == 'hajj',
+                  gold: gold, cardColor: cardColor, textColor: textColor, onTap: () => onTripTypeChanged('hajj'))),
               const SizedBox(width: 12),
-              Expanded(
-                  child: _TripTypeBtn(
-                      label: 'عمرة',
-                      icon: Icons.loop_rounded,
-                      selected: tripType == 'umrah',
-                      gold: gold,
-                      cardColor: cardColor,
-                      textColor: textColor,
-                      onTap: () => onTripTypeChanged('umrah'))),
+              Expanded(child: _TripTypeBtn(label: 'عمرة', icon: Icons.loop_rounded, selected: tripType == 'umrah',
+                  gold: gold, cardColor: cardColor, textColor: textColor, onTap: () => onTripTypeChanged('umrah'))),
             ],
           ),
         ],
@@ -385,14 +338,8 @@ class _TripTypeBtn extends StatelessWidget {
   final Color cardColor;
   final Color textColor;
   final VoidCallback onTap;
-  const _TripTypeBtn(
-      {required this.label,
-      required this.icon,
-      required this.selected,
-      required this.gold,
-      required this.cardColor,
-      required this.textColor,
-      required this.onTap});
+  const _TripTypeBtn({required this.label, required this.icon, required this.selected,
+      required this.gold, required this.cardColor, required this.textColor, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -404,19 +351,12 @@ class _TripTypeBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? gold.withOpacity(.15) : cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: selected ? gold : gold.withOpacity(.2),
-              width: selected ? 2 : 1),
+          border: Border.all(color: selected ? gold : gold.withOpacity(.2), width: selected ? 2 : 1),
         ),
         child: Column(children: [
-          Icon(icon,
-              color: selected ? gold : textColor.withOpacity(.5), size: 28),
+          Icon(icon, color: selected ? gold : textColor.withOpacity(.5), size: 28),
           const SizedBox(height: 8),
-          Text(label,
-              style: TextStyle(
-                  color: selected ? gold : textColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16)),
+          Text(label, style: TextStyle(color: selected ? gold : textColor, fontWeight: FontWeight.w700, fontSize: 16)),
         ]),
       ),
     );

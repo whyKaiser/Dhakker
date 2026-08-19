@@ -116,8 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final fieldFill = isDark ? DhakkerColors.bg.withOpacity(.72) : Colors.white;
-    final borderColor =
-        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
+    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
 
     return Scaffold(
       backgroundColor: bg,
@@ -203,8 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             filled: true,
                             fillColor: fieldFill,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
@@ -267,8 +265,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             filled: true,
                             fillColor: fieldFill,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
@@ -301,8 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: (v) {
                             final value = (v ?? '').trim();
                             if (value.isEmpty) return s.authEmailRequired;
-                            final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                .hasMatch(value);
+                            final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
                             if (!ok) return s.authInvalidEmail;
                             return null;
                           },
@@ -332,19 +328,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: gold2.withOpacity(.92),
                             ),
                             suffixIcon: IconButton(
-                              onPressed: () =>
-                                  setState(() => _obscure1 = !_obscure1),
+                              onPressed: () => setState(() => _obscure1 = !_obscure1),
                               icon: Icon(
-                                _obscure1
-                                    ? Icons.visibility_rounded
-                                    : Icons.visibility_off_rounded,
+                                _obscure1 ? Icons.visibility_rounded : Icons.visibility_off_rounded,
                                 color: muted.withOpacity(.9),
                               ),
                             ),
                             filled: true,
                             fillColor: fieldFill,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
@@ -407,19 +399,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: gold2.withOpacity(.92),
                             ),
                             suffixIcon: IconButton(
-                              onPressed: () =>
-                                  setState(() => _obscure2 = !_obscure2),
+                              onPressed: () => setState(() => _obscure2 = !_obscure2),
                               icon: Icon(
-                                _obscure2
-                                    ? Icons.visibility_rounded
-                                    : Icons.visibility_off_rounded,
+                                _obscure2 ? Icons.visibility_rounded : Icons.visibility_off_rounded,
                                 color: muted.withOpacity(.9),
                               ),
                             ),
                             filled: true,
                             fillColor: fieldFill,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(
@@ -451,20 +439,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           validator: (v) {
                             final value = v ?? '';
-                            if (value.isEmpty) {
-                              return s.authConfirmPasswordRequired;
-                            }
-                            if (value != _pass.text) {
-                              return s.authPasswordsNotMatch;
-                            }
+                            if (value.isEmpty) return s.authConfirmPasswordRequired;
+                            if (value != _pass.text) return s.authPasswordsNotMatch;
                             return null;
                           },
                         ),
                         const SizedBox(height: 18),
                         _PrimaryButton(
-                          text: _loading
-                              ? s.authCreatingAccount
-                              : s.authRegisterButton,
+                          text: _loading ? s.authCreatingAccount : s.authRegisterButton,
                           enabled: !_loading,
                           onTap: _register,
                         ),
@@ -556,9 +538,7 @@ class _LangPill extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bg = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
-    final border = isDark
-        ? DhakkerColors.gold.withOpacity(.65)
-        : DhakkerColors.gold2.withOpacity(.55);
+    final border = isDark ? DhakkerColors.gold.withOpacity(.65) : DhakkerColors.gold2.withOpacity(.55);
     final text = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
     return Material(

@@ -23,8 +23,7 @@ class _AdminHomeLayoutState extends State<AdminHomeLayout> {
   void initState() {
     super.initState();
     // تهيئة الـ Controller بناءً على الشاشة الحالية المعتمدة بالـ Cubit فوراً
-    _adminPageController =
-        PageController(initialPage: AdminCubit.get(context).currentScreen);
+    _adminPageController = PageController(initialPage: AdminCubit.get(context).currentScreen);
   }
 
   @override
@@ -44,10 +43,8 @@ class _AdminHomeLayoutState extends State<AdminHomeLayout> {
     return BlocConsumer<AdminCubit, AdminState>(
       listener: (context, state) {
         // الحفاظ على تزامن الـ PageController إذا تم تغيير الشاشة خارجياً من داخل كود الشاشات
-        if (AdminCubit.get(context).currentScreen !=
-            _adminPageController.page?.round()) {
-          _adminPageController
-              .jumpToPage(AdminCubit.get(context).currentScreen);
+        if (AdminCubit.get(context).currentScreen != _adminPageController.page?.round()) {
+          _adminPageController.jumpToPage(AdminCubit.get(context).currentScreen);
         }
       },
       builder: (context, state) {
@@ -75,15 +72,15 @@ class _AdminHomeLayoutState extends State<AdminHomeLayout> {
                           radius: 0.95,
                           colors: isDark
                               ? [
-                                  DhakkerColors.gold.withOpacity(.10),
-                                  DhakkerColors.bg.withOpacity(.0),
-                                  DhakkerColors.bg,
-                                ]
+                            DhakkerColors.gold.withOpacity(.10),
+                            DhakkerColors.bg.withOpacity(.0),
+                            DhakkerColors.bg,
+                          ]
                               : [
-                                  DhakkerColors.gold.withOpacity(.10),
-                                  DhakkerColors.lightBg.withOpacity(.0),
-                                  DhakkerColors.lightBg,
-                                ],
+                            DhakkerColors.gold.withOpacity(.10),
+                            DhakkerColors.lightBg.withOpacity(.0),
+                            DhakkerColors.lightBg,
+                          ],
                           stops: const [0.0, 0.45, 1.0],
                         ),
                       ),
@@ -92,8 +89,7 @@ class _AdminHomeLayoutState extends State<AdminHomeLayout> {
                   // استبدال الوجت الجامد القديم بـ PageView لمنح تجربة سحب هيدروليكية بالكامل للأدمن
                   PageView.builder(
                     controller: _adminPageController,
-                    physics:
-                        const BouncingScrollPhysics(), // فيزياء ارتداد وتمطيط ناعمة تريح اليد
+                    physics: const BouncingScrollPhysics(), // فيزياء ارتداد وتمطيط ناعمة تريح اليد
                     itemCount: cubit.screens.length,
                     onPageChanged: (index) {
                       cubit.changeScreen(index);
@@ -111,8 +107,7 @@ class _AdminHomeLayoutState extends State<AdminHomeLayout> {
                   _adminPageController.animateToPage(
                     index,
                     duration: const Duration(milliseconds: 350),
-                    curve: Curves
-                        .easeInOutCubic, // منحنى فخم متناسق مع حركات المنظومة الذكية
+                    curve: Curves.easeInOutCubic, // منحنى فخم متناسق مع حركات المنظومة الذكية
                   );
                 },
               ),
@@ -145,8 +140,7 @@ class _AdminTopBar extends StatelessWidget implements PreferredSizeWidget {
 
     final bg = isDark ? DhakkerColors.bg : DhakkerColors.lightBg;
     const titleColor = DhakkerColors.gold;
-    final lineColor =
-        isDark ? DhakkerColors.gold.withOpacity(.06) : const Color(0xFFE6E8EC);
+    final lineColor = isDark ? DhakkerColors.gold.withOpacity(.06) : const Color(0xFFE6E8EC);
 
     return AppBar(
       backgroundColor: bg,

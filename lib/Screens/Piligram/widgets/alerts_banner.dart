@@ -96,10 +96,7 @@ class _AlertCard extends StatelessWidget {
       case 'info':
         return (color: const Color(0xFF3B82F6), icon: Icons.info_rounded);
       default:
-        return (
-          color: const Color(0xFFE0A23C),
-          icon: Icons.warning_amber_rounded
-        );
+        return (color: const Color(0xFFE0A23C), icon: Icons.warning_amber_rounded);
     }
   }
 

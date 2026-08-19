@@ -58,18 +58,15 @@ const List<ManasikRitual> manasikRituals = [
       'Recite the Talbiyah frequently (men aloud).',
       'Avoid the prohibitions of Ihram: perfume, cutting hair/nails, arguing.',
     ],
-    duaAr:
-        'لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لا شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الحَمْدَ وَالنِّعْمَةَ لَكَ وَالمُلْكَ، لا شَرِيكَ لَكَ.',
-    duaEn:
-        'Labbayk Allahumma labbayk, labbayk la sharika laka labbayk, innal-hamda wan-ni\'mata laka wal-mulk, la sharika lak.',
+    duaAr: 'لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لا شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الحَمْدَ وَالنِّعْمَةَ لَكَ وَالمُلْكَ، لا شَرِيكَ لَكَ.',
+    duaEn: 'Labbayk Allahumma labbayk, labbayk la sharika laka labbayk, innal-hamda wan-ni\'mata laka wal-mulk, la sharika lak.',
   ),
   ManasikRitual(
     id: 'tawaf',
     titleAr: 'الطواف',
     titleEn: 'Tawaf',
     summaryAr: 'سبعة أشواط حول الكعبة تبدأ وتنتهي عند الحجر الأسود.',
-    summaryEn:
-        'Seven circuits around the Kaaba, starting and ending at the Black Stone.',
+    summaryEn: 'Seven circuits around the Kaaba, starting and ending at the Black Stone.',
     stepsAr: [
       'البدء من محاذاة الحجر الأسود، وجعل الكعبة عن يسارك.',
       'استلام الحجر الأسود أو الإشارة إليه مع التكبير عند بداية كل شوط.',
@@ -84,10 +81,8 @@ const List<ManasikRitual> manasikRituals = [
       'Supplicate freely; no specific dua is required for each circuit.',
       'After seven circuits, pray two rak\'ahs behind Maqam Ibrahim if possible.',
     ],
-    duaAr:
-        'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ.',
-    duaEn:
-        'Rabbana atina fid-dunya hasanah wa fil-akhirati hasanah wa qina \'adhab an-nar.',
+    duaAr: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ.',
+    duaEn: 'Rabbana atina fid-dunya hasanah wa fil-akhirati hasanah wa qina \'adhab an-nar.',
   ),
   ManasikRitual(
     id: 'sai',
@@ -109,10 +104,8 @@ const List<ManasikRitual> manasikRituals = [
       'Counting starts at Safa and ends at Marwah.',
       'Supplicate freely during the Sa\'i.',
     ],
-    duaAr:
-        'إِنَّ الصَّفَا وَالمَرْوَةَ مِنْ شَعَائِرِ اللَّهِ، أَبْدَأُ بِمَا بَدَأَ اللَّهُ بِهِ.',
-    duaEn:
-        'Inna as-Safa wal-Marwata min sha\'a\'irillah. Abda\'u bima bada\'allahu bih.',
+    duaAr: 'إِنَّ الصَّفَا وَالمَرْوَةَ مِنْ شَعَائِرِ اللَّهِ، أَبْدَأُ بِمَا بَدَأَ اللَّهُ بِهِ.',
+    duaEn: 'Inna as-Safa wal-Marwata min sha\'a\'irillah. Abda\'u bima bada\'allahu bih.',
   ),
   ManasikRitual(
     id: 'halq',
@@ -150,10 +143,8 @@ const List<ManasikRitual> manasikRituals = [
       'Supplicate and remember Allah abundantly, facing the Qibla.',
       'Do not leave Arafah before sunset.',
     ],
-    duaAr:
-        'لا إِلَهَ إِلّا اللَّهُ وَحْدَهُ لا شَرِيكَ لَهُ، لَهُ المُلْكُ وَلَهُ الحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.',
-    duaEn:
-        'La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamd, wa huwa \'ala kulli shay\'in qadir.',
+    duaAr: 'لا إِلَهَ إِلّا اللَّهُ وَحْدَهُ لا شَرِيكَ لَهُ، لَهُ المُلْكُ وَلَهُ الحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ.',
+    duaEn: 'La ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamd, wa huwa \'ala kulli shay\'in qadir.',
   ),
   ManasikRitual(
     id: 'muzdalifah',
