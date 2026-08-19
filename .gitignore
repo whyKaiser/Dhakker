@@ -45,3 +45,7 @@ tools/
 
 CLAUDE.md
 .claude/
+
+# Node dependencies (Firestore rules tests, Worker tooling)
+node_modules/
+test_firestore_rules/package-lock.json

@@ -900,7 +900,8 @@ test("noApprovedSourceAnswer is localized (distinct per language, not English ev
 // the PROVENANCE GATE, neither of which depends on the body content — so
 // there is no reason to copy approved religious material into this repo.
 
-const { mapSupplicationRows, VERIFICATION_STATUS_VERIFIED } = __testing__;
+const { mapSupplicationRows, VERIFICATION_STATUS_VERIFIED, isValidHttpsUrl } =
+  __testing__;
 
 /// Builds a Firestore `documents:runQuery` row from plain values.
 function supplicationRow({
@@ -916,6 +917,7 @@ function supplicationRow({
   sourceUrl,
   sourceVersion,
   section,
+  revokedAt,
   zoneId = "zone-haram",
 } = {}) {
   const fields = {
@@ -939,7 +941,22 @@ function supplicationRow({
   if (sourceUrl !== undefined) fields.sourceUrl = { stringValue: sourceUrl };
   if (sourceVersion !== undefined) fields.sourceVersion = { stringValue: sourceVersion };
   if (section !== undefined) fields.section = { stringValue: section };
+  if (revokedAt !== undefined) fields.revokedAt = { stringValue: revokedAt };
   return { document: { fields } };
+}
+
+/// Full, valid provenance — the ONLY shape the gate accepts. Every required
+/// field must be present; see the gate comment in worker.js.
+const FULL_PROVENANCE = {
+  authority: "Example Approving Authority",
+  verificationStatus: VERIFICATION_STATUS_VERIFIED,
+  sourceUrl: "https://example.org/official/doc",
+  sourceVersion: "2026-01",
+};
+
+/// A row that passes the gate, with optional overrides.
+function verifiedRow(overrides = {}) {
+  return supplicationRow({ ...FULL_PROVENANCE, ...overrides });
 }
 
 test("supplications adapter maps the legacy schema onto the retrieval shape", () => {
@@ -970,13 +987,11 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
 
 test("supplications adapter selects title/text for the requested language", () => {
   const rows = [
-    supplicationRow({
+    verifiedRow({
       titleAr: "PLACEHOLDER AR TITLE",
       titleEn: "PLACEHOLDER EN TITLE",
       textAr: "PLACEHOLDER AR BODY",
       textEn: "PLACEHOLDER EN BODY",
-      authority: "Example Authority",
-      verificationStatus: VERIFICATION_STATUS_VERIFIED,
     }),
   ];
   assert.equal(mapSupplicationRows(rows, "ar")[0].title, "PLACEHOLDER AR TITLE");
@@ -987,11 +1002,7 @@ test("supplications adapter selects title/text for the requested language", () =
 
 test("supplications adapter falls back to zoneId as section when none is set", () => {
   const rows = [
-    supplicationRow({
-      zoneId: "zone-mina",
-      authority: "Example Authority",
-      verificationStatus: VERIFICATION_STATUS_VERIFIED,
-    }),
+    verifiedRow({ zoneId: "zone-mina" }),
   ];
   assert.equal(mapSupplicationRows(rows, "en")[0].section, "zone-mina");
 });
@@ -1025,21 +1036,14 @@ test("PROVENANCE GATE: verificationStatus=verified with a blank authority is not
 
 test("supplications adapter drops records that do not carry the reply language", () => {
   const rows = [
-    supplicationRow({
-      languageCodes: ["ar"],
-      authority: "Example Authority",
-      verificationStatus: VERIFICATION_STATUS_VERIFIED,
-    }),
+    verifiedRow({ languageCodes: ["ar"] }),
   ];
   assert.deepEqual(mapSupplicationRows(rows, "fr"), []);
   assert.equal(mapSupplicationRows(rows, "ar").length, 1);
 });
 
 test("supplications adapter drops records missing id, title, or body", () => {
-  const base = {
-    authority: "Example Authority",
-    verificationStatus: VERIFICATION_STATUS_VERIFIED,
-  };
+  const base = { ...FULL_PROVENANCE };
   assert.deepEqual(mapSupplicationRows([supplicationRow({ ...base, duaId: "" })], "en"), []);
   assert.deepEqual(
     mapSupplicationRows([supplicationRow({ ...base, titleEn: "", titleAr: "" })], "en"),
@@ -1064,11 +1068,7 @@ test("mixed registry: only provenance-bearing records survive to become citation
   const rows = [
     supplicationRow({ duaId: "legacy-no-provenance" }),
     supplicationRow({ duaId: "draft-only", authority: "A", verificationStatus: "draft" }),
-    supplicationRow({
-      duaId: "approved-1",
-      authority: "Example Approving Authority",
-      verificationStatus: VERIFICATION_STATUS_VERIFIED,
-    }),
+    verifiedRow({ duaId: "approved-1" }),
   ];
   const docs = mapSupplicationRows(rows, "en");
   assert.equal(docs.length, 1);
@@ -1126,12 +1126,10 @@ test("end-to-end: a provenance-bearing registry produces a grounded, canonicaliz
     if (u.includes("firestore.googleapis.com")) {
       return new Response(
         JSON.stringify([
-          supplicationRow({
+          verifiedRow({
             duaId: "approved-7",
             titleEn: "PLACEHOLDER TITLE",
             textEn: "PLACEHOLDER BODY",
-            authority: "Example Approving Authority",
-            verificationStatus: VERIFICATION_STATUS_VERIFIED,
             sourceUrl: "https://example.org/ref/7",
           }),
         ]),
@@ -1191,4 +1189,90 @@ test("end-to-end: a provenance-bearing registry produces a grounded, canonicaliz
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+// ── Fail-closed provenance gate: every required condition ─────────────────
+
+test("isValidHttpsUrl accepts only absolute HTTPS URLs", () => {
+  assert.equal(isValidHttpsUrl("https://example.org/a"), true);
+  assert.equal(isValidHttpsUrl("  https://example.org/a  "), true);
+  for (const bad of [
+    "http://example.org/a",
+    "ftp://example.org/a",
+    "javascript:alert(1)",
+    "data:text/html,x",
+    "example.org/a",
+    "//example.org/a",
+    "https://",
+    "",
+    "   ",
+    null,
+    undefined,
+    42,
+  ]) {
+    assert.equal(isValidHttpsUrl(bad), false, `${JSON.stringify(bad)} must be rejected`);
+  }
+});
+
+test("GATE: a missing or non-HTTPS sourceUrl makes a record uncitable", () => {
+  for (const url of [undefined, "", "   ", "http://example.org/doc", "not-a-url"]) {
+    const rows = [verifiedRow({ sourceUrl: url })];
+    assert.deepEqual(
+      mapSupplicationRows(rows, "en"),
+      [],
+      `sourceUrl ${JSON.stringify(url)} must not be citable`
+    );
+  }
+});
+
+test("GATE: a missing or blank sourceVersion makes a record uncitable", () => {
+  for (const v of [undefined, "", "   "]) {
+    const rows = [verifiedRow({ sourceVersion: v })];
+    assert.deepEqual(mapSupplicationRows(rows, "en"), []);
+  }
+});
+
+test("GATE: isActive must be explicitly true", () => {
+  assert.deepEqual(mapSupplicationRows([verifiedRow({ isActive: false })], "en"), []);
+});
+
+test("GATE: a revoked record is excluded even when fully verified", () => {
+  const rows = [verifiedRow({ duaId: "revoked-1", revokedAt: "2026-05-01T00:00:00Z" })];
+  assert.deepEqual(mapSupplicationRows(rows, "en"), []);
+  // Sanity: the same record without revokedAt IS citable.
+  assert.equal(mapSupplicationRows([verifiedRow({ duaId: "revoked-1" })], "en").length, 1);
+});
+
+test("GATE: sourceSection is preferred over section and zoneId", () => {
+  const withSource = verifiedRow({ zoneId: "zone-x", section: "sec-y" });
+  withSource.document.fields.sourceSection = { stringValue: "p. 42" };
+  assert.equal(mapSupplicationRows([withSource], "en")[0].section, "p. 42");
+});
+
+test("GATE: a fully-verified record exposes url and version from the record", () => {
+  const docs = mapSupplicationRows(
+    [verifiedRow({ sourceUrl: "https://example.org/x", sourceVersion: "1447H" })],
+    "en"
+  );
+  assert.equal(docs[0].url, "https://example.org/x");
+  assert.equal(docs[0].version, "1447H");
+});
+
+test("GATE: legacy records are excluded wholesale — no partial-credit citation", () => {
+  // A realistic un-migrated production batch: good content, zero provenance.
+  const rows = [
+    supplicationRow({ duaId: "legacy-1" }),
+    supplicationRow({ duaId: "legacy-2" }),
+    supplicationRow({ duaId: "legacy-3", authority: "Someone" }),
+    supplicationRow({
+      duaId: "legacy-4",
+      authority: "Someone",
+      verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    }),
+  ];
+  assert.deepEqual(
+    mapSupplicationRows(rows, "en"),
+    [],
+    "no legacy record may become citable without complete provenance"
+  );
 });

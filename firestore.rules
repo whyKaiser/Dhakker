@@ -43,14 +43,67 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // supplications: قراءة للجميع؛ الأدمن كتابة كاملة؛ الحاج يحدّث usage_count فقط.
+    // ── حقول التوثيق (provenance) للمصادر ────────────────────────────────
+    // سجلّات supplications هي سجلّات محتوى قائمة، وليست مصادر معتمدة بحد
+    // ذاتها. لا يُعتبر أي سجلّ موثّقاً إلا بعد مطابقته يدوياً بمصدر رسمي
+    // منشور وتسجيل ذلك في هذه الحقول.
+    function verificationKeys() {
+      return [
+        'verificationStatus', 'authority', 'sourceUrl', 'sourceVersion',
+        'sourceLanguage', 'sourceSection', 'verifiedAt', 'verifiedBy',
+        'contentHash', 'revokedAt', 'reviewNotes'
+      ];
+    }
+
+    function touchesVerificationFields() {
+      return request.resource.data.diff(resource.data)
+               .affectedKeys().hasAny(verificationKeys());
+    }
+
+    // سجلّ "موثّق" غير مكتمل = مرفوض. تُطبَّق نفس الشروط التي يفرضها
+    // الوسيط (worker.js) حتى لا يعتمد الأمان على تحقّق العميل وحده.
+    // ملاحظة: نتحقق من وجود الحقل بـ `in` قبل قراءته. قراءة حقل غير موجود
+    // في قواعد Firestore تُنتج خطأ تقييم (يمنع الوصول لكنه غير نظيف)، لذا
+    // نجعل الرفض صريحاً ومقروءاً في السجلّات.
+    function hasCompleteProvenance(data) {
+      return data.verificationStatus == 'verified'
+        && ('authority' in data)
+        && data.authority is string && data.authority.size() > 0
+        && ('sourceUrl' in data)
+        && data.sourceUrl is string && data.sourceUrl.matches('https://.+')
+        && ('sourceVersion' in data)
+        && data.sourceVersion is string && data.sourceVersion.size() > 0
+        && ('sourceLanguage' in data)
+        && data.sourceLanguage is string && data.sourceLanguage.size() > 0
+        && ('verifiedBy' in data)
+        && data.verifiedBy is string && data.verifiedBy.size() > 0
+        && ('verifiedAt' in data) && data.verifiedAt != null
+        && (!('revokedAt' in data) || data.revokedAt == null);
+    }
+
+    // يُسمح بالكتابة إذا لم يُدَّعَ التوثيق، أو ادُّعي مع استيفاء كل الحقول.
+    function verificationClaimIsValid() {
+      return !('verificationStatus' in request.resource.data)
+        || request.resource.data.verificationStatus != 'verified'
+        || hasCompleteProvenance(request.resource.data);
+    }
+
+    // supplications: قراءة لأي مسجّل؛ الأدمن يكتب؛ الحاج يحدّث usage_count فقط.
+    // لا يستطيع الحاج بأي حال لمس حقول التوثيق (لا إنشاءً ولا تعديلاً).
     match /supplications/{duaId} {
       allow read: if isSignedIn();
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin()
+      allow delete: if isAdmin();
+
+      allow create: if isAdmin()
+        && (!('verificationStatus' in request.resource.data)
+            || request.resource.data.verificationStatus != 'verified'
+            || hasCompleteProvenance(request.resource.data));
+
+      allow update: if (isAdmin() && verificationClaimIsValid())
         || (isSignedIn()
             && request.resource.data.diff(resource.data)
-                  .affectedKeys().hasOnly(['usage_count']));
+                  .affectedKeys().hasOnly(['usage_count'])
+            && !touchesVerificationFields());
     }
 
     // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.

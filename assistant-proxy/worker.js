@@ -672,25 +672,49 @@ async function retrieveKnowledge(question, language, env, token) {
 //   languageCodes[]       →  language    (array membership, filtered here)
 //   zoneId                →  section     (fallback when no explicit section)
 //
-// PROVENANCE GATE — the important part.
-// The legacy `supplications` schema carries no provenance fields, so a record
-// can be perfectly good religious content and still be uncitable *as a
-// verified citation*, because we cannot name who approved it. A citation
-// asserting an authority we do not actually have on record would be exactly
-// the fabrication this whole pipeline exists to prevent.
+// PROVENANCE GATE — fail closed.
 //
-// So a record is returned (i.e. becomes citable, and can make an answer
-// `grounded`) ONLY when the admin has filled in real provenance:
-//   - `authority`        non-empty string — the issuing/approving body
+// IMPORTANT FRAMING: the records in `supplications` are existing CONTENT
+// RECORDS. They are NOT approved sources and must not be described as such.
+// They carry no provenance metadata, and nothing about their presence in the
+// collection implies any authority reviewed or approved them. Until a human
+// has matched a record against an official published source and recorded
+// that fact, it is unverified — full stop.
+//
+// A record is retrievable (i.e. citable, and able to make an answer
+// `grounded`) ONLY when ALL of the following hold:
 //   - `verificationStatus` === "verified"
-// Optional: `sourceUrl`, `sourceVersion`, `section`, `lastVerifiedAt`.
+//   - `isActive` === true
+//   - `authority`      non-empty        — the issuing/approving body
+//   - `sourceUrl`      valid https:// URL — where the claim can be checked
+//   - `sourceVersion`  non-empty        — which edition was checked
+//   - not revoked (`revokedAt` unset/empty)
 //
-// Records without that metadata are skipped, which means the question falls
-// through to the deterministic "no approved source" response rather than
-// producing an answer citing an authority nobody vouched for. Populating
-// these fields is an admin/data task, not a code change — see
-// docs/ARCHITECTURE.md ("Approved source registry").
+// Every one of these is required because a citation makes an assertion TO A
+// PILGRIM about who stands behind the text. A missing authority means we
+// cannot name the approver; a missing/non-HTTPS sourceUrl means the pilgrim
+// cannot independently check it; a missing sourceVersion means we cannot say
+// WHICH edition was reviewed. Any of those gaps turns a citation into an
+// unfalsifiable claim of endorsement.
+//
+// Anything failing these checks is skipped, so the question falls through to
+// the deterministic "no approved source" response. Legacy records therefore
+// stay excluded by default — that is the intended, safe state, not a bug.
 const VERIFICATION_STATUS_VERIFIED = "verified";
+
+/// True only for a syntactically valid absolute HTTPS URL. Plain http:// is
+/// rejected: a citation the pilgrim cannot verify over a protected channel is
+/// not a usable provenance reference.
+function isValidHttpsUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return false;
+  let parsed;
+  try {
+    parsed = new URL(value.trim());
+  } catch (_) {
+    return false;
+  }
+  return parsed.protocol === "https:" && !!parsed.hostname;
+}
 
 async function queryFirestoreSupplications(keywords, language, projectId, token) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
@@ -721,6 +745,17 @@ async function queryFirestoreSupplications(keywords, language, projectId, token)
                 field: { fieldPath: "isActive" },
                 op: "EQUAL",
                 value: { booleanValue: true },
+              },
+            },
+            {
+              // Filter unverified records out server-side as well as in
+              // mapSupplicationRows. This is both an efficiency measure and
+              // defense in depth: the gate does not depend on either layer
+              // alone. Requires the composite index in firestore.indexes.json.
+              fieldFilter: {
+                field: { fieldPath: "verificationStatus" },
+                op: "EQUAL",
+                value: { stringValue: VERIFICATION_STATUS_VERIFIED },
               },
             },
           ],
@@ -756,10 +791,26 @@ function mapSupplicationRows(rows, language) {
     const langs = langValues.map((v) => v.stringValue).filter(Boolean);
     if (langs.length > 0 && !langs.includes(language)) continue;
 
-    // Provenance gate — no verified authority, not citable.
-    const authority = (fields.authority?.stringValue || "").trim();
+    // Provenance gate — ALL conditions required (see block comment above).
     const status = (fields.verificationStatus?.stringValue || "").trim();
-    if (!authority || status !== VERIFICATION_STATUS_VERIFIED) continue;
+    if (status !== VERIFICATION_STATUS_VERIFIED) continue;
+
+    // isActive must be explicitly true. A missing/non-boolean field fails.
+    if (fields.isActive?.booleanValue !== true) continue;
+
+    const authority = (fields.authority?.stringValue || "").trim();
+    if (!authority) continue;
+
+    const sourceUrl = (fields.sourceUrl?.stringValue || "").trim();
+    if (!isValidHttpsUrl(sourceUrl)) continue;
+
+    const sourceVersion = (fields.sourceVersion?.stringValue || "").trim();
+    if (!sourceVersion) continue;
+
+    // A revoked source is withdrawn immediately, regardless of its status.
+    const revokedAt = (fields.revokedAt?.stringValue || "").trim();
+    const revokedTs = fields.revokedAt?.timestampValue;
+    if (revokedAt || revokedTs) continue;
 
     const localized = (mapField) => {
       const m = fields[mapField]?.mapValue?.fields;
@@ -776,10 +827,14 @@ function mapSupplicationRows(rows, language) {
       documentId,
       title,
       authority,
-      section:
-        (fields.section?.stringValue || fields.zoneId?.stringValue || "").trim(),
-      url: (fields.sourceUrl?.stringValue || "").trim(),
-      version: (fields.sourceVersion?.stringValue || "").trim(),
+      section: (
+        fields.sourceSection?.stringValue ||
+        fields.section?.stringValue ||
+        fields.zoneId?.stringValue ||
+        ""
+      ).trim(),
+      url: sourceUrl,
+      version: sourceVersion,
       content,
     });
   }
@@ -1159,6 +1214,7 @@ export const __testing__ = {
   verifyFirebaseIdToken,
   mapSupplicationRows,
   VERIFICATION_STATUS_VERIFIED,
+  isValidHttpsUrl,
   GROQ_TIMEOUT_MS,
   GEMINI_TIMEOUT_MS,
   JWKS_TIMEOUT_MS,

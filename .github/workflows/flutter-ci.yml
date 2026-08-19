@@ -67,3 +67,25 @@ jobs:
       - name: Run Worker tests
         working-directory: assistant-proxy
         run: node --test worker.test.mjs
+
+  firestore-rules-tests:
+    name: Firestore security rules tests (emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # The Firestore emulator is a Java process.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install rules-test dependencies
+        working-directory: test_firestore_rules
+        run: npm install --no-audit --no-fund
+      # `firebase emulators:exec` boots the emulator, runs the suite, and
+      # tears it down — no long-lived emulator and no real project involved.
+      - name: Run Firestore rules tests
+        working-directory: test_firestore_rules
+        run: npm test
