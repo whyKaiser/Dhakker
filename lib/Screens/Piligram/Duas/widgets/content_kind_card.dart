@@ -1,0 +1,156 @@
+/// عرض المحتوى بحسب تصنيفه، بحيث لا يختلط الإرشاد بالدعاء ولا يُنسب دعاء
+/// عام إلى موضع لم يخصّه به المصدر.
+///
+/// القاعدتان اللتان تفرضهما هذه الملفات:
+///   1. [SupplicationContentKind.proceduralGuidance] لا يُعرض أبدًا تحت
+///      عنوان «دعاء»، ولا يُعرض له زر تشغيل صوتي — فهو حكم أو إرشاد، لا نص
+///      يُتلىٰ. يُعرض في [GuidanceCard] المنفصلة.
+///   2. كل ما ليس [SupplicationContentKind.specificText] يحمل وسمًا ظاهرًا
+///      يقول إنه عام وغير مخصوص بالموضع.
+library;
+
+import 'package:flutter/material.dart';
+
+import '../../Home/models/supplication_model.dart';
+
+/// وسم صغير يوضّح تصنيف المحتوى. لا يجوز إخفاؤه للأنواع العامة.
+class ContentKindBadge extends StatelessWidget {
+  const ContentKindBadge({super.key, required this.kind});
+
+  final SupplicationContentKind kind;
+
+  Color get _color {
+    switch (kind) {
+      case SupplicationContentKind.specificText:
+        return const Color(0xFF2E7D32);
+      case SupplicationContentKind.proceduralGuidance:
+        return const Color(0xFF1565C0);
+      case SupplicationContentKind.mosqueEntry:
+        return const Color(0xFF6A1B9A);
+      case SupplicationContentKind.generalDua:
+      case SupplicationContentKind.generalDhikr:
+        return const Color(0xFF8D6E00);
+    }
+  }
+
+  IconData get _icon {
+    switch (kind) {
+      case SupplicationContentKind.specificText:
+        return Icons.place_rounded;
+      case SupplicationContentKind.proceduralGuidance:
+        return Icons.info_outline_rounded;
+      case SupplicationContentKind.mosqueEntry:
+        return Icons.mosque_rounded;
+      case SupplicationContentKind.generalDua:
+      case SupplicationContentKind.generalDhikr:
+        return Icons.public_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _color.withOpacity(0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_icon, size: 13, color: _color),
+          const SizedBox(width: 4),
+          Text(
+            kind.badgeAr(),
+            style: TextStyle(
+                color: _color, fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة الإرشاد — منفصلة تمامًا عن بطاقات الأدعية.
+///
+/// لا تحمل زر تشغيل ولا تُسمّىٰ «دعاء»، لأن محتواها حكم أو توجيه عملي مثل
+/// «لا يصح الطواف من داخل الحِجْر» أو «لا تُزاحم على الركن».
+class GuidanceCard extends StatelessWidget {
+  const GuidanceCard({
+    super.key,
+    required this.title,
+    required this.body,
+    this.cardColor,
+    this.textColor,
+  });
+
+  final String title;
+  final String body;
+  final Color? cardColor;
+  final Color? textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF1565C0);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardColor ?? Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: accent),
+              SizedBox(width: 6),
+              Text('إرشاد',
+                  style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (title.trim().isNotEmpty) ...[
+            Text(title,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w800,
+                    height: 1.6)),
+            const SizedBox(height: 6),
+          ],
+          Text(body, style: TextStyle(color: textColor, height: 1.9)),
+          const SizedBox(height: 10),
+          const ContentKindBadge(
+              kind: SupplicationContentKind.proceduralGuidance),
+        ],
+      ),
+    );
+  }
+}
+
+/// يقسم قائمة سجلات إلى (أدعية/أذكار) و(إرشادات)، حفاظًا على الفصل في كل
+/// شاشة تعرضها. أي شاشة تعرض القائمة الخام دون هذا التقسيم تكون قد خالفت
+/// القاعدة.
+class SupplicationPartition {
+  const SupplicationPartition(
+      {required this.recitable, required this.guidance});
+
+  final List<SupplicationModel> recitable;
+  final List<SupplicationModel> guidance;
+
+  factory SupplicationPartition.of(List<SupplicationModel> items) {
+    return SupplicationPartition(
+      recitable: items.where((e) => e.contentKind.belongsInDuaSection).toList(),
+      guidance: items
+          .where((e) =>
+              e.contentKind == SupplicationContentKind.proceduralGuidance)
+          .toList(),
+    );
+  }
+}
