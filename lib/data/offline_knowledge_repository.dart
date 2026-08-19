@@ -132,12 +132,15 @@ class OfflineKnowledgeRepository {
         q.contains('sai') ||
         q.contains('safa') ||
         q.contains('marwa')) return 'sai';
-    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat'))
+    if (q.contains('إحرام') || q.contains('ihram') || q.contains('miqat')) {
       return 'ihram';
-    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning'))
+    }
+    if (q.contains('جمر') || q.contains('jamarat') || q.contains('stoning')) {
       return 'jamarat';
-    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah'))
+    }
+    if (q.contains('عرفة') || q.contains('arafat') || q.contains('arafah')) {
       return 'arafat';
+    }
     return 'fallback';
   }
 }

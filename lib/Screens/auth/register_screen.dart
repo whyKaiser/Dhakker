@@ -451,10 +451,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           validator: (v) {
                             final value = v ?? '';
-                            if (value.isEmpty)
+                            if (value.isEmpty) {
                               return s.authConfirmPasswordRequired;
-                            if (value != _pass.text)
+                            }
+                            if (value != _pass.text) {
                               return s.authPasswordsNotMatch;
+                            }
                             return null;
                           },
                         ),
