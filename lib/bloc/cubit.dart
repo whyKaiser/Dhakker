@@ -151,6 +151,15 @@ class AppCubit extends Cubit<AppStates> {
   bool _tawafArmed = false;
   bool _nearTawaf = false; // هل آخر موقع GPS قريب من المطاف؟
   bool _nearSai = false; // هل آخر موقع GPS قريب من الصفا/المروة؟
+
+  /// Real-time "is a Tawaf lap in progress right now" signal — based on live
+  /// GPS proximity to the Tawaf start point AND an incomplete lap count, NOT
+  /// merely "roundCount > 0" (which stays true for hours after Tawaf ends and
+  /// would wrongly label a finished ritual as still active).
+  bool get isTawafActive => _nearTawaf && roundCount < 7;
+
+  /// Same real-time signal for Sa'i — see [isTawafActive].
+  bool get isSaiActive => _nearSai && saiCount < 7;
   // وضع الدقة القصوى لـ GPS: يُفعَّل فقط قرب مناطق العدّ (طواف/سعي) لتوفير
   // البطارية في باقي الأماكن (منى/عرفات/الفندق...) دون التأثير على دقة العدّ.
   bool _highAccuracyMode = false;

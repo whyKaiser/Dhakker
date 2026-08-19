@@ -1,3 +1,4 @@
+import '../Screens/Piligram/Home/controllers/home_dua_controller.dart';
 import '../Screens/Piligram/Home/models/zone_model.dart';
 import '../bloc/cubit.dart';
 import 'assistant_service.dart';
@@ -20,23 +21,38 @@ class PilgrimContextBuilder {
   }) {
     if (!consent) return PilgrimContext.none;
 
-    final ritual = _ritualFor(cubit, currentZone);
+    // Reuse HomeDuaController.currentZone via its static, in-memory mirror
+    // (HomeDuaController.lastKnownZone) when the caller doesn't pass one
+    // explicitly — never a second GPS/zone stream, just the same coarse
+    // value that controller already computed.
+    final zone = currentZone ?? HomeDuaController.lastKnownZone;
+
+    final ritual = _ritualFor(cubit);
 
     return PilgrimContext(
       consent: true,
       ritual: ritual,
+      // Only ever attached when that specific ritual is verified ACTIVE
+      // right now (real-time GPS-proximity signal), never merely because a
+      // lap counter is non-zero — a counter stays non-zero for hours after
+      // the ritual actually finished and must not be used to infer it.
       tawafLapsCompleted: ritual == 'tawaf' ? cubit.roundCount.clamp(0, 7) : null,
       saiLapsCompleted: ritual == 'sai' ? cubit.saiCount.clamp(0, 7) : null,
       // Coarse named zone only (e.g. "Al-Haram") — never raw lat/lng, which
       // never enters this object in the first place.
-      zone: currentZone?.zoneId,
+      zone: zone?.zoneId,
     );
   }
 
-  static String? _ritualFor(AppCubit cubit, ZoneModel? zone) {
-    final type = zone?.type.toLowerCase() ?? '';
-    if (type.contains('tawaf') || cubit.roundCount > 0) return 'tawaf';
-    if (type.contains('sai') || cubit.saiCount > 0) return 'sai';
+  /// Determines the CURRENTLY active ritual using real-time state only.
+  /// Deliberately does NOT infer "tawaf"/"sai" merely because
+  /// `roundCount`/`saiCount` > 0 — those counters remain non-zero long after
+  /// the ritual has actually ended and would mislabel a stale session as
+  /// in-progress. If no reliable active-session signal is available, this
+  /// reports 'none' rather than guessing.
+  static String _ritualFor(AppCubit cubit) {
+    if (cubit.isTawafActive) return 'tawaf';
+    if (cubit.isSaiActive) return 'sai';
     return 'none';
   }
 }

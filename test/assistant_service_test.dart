@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:dhakker/services/assistant_service.dart';
 
 void main() {
@@ -93,6 +97,26 @@ void main() {
       }, 'en');
 
       expect(resp.citations, isEmpty);
+      // Core safety invariant: grounded can NEVER be true once the
+      // validated citations list ends up empty, regardless of the raw
+      // JSON's claim.
+      expect(resp.grounded, isFalse);
+      expect(resp.confidence, 'low');
+      expect(resp.requiresHumanGuide, isTrue);
+    });
+
+    test('grounded:true with an empty citations array is forced to grounded:false/low/requiresHumanGuide:true', () {
+      final resp = AssistantResponse.fromJson({
+        'answer': 'Some answer',
+        'grounded': true,
+        'confidence': 'high',
+        'citations': <Map<String, dynamic>>[],
+        'requiresHumanGuide': false,
+      }, 'en');
+
+      expect(resp.grounded, isFalse);
+      expect(resp.confidence, 'low');
+      expect(resp.requiresHumanGuide, isTrue);
     });
 
     test('empty citations + grounded=false yields a client object with zero citations', () {
@@ -156,6 +180,108 @@ void main() {
       await service.ask('hello', language: 'en'); // not configured -> no history added
       service.clearHistory();
       expect(service.history, isEmpty);
+    });
+  });
+
+  // ── Firebase auth wiring (proxy mode) ──────────────────────────────────
+  //
+  // These force proxy mode via the test-only `proxyUrl` constructor param
+  // (the real app instead relies on the compile-time `ASSISTANT_PROXY_URL`
+  // define) and fake the token provider / HTTP transport, since there is no
+  // live Firebase project available in this test environment.
+  group('AssistantService — auth (proxy mode)', () {
+    test('missing token (no authenticated user) returns signInRequired without any network call', () async {
+      var callCount = 0;
+      final client = MockClient((request) async {
+        callCount++;
+        return http.Response('{}', 200);
+      });
+      final service = AssistantService(proxyUrl: 'https://proxy.example/assistant', client: client)
+        ..idTokenProvider = () async => null;
+
+      final resp = await service.ask('What is Tawaf?', language: 'en');
+
+      expect(resp.signInRequired, isTrue);
+      expect(resp.grounded, isFalse);
+      expect(callCount, 0); // never even attempted the request without a token
+      expect(service.history, isEmpty); // user turn rolled back
+    });
+
+    test('valid token attaches an Authorization header and returns the structured response', () async {
+      String? seenAuthHeader;
+      final client = MockClient((request) async {
+        seenAuthHeader = request.headers['Authorization'];
+        return http.Response(
+          jsonEncode({
+            'answer': 'Tawaf is seven circuits.',
+            'grounded': true,
+            'confidence': 'high',
+            'citations': [
+              {'documentId': 'd1', 'title': 'T', 'authority': 'A', 'section': '', 'url': ''}
+            ],
+            'requiresHumanGuide': false,
+          }),
+          200,
+        );
+      });
+      final service = AssistantService(proxyUrl: 'https://proxy.example/assistant', client: client)
+        ..idTokenProvider = () async => 'valid-fresh-token';
+
+      final resp = await service.ask('What is Tawaf?', language: 'en');
+
+      expect(seenAuthHeader, 'Bearer valid-fresh-token');
+      expect(resp.grounded, isTrue);
+      expect(resp.signInRequired, isFalse);
+    });
+
+    test('expired/rejected token (server 401) returns signInRequired, not a generic error', () async {
+      final client = MockClient((request) async => http.Response('{"error":"unauthenticated"}', 401));
+      final service = AssistantService(proxyUrl: 'https://proxy.example/assistant', client: client)
+        ..idTokenProvider = () async => 'expired-token';
+
+      final resp = await service.ask('What is Tawaf?', language: 'en');
+
+      expect(resp.signInRequired, isTrue);
+      expect(resp.grounded, isFalse);
+    });
+
+    test('token refresh: idTokenProvider is invoked fresh on every request, never cached across calls', () async {
+      var tokenCallCount = 0;
+      final seenHeaders = <String?>[];
+      final client = MockClient((request) async {
+        seenHeaders.add(request.headers['Authorization']);
+        return http.Response(jsonEncode({'answer': 'ok', 'grounded': false, 'citations': []}), 200);
+      });
+      final service = AssistantService(proxyUrl: 'https://proxy.example/assistant', client: client)
+        ..idTokenProvider = () async {
+          tokenCallCount++;
+          return 'token-$tokenCallCount'; // a new token string each call, simulating force-refresh
+        };
+
+      await service.ask('first question', language: 'en');
+      await service.ask('second question', language: 'en');
+
+      expect(tokenCallCount, 2); // fetched fresh each time, never reused/cached
+      expect(seenHeaders, ['Bearer token-1', 'Bearer token-2']);
+    });
+
+    test('no context key is serialized in the request body when consent is false', () async {
+      Map<String, dynamic>? sentBody;
+      final client = MockClient((request) async {
+        sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'answer': 'ok', 'grounded': false, 'citations': []}), 200);
+      });
+      final service = AssistantService(proxyUrl: 'https://proxy.example/assistant', client: client)
+        ..idTokenProvider = () async => 'tok';
+
+      await service.ask(
+        'What is Tawaf?',
+        language: 'en',
+        context: const PilgrimContext(consent: false, ritual: 'tawaf', zone: 'Al-Haram'),
+      );
+
+      expect(sentBody, isNotNull);
+      expect(sentBody!.containsKey('context'), isFalse);
     });
   });
 }

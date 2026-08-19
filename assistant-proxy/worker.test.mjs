@@ -145,6 +145,37 @@ test("parseModelJson strips citations with missing required fields (no invented 
   assert.deepEqual(parsed.citations, []);
 });
 
+test("parseModelJson: grounded=true claim with an empty citations list is forced to grounded=false/low/requiresHumanGuide=true", () => {
+  const raw = JSON.stringify({
+    answer: "Some answer",
+    grounded: true,
+    confidence: "high",
+    citations: [],
+    requiresHumanGuide: false,
+  });
+  const parsed = parseModelJson(raw, "en");
+  assert.equal(parsed.grounded, false);
+  assert.equal(parsed.confidence, "low");
+  assert.equal(parsed.requiresHumanGuide, true);
+});
+
+test("parseModelJson: grounded=true claim whose only citations fail validation is forced to grounded=false/low/requiresHumanGuide=true", () => {
+  const raw = JSON.stringify({
+    answer: "Some answer",
+    grounded: true,
+    confidence: "high",
+    // Missing required fields (authority) — filtered out by the schema check,
+    // so the effective citations list is empty.
+    citations: [{ documentId: "d1", title: "T" }],
+    requiresHumanGuide: false,
+  });
+  const parsed = parseModelJson(raw, "en");
+  assert.deepEqual(parsed.citations, []);
+  assert.equal(parsed.grounded, false);
+  assert.equal(parsed.confidence, "low");
+  assert.equal(parsed.requiresHumanGuide, true);
+});
+
 test("parseModelJson unwraps a markdown code fence", () => {
   const raw = "```json\n" + JSON.stringify({ answer: "hi" }) + "\n```";
   const parsed = parseModelJson(raw, "en");
@@ -221,6 +252,16 @@ test("retrieveKnowledge matches non-production dev fixtures by keyword (clearly 
   assert.ok(docs.length >= 1);
   assert.ok(docs[0].title.includes("DEV FIXTURE"));
   assert.ok(docs[0].authority.toLowerCase().includes("non-authoritative"));
+});
+
+test("retrieveKnowledge NEVER returns dev fixtures in production, even for a matching keyword", async () => {
+  const docs = await retrieveKnowledge(
+    "what are the visitor center hours",
+    "en",
+    { ENVIRONMENT: "production" }, // production, no FIRESTORE_PROJECT_ID configured
+    null
+  );
+  assert.deepEqual(docs, []);
 });
 
 test("dev fixtures never claim to be religious/authoritative content", () => {

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -109,6 +110,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     super.initState();
     _initSpeech();
     _initTts();
+    // Provide a FRESH Firebase ID token per proxy request (force-refresh):
+    // never cache a token across the session, since a long-lived chat could
+    // otherwise send an expired token and hit a permanent 401 loop.
+    _service.idTokenProvider = () =>
+        FirebaseAuth.instance.currentUser?.getIdToken(true);
   }
 
   Future<void> _initTts() async {
@@ -272,21 +278,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   /// Builds the consent-gated [PilgrimContext] from the app's EXISTING
-  /// Tawaf/Sa'i counters via [AppCubit] — never a new/duplicate counter.
-  /// Falls back to no-context if AppCubit isn't reachable from this widget
-  /// tree (e.g. this screen shown standalone in a test) rather than
-  /// throwing.
+  /// Tawaf/Sa'i counters via [AppCubit] and the coarse zone via
+  /// [HomeDuaController.lastKnownZone] — never a new/duplicate counter or
+  /// location stream. Falls back to no-context if AppCubit isn't reachable
+  /// from this widget tree (e.g. this screen shown standalone in a test)
+  /// rather than throwing.
   PilgrimContext _buildPilgrimContext() {
     if (!_contextConsent) return PilgrimContext.none;
     try {
       final cubit = AppCubit.get(context);
-      return PilgrimContextBuilder.build(
-        consent: true,
-        cubit: cubit,
-        currentZone: null, // zone wiring left to the Home screen's own
-        // HomeDuaController instance; not duplicated here to avoid a
-        // second location-detection stream (see docs/ARCHITECTURE.md).
-      );
+      return PilgrimContextBuilder.build(consent: true, cubit: cubit);
     } catch (_) {
       return const PilgrimContext(consent: true);
     }
@@ -662,73 +663,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     ));
   }
 
-  /// Shows grounding/offline/human-guide indicators and citations, if any,
-  /// under an assistant reply — satisfies the "citations visible in app"
-  /// and "offline status indicator" acceptance criteria.
+  /// Shows grounding/offline/sign-in/human-guide indicators and citations,
+  /// if any, under an assistant reply — satisfies the "citations visible in
+  /// app" and "offline status indicator" acceptance criteria. Delegates to
+  /// the standalone, independently-testable [AssistantResponseMeta] widget.
   Widget _responseMeta(AssistantResponse r) {
-    final chips = <Widget>[];
-    if (r.isOffline) {
-      chips.add(_metaChip(Icons.wifi_off_rounded, _isRtl(_lang.label) ? 'غير متصل' : 'Offline', Colors.orange));
-    } else if (r.grounded) {
-      chips.add(_metaChip(Icons.verified_rounded, _isRtl(_lang.label) ? 'موثّق' : 'Grounded', Colors.green));
-    }
-    if (r.requiresHumanGuide) {
-      chips.add(_metaChip(
-        Icons.support_agent_rounded,
-        _isRtl(_lang.label) ? 'راجع مرشداً معتمداً' : 'Consult an authorized guide',
-        _danger,
-      ));
-    }
-    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: 6, children: chips),
-          if (r.citations.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            ...r.citations.map(
-              (c) => Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.link_rounded, size: 13, color: _p.textSecondary),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${c.title} — ${c.authority}',
-                        style: TextStyle(color: _p.textSecondary, fontSize: 11.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _metaChip(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(.14),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
+    return AssistantResponseMeta(response: r, isRtl: _isRtl(_lang.label), textSecondary: _p.textSecondary);
   }
 
   Widget _thinkingBar() {
@@ -817,6 +757,120 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Renders the grounding/offline/sign-in/human-guide status chips and the
+/// citation list for one [AssistantResponse]. Extracted from
+/// [_AssistantScreenState] as a standalone, stateless widget so it can be
+/// unit-tested (citation display, grounded/ungrounded/offline/sign-in-required
+/// states) without pumping the whole [AssistantScreen] (which needs speech,
+/// TTS, and Firebase plumbing to build).
+class AssistantResponseMeta extends StatelessWidget {
+  const AssistantResponseMeta({
+    super.key,
+    required this.response,
+    required this.isRtl,
+    required this.textSecondary,
+  });
+
+  final AssistantResponse response;
+  final bool isRtl;
+  final Color textSecondary;
+
+  static const _danger = Color(0xFFE0463F);
+
+  @override
+  Widget build(BuildContext context) {
+    final r = response;
+    final chips = <Widget>[];
+    if (r.signInRequired) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.login_rounded,
+        label: isRtl ? 'يلزم تسجيل الدخول' : 'Sign-in required',
+        color: _danger,
+      ));
+    } else if (r.isOffline) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.wifi_off_rounded,
+        label: isRtl ? 'غير متصل' : 'Offline',
+        color: Colors.orange,
+      ));
+    } else if (r.grounded) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.verified_rounded,
+        label: isRtl ? 'موثّق' : 'Grounded',
+        color: Colors.green,
+      ));
+    }
+    if (r.requiresHumanGuide) {
+      chips.add(AssistantMetaChip(
+        icon: Icons.support_agent_rounded,
+        label: isRtl ? 'راجع مرشداً معتمداً' : 'Consult an authorized guide',
+        color: _danger,
+      ));
+    }
+    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (chips.isNotEmpty) Wrap(spacing: 6, runSpacing: 6, children: chips),
+          if (r.citations.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ...r.citations.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.link_rounded, size: 13, color: textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${c.title} — ${c.authority}',
+                        style: TextStyle(color: textSecondary, fontSize: 11.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A small labeled status pill (e.g. "Grounded", "Offline", "Sign-in
+/// required"). Extracted as a standalone widget for direct widget testing.
+class AssistantMetaChip extends StatelessWidget {
+  const AssistantMetaChip({super.key, required this.icon, required this.label, required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }
