@@ -670,7 +670,7 @@ async function retrieveKnowledge(question, language, env, token) {
 //   text{ar,en}           →  content     (per reply language)
 //   tagsAr / tagsEn       →  keywords    (per reply language)
 //   languageCodes[]       →  language    (array membership, filtered here)
-//   zoneId                →  section     (fallback when no explicit section)
+//   zoneKey / zoneId      →  section     (fallback when no explicit section)
 //
 // PROVENANCE GATE — fail closed.
 //
@@ -827,9 +827,14 @@ function mapSupplicationRows(rows, language) {
       documentId,
       title,
       authority,
+      // `zoneKey` (stable slug, e.g. "hajar_aswad") is preferred over the
+      // project-specific `zoneId` when no explicit section is recorded:
+      // it is the identifier the source packs carry, and renaming a zone
+      // in the admin console must not change what a citation points at.
       section: (
         fields.sourceSection?.stringValue ||
         fields.section?.stringValue ||
+        fields.zoneKey?.stringValue ||
         fields.zoneId?.stringValue ||
         ""
       ).trim(),

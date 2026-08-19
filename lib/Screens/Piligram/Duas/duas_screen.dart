@@ -10,6 +10,7 @@ import '../Home/models/zone_model.dart';
 import '../Home/services/dua_playback_service.dart';
 import 'services/dua_search_service.dart';
 import 'services/voice_search_service.dart';
+import 'widgets/content_kind_card.dart';
 import 'widgets/voice_command_dialog.dart';
 import 'manasik_guide.dart';
 import 'hajj_schedule.dart';
@@ -368,10 +369,21 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                             },
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 14),
-                              child: _DuaResultCard(
+                              // الإرشاد ليس دعاءً: يُعرض في بطاقة إرشادية
+                              // منفصلة بلا زر تشغيل وبلا عنوان «دعاء».
+                              child: item.dua.contentKind ==
+                                      SupplicationContentKind.proceduralGuidance
+                                  ? GuidanceCard(
+                                      title: item.dua.titleByLanguage(langCode),
+                                      body: item.dua.textByLanguage(langCode),
+                                      cardColor: palette.card,
+                                      textColor: palette.text,
+                                    )
+                                  : _DuaResultCard(
                                 palette: palette,
                                 title: item.dua.titleByLanguage(langCode),
                                 text: item.dua.textByLanguage(langCode),
+                                kind: item.dua.contentKind,
                                 zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
                                 buttonText: s.duasPlayButton,
                                 onPlay: () async => await _playDua(item.dua),
@@ -639,10 +651,15 @@ class _DuaResultCard extends StatefulWidget {
   final VoidCallback onPlay;
   final VoidCallback? onShare;
 
+  /// تصنيف المحتوى — يُعرض كوسم ظاهر بجوار اسم الموضع، حتى لا يُفهم دعاء
+  /// عام على أنه مخصوص بهذا المكان.
+  final SupplicationContentKind kind;
+
   const _DuaResultCard({
     required this.palette,
     required this.title,
     required this.text,
+    required this.kind,
     required this.zoneName,
     required this.buttonText,
     required this.onPlay,
@@ -701,6 +718,11 @@ class _DuaResultCardState extends State<_DuaResultCard> {
                 child: Icon(Icons.copy_rounded, color: widget.palette.gold.withOpacity(.6), size: 19),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ContentKindBadge(kind: widget.kind),
           ),
           const SizedBox(height: 14),
           Text(

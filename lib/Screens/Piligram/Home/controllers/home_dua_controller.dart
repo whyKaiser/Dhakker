@@ -52,7 +52,21 @@ class HomeDuaController extends ChangeNotifier {
   void Function(Position position)? onPositionUpdate;
 
   // 1. تغيير الدعاء الواحد إلى قائمة لدعم التعدد
+  //
+  // هذه القائمة خام: قد تحوي إرشادات (procedural_guidance) وهي ليست أدعية
+  // تُتلىٰ. كل ما تعرضه الواجهة أو يُشغَّل صوتيًّا يمرّ عبر [recitableDuas]،
+  // والإرشادات تُعرض منفصلة عبر [guidanceItems].
   List<SupplicationModel> currentDuasList = [];
+
+  /// الأدعية والأذكار فقط — بلا إرشادات. هذا هو ما يُعرض ويُشغَّل.
+  List<SupplicationModel> get recitableDuas => currentDuasList
+      .where((e) => e.contentKind.belongsInDuaSection)
+      .toList(growable: false);
+
+  /// الإرشادات والأحكام — تُعرض في بطاقة منفصلة، ولا تُشغَّل صوتيًّا أبدًا.
+  List<SupplicationModel> get guidanceItems => currentDuasList
+      .where((e) => e.contentKind == SupplicationContentKind.proceduralGuidance)
+      .toList(growable: false);
 
   String? errorMessage;
 
@@ -254,11 +268,16 @@ class HomeDuaController extends ChangeNotifier {
     if (_lastFetchedZoneId != detectedZone.zoneId) {
       currentDuasList = await supplicationService.getSupplicationsByZone(
         detectedZone.zoneId,
+        // الربط المفضَّل بالمعرّف الثابت: تعديل اسم المنطقة في لوحة الإدارة
+        // يجب ألا يفصل نصوصها عنها.
+        zoneKey: detectedZone.zoneKey,
       );
       _lastFetchedZoneId = detectedZone.zoneId;
     }
 
-    if (currentDuasList.isEmpty) {
+    // الإرشادات مستبعدة هنا: لا يُشغَّل حكمٌ أو توجيه عملي على أنه دعاء.
+    final playableCandidates = recitableDuas;
+    if (playableCandidates.isEmpty) {
       _isCurrentZoneHandled = false;
       notifyListeners();
       return;
@@ -266,8 +285,8 @@ class HomeDuaController extends ChangeNotifier {
 
     // نختار أول دعاء "قابل للتشغيل" (له ملف صوتي أو نص غير فارغ بهذه اللغة)
     // حتى لا يطلع الدعاء صامتاً لو كان الأول بدون صوت ولا نص بهاللغة.
-    SupplicationModel selected = currentDuasList.first;
-    for (final d in currentDuasList) {
+    SupplicationModel selected = playableCandidates.first;
+    for (final d in playableCandidates) {
       final playable = (d.audioMode == 'file' && d.audioUrl.trim().isNotEmpty) ||
           d.textByLanguage(langCode).trim().isNotEmpty;
       if (playable) {
@@ -298,7 +317,8 @@ class HomeDuaController extends ChangeNotifier {
           title: isAr ? 'دخلت: $zoneName' : 'Entered: $zoneName',
           body: duaTitle.isNotEmpty
               ? duaTitle
-              : (isAr ? 'اضغط لقراءة دعاء المكان' : "Tap to read this place's supplication"),
+              // صياغة محايدة: لا ندّعي أن الدعاء مخصوص بهذا الموضع.
+              : (isAr ? 'اضغط لقراءة الدعاء' : 'Tap to read the supplication'),
         );
 
         // تأخير بسيط يمنح الحاج لحظة يستقر فيها قبل أن يبدأ الدعاء
@@ -359,9 +379,10 @@ class HomeDuaController extends ChangeNotifier {
 
   // 3. تعديل دالة الضغط لتقبل رقم الدعاء (index) وتزيد العداد في Firestore
   Future<void> onPrimaryButtonTap(String langCode, int index) async {
-    if (currentDuasList.isEmpty || index >= currentDuasList.length) return;
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return;
 
-    final dua = currentDuasList[index];
+    final dua = items[index];
 
     // تحديث عداد التشغيل في قاعدة البيانات
     try {
@@ -389,13 +410,23 @@ class HomeDuaController extends ChangeNotifier {
 
   // 4. تعديل دوال جلب النصوص لتقبل الفهرس (index)
   String? displayedDuaTitle(String langCode, int index) {
-    if (currentDuasList.isEmpty || index >= currentDuasList.length) return null;
-    return currentDuasList[index].titleByLanguage(langCode);
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return null;
+    return items[index].titleByLanguage(langCode);
   }
 
   String? displayedDuaText(String langCode, int index) {
-    if (currentDuasList.isEmpty || index >= currentDuasList.length) return null;
-    return currentDuasList[index].textByLanguage(langCode);
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return null;
+    return items[index].textByLanguage(langCode);
+  }
+
+  /// تصنيف الدعاء المعروض في هذا الموضع من القائمة — تستعمله الواجهة لعرض
+  /// الوسم الصريح («عام» / «وارد في هذا الموضع»).
+  SupplicationContentKind? displayedDuaKind(int index) {
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return null;
+    return items[index].contentKind;
   }
 
   void _log(String message) {
@@ -404,8 +435,9 @@ class HomeDuaController extends ChangeNotifier {
 
   // 5. تحديث المتغيرات التي تعتمد عليها واجهة المستخدم
   bool get hasDetectedZone => currentZone != null;
-  bool get hasDua => currentDuasList.isNotEmpty;
-  int get duasCount => currentDuasList.length; // متغير جديد لجلب عدد الأدعية
+  // الإرشادات لا تُحسب دعاءً ولا تدخل في العدّ ولا في hasDua.
+  bool get hasDua => recitableDuas.isNotEmpty;
+  int get duasCount => recitableDuas.length; // متغير جديد لجلب عدد الأدعية
 
   /// يصنّف نُسُك المنطقة الحالية: 'tawaf' (المطاف) أو 'sai' (الصفا/المروة/المسعى)
   /// أو null لأي منطقة أخرى. تستخدمه الواجهة لإظهار العدّاد المناسب فقط.

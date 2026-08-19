@@ -88,6 +88,48 @@ The source **explicitly forbids** assigning a supplication to each circuit — i
 | U11 | 59 | low | رموز ﷺ و«رضي الله عنهما» زخرفية مركّبة؛ كُتبت نصًّا حيث لزم. لا تؤثر على المتون. |
 | U12 | 71 | medium | «إِبْرَٰهِـۧمَ» in Baqarah 125 carries a superscript yā' in the Uthmani rasm; transcribed as printed, needs character-level check. |
 
+## Round 4 — final review before the PR
+
+The classification now reaches the pilgrim instead of sitting in JSON.
+
+**Wired end to end.** `contentKind` and `zoneKey` existed only in
+`source_packs/*.json`; they now flow through `SupplicationModel` →
+`SupplicationService` (queried by `zoneKey`, falling back to `zoneId`) →
+`HomeDuaController` → both screens, and through the Worker's retrieval
+adapter, which prefers `zoneKey` over `zoneId` for a citation's section.
+`scripts/import_source_pack.mjs` is the import half; it refuses a record
+with a missing `zoneKey`, an unknown zone slug, or an unknown kind, and
+forces `verificationStatus="unverified"` whatever the file claims.
+
+**Guidance is no longer shown as dua.** `procedural_guidance` records render
+in a separate blue «إرشاد» card with no play button, are excluded from
+`hasDua`/`duasCount`, and can never be picked for auto-playback. Every
+non-specific record carries a visible badge («دعاء عام — غير مخصوص بهذا
+الموضع»).
+
+**Three data defects the new tests caught** — fixed in the data, not the test:
+
+| Record | Was | Now | Why |
+|---|---|---|---|
+| `…umrah-entering-masjid` | `specific_text`, placed at Kaaba & Zamzam | `mosque_entry` | the source gives it for entering any mosque |
+| `…entering-masjid-hadith` | `specific_text` | `mosque_entry` | same |
+| `…talbiyah`, `…talbiyah-ziyadah` | `specific_text` with no owning zone, yet claimed «specific» at three miqats | `ritualKey: ihram` + explicit `appliesToZoneKeys` | tied by the source to entering ihram, a ritual spanning all three miqats — not to one spot |
+
+`zoneKey` was also backfilled on all 85 entries (only 29 carried it). 58 are
+explicitly `""` — meaning **not tied to any one place**; that is the honest
+encoding, and the importer rejects an absent key precisely because absence
+cannot be told apart from an oversight.
+
+Final kinds: 46 `general_dua` · 19 `procedural_guidance` · 14 `specific_text`
+· 4 `general_dhikr` · 2 `mosque_entry`. Zone-tied: 27.
+
+**Still true, still not invented:** Zamzam and the Kaaba have no
+place-specific text in the transcribed pages, and a test now fails if any
+appears. No UI names a per-circuit dua, and a test scans `lib/` for that too.
+
 ## Tests
 
-`flutter analyze` 0 · `flutter test` 44/44 · worker 86/86 · Firestore rules 21/21
+`flutter analyze` 0 · `flutter test` 72/72 · worker 86/86 · Firestore rules 21/21
+
+The 28 new Dart tests are `test/content_kind_classification_test.dart` (12)
+and `test/source_pack_integrity_test.dart` (16).

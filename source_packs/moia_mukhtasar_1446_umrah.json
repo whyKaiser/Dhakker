@@ -128,6 +128,7 @@
     {
       "duaId": "moia-mukhtasar-1446-umrah-talbiyah",
       "zoneNameAr": "مواقيت الإحرام",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "specific_text",
       "title": {
@@ -167,11 +168,18 @@
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "نص التلبية كما ورد في حديث جابر رضي الله عنهما، صفحة 59. المصدر يعزوه لمسلم رقم (1218).",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "ritualKey": "ihram",
+      "appliesToZoneKeys": [
+        "miqat_dhul_hulayfah",
+        "miqat_yalamlam",
+        "miqat_qarn_manazil"
+      ]
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
       "zoneNameAr": "مواقيت الإحرام",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "specific_text",
       "title": {
@@ -210,13 +218,20 @@
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "زيادة ثابتة عن عمر بن الخطاب وابنه عبدالله رضي الله عنهما، صفحة 59. المصدر يعزوها لمسلم رقم (1184). المصدر يقول: «وإن زاد ... فلا بأس» — أي جائزة لا لازمة.",
-      "visuallyUncertain": []
+      "visuallyUncertain": [],
+      "ritualKey": "ihram",
+      "appliesToZoneKeys": [
+        "miqat_dhul_hulayfah",
+        "miqat_yalamlam",
+        "miqat_qarn_manazil"
+      ]
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-entering-masjid",
       "zoneNameAr": "المسجد الحرام (عام)",
+      "zoneKey": "",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "mosque_entry",
       "title": {
         "ar": "دعاء دخول المسجد",
         "en": "Supplication on entering the mosque"
@@ -260,8 +275,9 @@
     {
       "duaId": "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
       "zoneNameAr": "المسجد الحرام (عام)",
+      "zoneKey": "",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "mosque_entry",
       "title": {
         "ar": "حديث دخول المسجد والخروج منه",
         "en": "Hadith: entering and leaving the mosque"
@@ -305,6 +321,7 @@
     {
       "duaId": "moia-mukhtasar-1446-tawaf-touching",
       "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
       "zoneId": "",
       "contentKind": "procedural_guidance",
       "title": {
@@ -348,6 +365,7 @@
     {
       "duaId": "moia-mukhtasar-1446-tawaf-between-corners",
       "zoneNameAr": "المطاف (منطقة الطواف)",
+      "zoneKey": "mataf",
       "zoneId": "",
       "contentKind": "specific_text",
       "title": {
@@ -393,6 +411,7 @@
     {
       "duaId": "moia-mukhtasar-1446-tawaf-takbir-hajar",
       "zoneNameAr": "الحجر الأسود",
+      "zoneKey": "hajar_aswad",
       "zoneId": "",
       "contentKind": "specific_text",
       "title": {
@@ -434,6 +453,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-001",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -476,6 +496,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-002",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -519,6 +540,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-003",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -562,6 +584,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-004",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -605,6 +628,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-005",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -648,6 +672,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-006",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -691,6 +716,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-007",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -734,6 +760,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-008",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -777,6 +804,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-009",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dhikr",
       "title": {
@@ -820,6 +848,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-010",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -863,6 +892,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-011",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -907,6 +937,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-012",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -950,6 +981,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-013",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -993,6 +1025,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-014",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1036,6 +1069,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-015",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dhikr",
       "title": {
@@ -1079,6 +1113,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-016",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1122,6 +1157,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-017",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1165,6 +1201,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-018",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1208,6 +1245,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-019",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1252,6 +1290,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-020",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1296,6 +1335,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-021",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1340,6 +1380,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-022",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1384,6 +1425,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-023",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1426,6 +1468,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-024",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1469,6 +1512,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-025",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1511,6 +1555,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-026",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1554,6 +1599,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-027",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1596,6 +1642,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-028",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1638,6 +1685,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-029",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1680,6 +1728,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-030",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1722,6 +1771,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-031",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1764,6 +1814,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-032",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1806,6 +1857,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-033",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dhikr",
       "title": {
@@ -1849,6 +1901,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-034",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1892,6 +1945,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-035",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1934,6 +1988,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-036",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -1977,6 +2032,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-037",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2019,6 +2075,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-038",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2061,6 +2118,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-039",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2104,6 +2162,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-040",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2146,6 +2205,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-041",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2188,6 +2248,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-042",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2231,6 +2292,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-043",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2273,6 +2335,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-044",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2316,6 +2379,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-045",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2359,6 +2423,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-046",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2402,6 +2467,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-047",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2445,6 +2511,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-048",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dua",
       "title": {
@@ -2488,6 +2555,7 @@
     {
       "duaId": "moia-mukhtasar-1446-general-049",
       "zoneNameAr": "",
+      "zoneKey": "",
       "zoneId": "",
       "contentKind": "general_dhikr",
       "title": {
