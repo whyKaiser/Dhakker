@@ -6,7 +6,8 @@ on:
       - "claude/dhakker-context-ai-upgrade-v0ilmk"
   pull_request:
     branches:
-      - "claude/dhakker-context-ai-upgrade-v0ilmk"
+      - main
+  workflow_dispatch:
 
 jobs:
   analyze-and-test:
