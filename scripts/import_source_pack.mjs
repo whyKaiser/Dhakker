@@ -95,6 +95,96 @@ export const KNOWN_CONTENT_KINDS = [
   "procedural_guidance",
 ];
 
+// ── The document schema ─────────────────────────────────────────────────
+//
+// Every field written to Firestore is listed here explicitly. This replaces
+// an earlier hand-written object literal that silently dropped any field the
+// packs gained later — `ritualKey` and `appliesToZoneKeys` (the two fields
+// that stop the Talbiyah being pinned to one miqat) and the whole Quranic
+// provenance block were being lost on import, so imported records were
+// poorer than the reviewed pack and nothing said so.
+//
+// A whole-object spread would have "fixed" that while creating a worse
+// problem: any typo or stray key in a pack would flow straight into
+// production documents. So the schema is explicit in both directions —
+// listed fields are copied, unlisted fields are a hard error.
+
+/** Forced by the importer regardless of what the pack says. */
+const FORCED_FIELDS = {
+  // Verification is a human act performed against the printed page. An
+  // import script must never be able to confer it.
+  verificationStatus: "unverified",
+  verifiedAt: null,
+  verifiedBy: null,
+  revokedAt: null,
+  // Playback/analytics defaults owned by the app, not by the source.
+  audioMode: "tts",
+  audioUrl: "",
+  usage_count: 0,
+};
+
+/** Must be present and non-empty in the pack. */
+const REQUIRED_FIELDS = ["duaId", "contentKind", "zoneKey", "title", "text"];
+
+/**
+ * Copied when present. The default applies ONLY when the key is absent from
+ * the pack entry — an explicit `null` or `""` is preserved as written,
+ * because in this data those carry meaning: `zoneKey: ""` says "not tied to
+ * any one place", and a null `contentHash` says "not yet computed". Coercing
+ * either would turn a deliberate statement into a guess.
+ */
+const OPTIONAL_FIELDS = {
+  zoneId: "",
+  zoneNameAr: "",
+  tagsAr: [],
+  tagsEn: [],
+  languageCodes: ["ar"],
+  isActive: true,
+
+  // Ministry (context) provenance.
+  authority: "",
+  sourceUrl: "",
+  sourceVersion: "",
+  sourceLanguage: "",
+  sourceSection: "",
+  printedPage: null,
+  contentHash: null,
+  contextAuthority: "",
+  contextSourceUrl: "",
+
+  // Ritual scope: a text the source ties to a rite spanning several zones
+  // rather than to one spot. Dropping these two silently re-attached such a
+  // text to a single place — the exact misattribution this pipeline exists
+  // to prevent.
+  ritualKey: "",
+  appliesToZoneKeys: [],
+
+  // Quranic text authority (King Fahd Complex) — see
+  // source_packs/QURAN_TEXT_AUTHORITY.md.
+  quranRef: null,
+  isPortionOfAyah: false,
+  textAuthority: "",
+  textAuthoritySourceUrl: "",
+  textRiwayah: "",
+  textRasm: "",
+  textEdition: "",
+  textEditionDate: "",
+
+  // Classification and review aids the human verifier needs in the console.
+  isGeneralSupplication: false,
+  reviewNotes: "",
+  visuallyUncertain: [],
+};
+
+/** Every key a pack entry may legitimately carry. */
+export const KNOWN_PACK_FIELDS = new Set([
+  ...REQUIRED_FIELDS,
+  ...Object.keys(OPTIONAL_FIELDS),
+  // A pack may restate a forced field (they all carry verificationStatus);
+  // the value is ignored, but the key is not an error.
+  ...Object.keys(FORCED_FIELDS),
+]);
+
 /**
  * Validates a pack and returns the Firestore-shaped records to write.
  * Throws on the first structural problem — a partial import is worse than
@@ -109,6 +199,18 @@ export function buildRecords(pack) {
   const seen = new Set();
   return entries.map((entry, index) => {
     const where = `entry #${index} (${entry?.duaId || "no duaId"})`;
+
+    // Unknown keys are refused, never dropped. A field nobody planned for is
+    // either a typo or a schema change; both need a human, and silently
+    // discarding it is how the previous bug went unnoticed.
+    for (const key of Object.keys(entry ?? {})) {
+      if (!KNOWN_PACK_FIELDS.has(key)) {
+        throw new Error(
+          `${where}: unknown field "${key}". Add it to OPTIONAL_FIELDS in ` +
+            "scripts/import_source_pack.mjs if it is meant to be imported.",
+        );
+      }
+    }
 
     const duaId = String(entry?.duaId || "").trim();
     if (!duaId) throw new Error(`${where}: missing duaId.`);
@@ -131,40 +233,43 @@ export function buildRecords(pack) {
       throw new Error(`${where}: unknown zoneKey "${zoneKey}".`);
     }
 
+    // Every zone a ritual-scoped text claims must exist too, or the text
+    // would surface at a place the seed does not define.
+    const appliesTo = entry.appliesToZoneKeys;
+    if (appliesTo !== undefined) {
+      if (!Array.isArray(appliesTo)) {
+        throw new Error(`${where}: appliesToZoneKeys must be an array.`);
+      }
+      for (const key of appliesTo) {
+        if (!KNOWN_ZONE_KEYS.includes(String(key))) {
+          throw new Error(`${where}: appliesToZoneKeys has unknown "${key}".`);
+        }
+      }
+    }
+
     const textAr = String(entry?.text?.ar || "").trim();
     if (!textAr) throw new Error(`${where}: empty Arabic text.`);
 
-    return {
+    const record = {
       duaId,
-      zoneKey,
-      // `zoneId` stays whatever the pack carries (usually empty): binding a
-      // record to this project's zone documents is a separate, deliberate
-      // admin step, not something an importer guesses.
-      zoneId: String(entry?.zoneId || ""),
       contentKind,
-      title: entry?.title ?? {},
-      text: entry?.text ?? {},
-      tagsAr: entry?.tagsAr ?? [],
-      tagsEn: entry?.tagsEn ?? [],
-      languageCodes: entry?.languageCodes ?? ["ar"],
-      isActive: entry?.isActive !== false,
-      audioMode: "tts",
-      audioUrl: "",
-      usage_count: 0,
-
-      // Provenance, carried through for the human verifier to check against.
-      authority: String(entry?.authority || ""),
-      sourceUrl: String(entry?.sourceUrl || ""),
-      sourceVersion: String(entry?.sourceVersion || ""),
-      sourceSection: String(entry?.sourceSection || ""),
-      printedPage: entry?.printedPage ?? null,
-
-      // Forced, regardless of input. See guarantee (2) above.
-      verificationStatus: "unverified",
-      verifiedAt: null,
-      verifiedBy: null,
-      revokedAt: null,
+      zoneKey,
+      title: entry.title,
+      text: entry.text,
     };
+
+    for (const [key, fallback] of Object.entries(OPTIONAL_FIELDS)) {
+      // hasOwnProperty, not `??` — an explicit null must survive as null.
+      record[key] = Object.prototype.hasOwnProperty.call(entry, key)
+        ? entry[key]
+        : fallback;
+    }
+
+    for (const [key, value] of Object.entries(FORCED_FIELDS)) {
+      record[key] = value;
+    }
+
+    return record;
   });
 }
 
