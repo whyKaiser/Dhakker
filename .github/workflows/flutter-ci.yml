@@ -10,6 +10,7 @@ on:
       - "claude/importer-field-schema"
       - "claude/staging-import-workflow"
       - "claude/language-routing-audit"
+      - "claude/staging-collection-rules"
   pull_request:
     branches:
       - main

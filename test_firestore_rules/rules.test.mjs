@@ -333,3 +333,140 @@ test("admins can write knowledge_chunks", async () => {
     setDoc(doc(adminDb(), "knowledge_chunks", "c3"), { content: "PLACEHOLDER" })
   );
 });
+
+// ── supplications_staging: unreachable by every client ──────────────────
+//
+// Import trials write here through the Firestore REST API with a service
+// account, which bypasses rules entirely. No CLIENT should ever reach it:
+// the collection holds unreviewed records that must not surface to a
+// pilgrim, and it is not the collection the app reads.
+//
+// These tests exercise the COMPLETE ruleset against the emulator, so they
+// are the real regression guard. The explicit `match` block in
+// firestore.rules is documentation and present-day defence — it cannot
+// override anything, because Firestore combines matching rules with OR: a
+// future broader `match` carrying a true `allow` would grant access no
+// matter what that block says. Only behaviour catches that, and behaviour is
+// what is asserted below.
+
+const STAGING = "supplications_staging";
+
+async function seedStaging(id, data) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), STAGING, id), data);
+  });
+}
+
+/// Every client identity the rules distinguish.
+function everyIdentity() {
+  return [
+    ["an unauthenticated user", anonDb()],
+    ["an ordinary pilgrim", pilgrimDb()],
+    // Admin matters most: `isAdmin()` is the widest grant in this file, so if
+    // any future rule leaks the collection it will very likely leak it here
+    // first.
+    ["an admin", adminDb()],
+  ];
+}
+
+test("no client identity can READ supplications_staging", async () => {
+  await seedStaging("s1", legacyRecord({ duaId: "staging-1" }));
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(getDoc(doc(db, STAGING, "s1")), `${who} could read`);
+  }
+});
+
+test("no client identity can CREATE in supplications_staging", async () => {
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      setDoc(doc(db, STAGING, `new-${who.replace(/\s/g, "-")}`), legacyRecord()),
+      `${who} could create`,
+    );
+  }
+});
+
+test("no client identity can UPDATE in supplications_staging", async () => {
+  await seedStaging("s1", legacyRecord({ duaId: "staging-1" }));
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      updateDoc(doc(db, STAGING, "s1"), { usage_count: 99 }),
+      `${who} could update`,
+    );
+  }
+});
+
+test("no client identity can DELETE from supplications_staging", async () => {
+  await seedStaging("s1", legacyRecord({ duaId: "staging-1" }));
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      deleteDoc(doc(db, STAGING, "s1")),
+      `${who} could delete`,
+    );
+  }
+});
+
+test("an admin cannot promote a staging record to verified", async () => {
+  // The staging collection is not a back door around the provenance gate.
+  await seedStaging("s1", legacyRecord({ duaId: "staging-1" }));
+  await assertFails(
+    updateDoc(doc(adminDb(), STAGING, "s1"), {
+      verificationStatus: "verified",
+      verifiedBy: ADMIN_UID,
+    }),
+  );
+});
+
+// ── Regression guard: behaviour of the WHOLE ruleset ────────────────────
+
+test("supplications_staging stays unreachable at every path shape", async () => {
+  // A future `match` might be written at a different depth — a nested
+  // subcollection, a wildcard segment, an oddly named document. Each shape
+  // is checked, because a broader rule added at any of them would grant
+  // access under Firestore's OR semantics regardless of the explicit deny.
+  const paths = [
+    [STAGING, "plain-id"],
+    [STAGING, "id.with.dots"],
+    [STAGING, "id-with-dashes"],
+    [STAGING, "doc", "nested", "child"],
+    [STAGING, "doc", "nested", "child", "deeper", "grandchild"],
+  ];
+
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    for (const segments of paths) {
+      await setDoc(doc(ctx.firestore(), ...segments), { seeded: true });
+    }
+  });
+
+  for (const [who, db] of everyIdentity()) {
+    for (const segments of paths) {
+      const where = segments.join("/");
+      await assertFails(
+        getDoc(doc(db, ...segments)),
+        `${who} could read ${where}`,
+      );
+      await assertFails(
+        setDoc(doc(db, ...segments), { written: true }),
+        `${who} could write ${where}`,
+      );
+    }
+  }
+});
+
+test("the staging denial does not depend on the document existing", async () => {
+  // An absent document must be as unreadable as a present one; otherwise a
+  // client could probe the collection for which ids exist.
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      getDoc(doc(db, STAGING, "definitely-absent")),
+      `${who} could read an absent doc`,
+    );
+  }
+});
+
+test("production supplications behaviour is unchanged by the staging rule", async () => {
+  // Guards the other direction: adding the staging block must not have
+  // altered the collection the app actually reads.
+  await seed("d1", legacyRecord());
+  await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "d1")));
+  await assertFails(getDoc(doc(anonDb(), "supplications", "d1")));
+});
