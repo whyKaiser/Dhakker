@@ -6,7 +6,9 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../bloc/cubit.dart';
 import '../../data/offline_knowledge_repository.dart';
+import '../../locale_controller.dart';
 import '../../services/assistant_service.dart';
+import '../../services/language_policy.dart';
 import '../../services/pilgrim_context_builder.dart';
 
 /// شاشة المساعد الصوتي الذكي للحج والعمرة.
@@ -100,7 +102,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final ScrollController _scroll = ScrollController();
 
   final List<_Msg> _messages = [];
+  // Initialised from the app locale in initState(); the picker may then
+  // override it for this conversation.
   _Lang _lang = _languages.first;
+
+  /// The picker entry matching the app's selected locale, falling back to
+  /// English rather than to whatever sits first in the list.
+  _Lang _langForAppLocale() {
+    final decision = LanguagePolicy.resolve(
+      userLocale: LocaleController.locale.value.toLanguageTag(),
+    );
+    return _languages.firstWhere(
+      (l) => l.code == decision.responseLanguage,
+      orElse: () => _languages.firstWhere((l) => l.code == 'en'),
+    );
+  }
+
   bool _speechReady = false;
   bool _listening = false;
   bool _sending = false;
@@ -109,6 +126,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
   @override
   void initState() {
     super.initState();
+    // Start on the language the app is actually set to, not on whichever
+    // entry happens to be first in the picker. Defaulting to Arabic meant an
+    // English-speaking pilgrim was answered in Arabic until they noticed the
+    // picker — the app already knew better, it just was not asked.
+    _lang = _langForAppLocale();
     _initSpeech();
     _initTts();
     // Provide a FRESH Firebase ID token per proxy request (force-refresh):
@@ -261,9 +283,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _scrollToEnd();
 
     try {
+      // One resolution point for the whole screen: the picker (an explicit
+      // setting) wins, the app locale is next, and the message itself is only
+      // consulted when neither is available.
+      final decision = LanguagePolicy.resolve(
+        responseLanguage: _lang.code,
+        userLocale: LocaleController.locale.value.toLanguageTag(),
+        latestUserMessage: msg,
+      );
       final reply = await _service.ask(
         msg,
-        language: _lang.code,
+        language: decision.responseLanguage,
+        userLocale: decision.userLocale,
         context: _buildPilgrimContext(),
       );
       if (!mounted) return;
@@ -801,6 +832,79 @@ class _AssistantScreenState extends State<AssistantScreen> {
 }
 
 /// Renders the grounding/offline/sign-in/human-guide status chips and the
+/// Renders one verbatim verified text as its own card.
+///
+/// Kept deliberately plain and separate: the heading says the text is quoted
+/// as stored, the body is the stored string untouched, and the authority is
+/// named underneath. Nothing here is generated.
+class VerifiedExcerptCard extends StatelessWidget {
+  const VerifiedExcerptCard({
+    super.key,
+    required this.excerpt,
+    required this.isRtl,
+  });
+
+  final VerifiedExcerpt excerpt;
+  final bool isRtl;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF2E7D32);
+    // The text keeps its own direction: Arabic scripture stays RTL inside an
+    // English reply.
+    final textIsRtl =
+        excerpt.textLanguage == 'ar' || excerpt.textLanguage == 'ur';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.menu_book_rounded, size: 14, color: accent),
+              const SizedBox(width: 5),
+              Text(
+                isRtl
+                    ? 'نص موثّق — كما ورد في المصدر'
+                    : 'Verified text — as recorded in the source',
+                style: const TextStyle(
+                  color: accent,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Directionality(
+            textDirection: textIsRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: SelectableText(
+              excerpt.text,
+              style: const TextStyle(fontSize: 16, height: 1.9),
+            ),
+          ),
+          if (excerpt.authority.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              excerpt.title.isNotEmpty
+                  ? '${excerpt.title} — ${excerpt.authority}'
+                  : excerpt.authority,
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// citation list for one [AssistantResponse]. Extracted from
 /// [_AssistantScreenState] as a standalone, stateless widget so it can be
 /// unit-tested (citation display, grounded/ungrounded/offline/sign-in-required
@@ -876,7 +980,9 @@ class AssistantResponseMeta extends StatelessWidget {
         color: _danger,
       ));
     }
-    if (chips.isEmpty && r.citations.isEmpty) return const SizedBox.shrink();
+    if (chips.isEmpty && r.citations.isEmpty && r.verifiedExcerpts.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -884,6 +990,17 @@ class AssistantResponseMeta extends StatelessWidget {
         children: [
           if (chips.isNotEmpty)
             Wrap(spacing: 6, runSpacing: 6, children: chips),
+
+          // The verified text, rendered from the SERVER's stored record and
+          // never from the model's answer. It gets its own card so a pilgrim
+          // can see at a glance which words are the source's and which are
+          // the assistant's explanation.
+          if (r.verifiedExcerpts.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...r.verifiedExcerpts.map(
+              (e) => VerifiedExcerptCard(excerpt: e, isRtl: isRtl),
+            ),
+          ],
           if (r.citations.isNotEmpty) ...[
             const SizedBox(height: 6),
             ...r.citations.map(

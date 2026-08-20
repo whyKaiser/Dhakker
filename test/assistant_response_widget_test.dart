@@ -169,4 +169,195 @@ void main() {
       expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
     });
   });
+
+  // ── Verified excerpts render as their own card ──────────────────────
+  //
+  // The server returns verified religious text byte-for-byte so it does not
+  // pass through the model. That is only worth anything if the UI actually
+  // shows it, separately from the generated explanation — otherwise the
+  // pilgrim reads the model's paraphrase and the guarantee is invisible.
+
+  const uthmani =
+      'رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ';
+
+  AssistantResponse withExcerpt({String answer = 'A short explanation.'}) {
+    return AssistantResponse(
+      answer: answer,
+      language: 'en',
+      grounded: true,
+      confidence: 'high',
+      citations: const [
+        AssistantCitation(
+          documentId: 'd1',
+          title: 'Supplication',
+          authority: 'Example Authority',
+        ),
+      ],
+      requiresHumanGuide: false,
+      verifiedExcerpts: const [
+        VerifiedExcerpt(
+          documentId: 'd1',
+          title: 'Supplication',
+          authority: 'Example Authority',
+          text: uthmani,
+          textLanguage: 'ar',
+        ),
+      ],
+    );
+  }
+
+  testWidgets('a verified excerpt is shown as its own labelled card',
+      (tester) async {
+    await tester.pumpWidget(harness(withExcerpt()));
+
+    expect(find.byType(VerifiedExcerptCard), findsOneWidget);
+    expect(
+        find.text('Verified text — as recorded in the source'), findsOneWidget);
+    expect(find.text(uthmani), findsOneWidget);
+  });
+
+  testWidgets('the excerpt text is rendered byte-for-byte', (tester) async {
+    await tester.pumpWidget(harness(withExcerpt()));
+
+    final widget = tester.widget<SelectableText>(
+      find.descendant(
+        of: find.byType(VerifiedExcerptCard),
+        matching: find.byType(SelectableText),
+      ),
+    );
+    final shown = widget.data!;
+    // Code-point equality, not "looks the same": a stripped diacritic or a
+    // normalised Uthmanic glyph must fail here.
+    expect(shown, uthmani);
+    expect(shown.runes.toList(), uthmani.runes.toList());
+    for (final cp in ['ۡ', 'ٗ', 'ٓ', 'ٱ']) {
+      expect(shown.split(cp).length, uthmani.split(cp).length, reason: cp);
+    }
+  });
+
+  testWidgets('the excerpt does not disappear when chips are present',
+      (tester) async {
+    await tester.pumpWidget(harness(withExcerpt(), isRtl: true));
+    expect(find.byType(VerifiedExcerptCard), findsOneWidget);
+    expect(find.text('نص موثّق — كما ورد في المصدر'), findsOneWidget);
+  });
+
+  testWidgets('the verified text is not duplicated inside the explanation',
+      (tester) async {
+    // The model echoing the āyah in `answer` must not produce two copies on
+    // screen; the meta block renders the stored text exactly once.
+    await tester.pumpWidget(harness(withExcerpt(answer: uthmani)));
+    expect(find.byType(VerifiedExcerptCard), findsOneWidget);
+    expect(find.text(uthmani), findsOneWidget);
+  });
+
+  testWidgets('one card per excerpt, no repeats', (tester) async {
+    const r = AssistantResponse(
+      answer: 'Explanation',
+      language: 'ar',
+      grounded: true,
+      confidence: 'high',
+      citations: [
+        AssistantCitation(documentId: 'a', title: 'A', authority: 'Auth'),
+        AssistantCitation(documentId: 'b', title: 'B', authority: 'Auth'),
+      ],
+      requiresHumanGuide: false,
+      verifiedExcerpts: [
+        VerifiedExcerpt(
+            documentId: 'a',
+            title: 'A',
+            authority: 'Auth',
+            text: 'نص أول',
+            textLanguage: 'ar'),
+        VerifiedExcerpt(
+            documentId: 'b',
+            title: 'B',
+            authority: 'Auth',
+            text: 'نص ثانٍ',
+            textLanguage: 'ar'),
+      ],
+    );
+    await tester.pumpWidget(harness(r, isRtl: true));
+
+    expect(find.byType(VerifiedExcerptCard), findsNWidgets(2));
+    expect(find.text('نص أول'), findsOneWidget);
+    expect(find.text('نص ثانٍ'), findsOneWidget);
+  });
+
+  testWidgets('no excerpts means no card, and nothing else breaks',
+      (tester) async {
+    const r = AssistantResponse(
+      answer: 'Explanation only',
+      language: 'en',
+      grounded: false,
+      confidence: 'low',
+      citations: [],
+      requiresHumanGuide: true,
+    );
+    await tester.pumpWidget(harness(r));
+
+    expect(find.byType(VerifiedExcerptCard), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  group('an older proxy that does not send the field', () {
+    test('a missing verifiedExcerpts parses to an empty list, not an error',
+        () {
+      final r = AssistantResponse.fromJson(const {
+        'answer': 'hello',
+        'language': 'en',
+        'grounded': false,
+        'confidence': 'low',
+        'citations': [],
+        'requiresHumanGuide': true,
+      }, 'en');
+      expect(r.verifiedExcerpts, isEmpty);
+      expect(r.answer, 'hello');
+    });
+
+    test('a malformed verifiedExcerpts is ignored rather than crashing', () {
+      for (final bad in [
+        'not a list',
+        42,
+        [
+          {'documentId': '', 'text': 'x'},
+          {'documentId': 'd', 'text': ''},
+          {'documentId': 'd'},
+          'string entry',
+        ],
+      ]) {
+        final r = AssistantResponse.fromJson({
+          'answer': 'hello',
+          'language': 'en',
+          'grounded': false,
+          'confidence': 'low',
+          'citations': const [],
+          'requiresHumanGuide': true,
+          'verifiedExcerpts': bad,
+        }, 'en');
+        expect(r.verifiedExcerpts, isEmpty, reason: '$bad');
+      }
+    });
+
+    test('excerpt text is never trimmed on parse', () {
+      final r = AssistantResponse.fromJson(const {
+        'answer': 'x',
+        'language': 'ar',
+        'grounded': false,
+        'confidence': 'low',
+        'citations': [],
+        'requiresHumanGuide': true,
+        'verifiedExcerpts': [
+          {
+            'documentId': 'd',
+            'title': 't',
+            'authority': 'a',
+            'text': '  نص فيه مسافات  ',
+            'textLanguage': 'ar',
+          }
+        ],
+      }, 'ar');
+      expect(r.verifiedExcerpts.single.text, '  نص فيه مسافات  ');
+    });
+  });
 }
