@@ -328,7 +328,7 @@ export function resolvePlan(argv, env = {}) {
 
   const known = new Set([
     "--dry-run", "--write", "--staging", "--production", "--limit",
-    "--confirm-project", "--confirm-count",
+    "--confirm-project", "--confirm-count", "--database",
   ]);
   for (const f of flags) {
     const name = f.split("=")[0];
@@ -399,6 +399,16 @@ export function resolvePlan(argv, env = {}) {
     throw new Error("Set FIREBASE_PROJECT_ID and FIREBASE_ADMIN_TOKEN.");
   }
 
+  // Firestore database id. Defaults to the only database most projects
+  // have. Constrained to Firestore's own id grammar so a stray value cannot
+  // be spliced into the REST path.
+  const database = (valueOf("--database") || "(default)").trim();
+  if (database !== "(default)" && !/^[a-z][a-z0-9-]{2,62}$/.test(database)) {
+    throw new Error(
+      `--database "${database}" is not a valid Firestore database id.`,
+    );
+  }
+
   return {
     mode: "write",
     inputPath,
@@ -406,7 +416,7 @@ export function resolvePlan(argv, env = {}) {
     collection,
     projectId,
     token,
-    database: "(default)",
+    database,
     confirmProject: valueOf("--confirm-project"),
     confirmCount: valueOf("--confirm-count"),
   };

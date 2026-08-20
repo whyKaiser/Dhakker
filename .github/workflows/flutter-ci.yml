@@ -8,6 +8,7 @@ on:
       - "claude/quran-text-authority-u5-u12"
       - "claude/import-staging-guards"
       - "claude/importer-field-schema"
+      - "claude/staging-import-workflow"
       - "claude/language-routing-audit"
   pull_request:
     branches:
@@ -86,6 +87,12 @@ jobs:
       # never touch a network.
       - name: Run source-pack importer guard tests
         run: node --test scripts/import_source_pack.test.mjs
+
+      # Static validation of the manual staging-import workflow: dispatch-only
+      # trigger, minimal permissions, SHA-pinned actions, confirmations before
+      # auth, and no path to the production collection.
+      - name: Validate staging-import workflow safety gates
+        run: node --test .github/workflows/staging_import_workflow.test.mjs
 
   firestore-rules-tests:
     name: Firestore security rules tests (emulator)
