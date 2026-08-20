@@ -107,6 +107,33 @@ service cloud.firestore {
     }
 
     // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.
+    // ── supplications_staging ────────────────────────────────────────────
+    //
+    // Import trials write here (see .github/workflows/staging-import.yml).
+    // No client ever reads it: the app queries `supplications`, and the
+    // staging collection holds unreviewed records that must never reach a
+    // pilgrim.
+    //
+    // WHAT THIS BLOCK IS, AND WHAT IT IS NOT.
+    //
+    // It is documentation and present-day defence: it states the intent at
+    // the collection where a reader looks for it, rather than leaving the
+    // denial implicit in the catch-all at the bottom.
+    //
+    // It is NOT an override. Firestore evaluates matching rules with OR
+    // semantics: a request is allowed if ANY matching allow expression is
+    // true. `if false` here denies nothing that another rule permits — add a
+    // broader `match` with a true `allow` later and access is granted
+    // regardless of this block. There is no rule precedence to rely on.
+    //
+    // So the real regression guard is behavioural, not textual: the tests in
+    // test_firestore_rules/rules.test.mjs exercise the COMPLETE ruleset
+    // against the emulator and fail if any future rule makes this collection
+    // reachable — for unauthenticated users, ordinary users, or admins.
+    match /supplications_staging/{document=**} {
+      allow read, write: if false;
+    }
+
     match /alerts/{alertId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
