@@ -1,0 +1,254 @@
+# Staging import — ONE record into `supplications_staging`, by hand only.
+#
+# This workflow exists so a human can try the source-pack importer against a
+# real Firestore project without a long-lived service-account key existing
+# anywhere. It authenticates with Workload Identity Federation: GitHub mints
+# a short-lived OIDC token, Google exchanges it for a short-lived access
+# token, and nothing durable is ever stored.
+#
+# ── Why it is shaped like this ──────────────────────────────────────────
+#
+# The importer's own guards (dry-run default, fixed destinations, --limit
+# refused against production, confirmations) already make an accidental
+# production write hard. This workflow adds the second half: it can only be
+# started deliberately, it can only ever name staging, and it proves the
+# operator knows what they are starting BEFORE any credential is minted.
+#
+# Deliberately absent: `push`, `pull_request`, `schedule`, `repository_dispatch`
+# and every other automatic trigger. A workflow that can write to a database
+# must never be startable by pushing a commit.
+#
+# `.github/workflows/staging_import_workflow.test.mjs` asserts all of that
+# statically, so a future edit that loosens a gate fails CI.
+
+name: Staging import (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_collection:
+        description: "Type the destination exactly: supplications_staging"
+        required: true
+        type: string
+      confirm_count:
+        description: "Type the number of records to write: 1"
+        required: true
+        type: string
+
+# contents: read  — the job only needs to check the repo out.
+# id-token: write — required to mint the OIDC token WIF exchanges.
+# Everything else is denied by omission: no packages, no deployments, no
+# write access to the repository itself.
+permissions:
+  contents: read
+  id-token: write
+
+# Two imports must never overlap: the second would race the first's writes
+# against the same document ids. `cancel-in-progress: false` queues rather
+# than cancels — killing a run mid-write is how you get a half-imported
+# collection.
+concurrency:
+  group: staging-import
+  cancel-in-progress: false
+
+jobs:
+  staging-import:
+    name: Import one record into supplications_staging
+    runs-on: ubuntu-latest
+
+    # A protected GitHub Environment. Required reviewers and branch
+    # restrictions are configured on the environment itself, so approval is
+    # enforced by GitHub before this job starts — not by anything in this
+    # file, which a PR could change.
+    environment: firebase-staging
+
+    steps:
+      # ── Gate 0: main only, before anything at all ─────────────────────
+      #
+      # The Workload Identity provider is configured to accept only
+      # `refs/heads/main` (see docs/STAGING_IMPORT_SETUP.md), and the
+      # protected environment restricts deployment branches as well. This
+      # step is the third, cheapest layer: it fails in seconds with a clear
+      # message instead of letting a run from a feature branch travel all
+      # the way to a confusing STS rejection.
+      #
+      # Belt and braces on purpose — the provider condition is the one that
+      # actually protects Google Cloud, but it lives in infrastructure this
+      # repository cannot verify, so the workflow states the rule too.
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
+      # ── Gate 1: confirmations, BEFORE any credential exists ───────────
+      #
+      # This runs before checkout and before authentication on purpose. If
+      # the operator mistyped, the run must end while it still holds nothing
+      # more sensitive than a repository name.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_COLLECTION: ${{ inputs.confirm_collection }}
+          CONFIRM_COUNT: ${{ inputs.confirm_count }}
+        run: |
+          set -euo pipefail
+          fail=0
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            fail=1
+          fi
+          if [ "$CONFIRM_COLLECTION" != "supplications_staging" ]; then
+            echo "::error::confirm_collection must be exactly 'supplications_staging'."
+            fail=1
+          fi
+          if [ "$CONFIRM_COUNT" != "1" ]; then
+            echo "::error::confirm_count must be exactly '1'."
+            fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then
+            echo "Refusing to authenticate. Nothing was contacted."
+            exit 1
+          fi
+          echo "Confirmations accepted."
+
+      # ── Gate 2: the configuration must match the confirmations ────────
+      #
+      # The confirmations above prove the operator's intent; this proves the
+      # repository is configured for the same thing. Both must agree before
+      # a token is minted.
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -n "$PROJECT_ID" ]      || missing="$missing FIREBASE_PROJECT_ID"
+          [ -n "$DATABASE_ID" ]     || missing="$missing FIREBASE_DATABASE_ID"
+          [ -n "$WIF_PROVIDER" ]    || missing="$missing GCP_WORKLOAD_IDENTITY_PROVIDER"
+          [ -n "$SERVICE_ACCOUNT" ] || missing="$missing GCP_SERVICE_ACCOUNT"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository/environment variables:$missing"
+            echo "See docs/STAGING_IMPORT_SETUP.md."
+            exit 1
+          fi
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            # Printing both is safe: a project id is not a secret, and seeing
+            # the mismatch is the whole point of the check.
+            echo "::error::FIREBASE_PROJECT_ID ($PROJECT_ID) does not match confirm_project ($CONFIRM_PROJECT)."
+            exit 1
+          fi
+          echo "Configuration present and consistent."
+
+      # actions/checkout v7.0.1 — pinned to the commit that tag points at.
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # ── Gate 3: dry run, still before authentication ──────────────────
+      #
+      # Validates the whole pack (ids, zone keys, content kinds, text) with
+      # no credentials in the environment at all. A malformed pack fails
+      # here, where failing costs nothing.
+      - name: Dry run (no credentials, nothing written)
+        run: |
+          set -euo pipefail
+          node scripts/import_source_pack.mjs \
+            source_packs/moia_mukhtasar_1446_umrah.json \
+            --staging --limit 1
+
+      # ── Authentication: short-lived, no key file ──────────────────────
+      #
+      # google-github-actions/auth v3.0.0.
+      #
+      # TWO DIFFERENT TOKENS, often conflated:
+      #   1. The GitHub OIDC token — minted by GitHub because of
+      #      `permissions: id-token: write`. It only asserts *who this
+      #      workflow is*; its lifetime is GitHub's and is not configurable
+      #      here. It is consumed by the STS exchange and never touches the
+      #      importer.
+      #   2. The Google access token — what STS returns in exchange, and the
+      #      only token that can write to Firestore. Its lifetime IS ours to
+      #      set, via `access_token_lifetime`.
+      #
+      # The action's default for (2) is 3600s — a full hour of write-capable
+      # credential for a job that needs seconds. 300s is requested instead.
+      # (Verified against action.yml at the pinned commit: the input exists,
+      # defaults to '3600s', and applies when token_format is access_token.)
+      #
+      # `create_credentials_file: false` keeps nothing on disk. The
+      # `access_token` output does not depend on that flag — only
+      # `credentials_file_path` does — so the token still reaches the
+      # importer step below, and only that step.
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        # google-github-actions/auth v3.0.0
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      # ── The write: staging only, exactly one record ───────────────────
+      #
+      # `--production` appears nowhere in this file, and the importer refuses
+      # `--limit` against production anyway, so neither this workflow nor a
+      # typo in it can reach `supplications`.
+      #
+      # The token is passed through `env:` and never echoed. `set -euo
+      # pipefail` without `set -x` keeps it out of the log; the action also
+      # registers it as a mask.
+      - name: Write one record to supplications_staging
+        # Bounded below the 300s token lifetime on purpose. Writing one
+        # record takes a second or two; if this ever hits four minutes
+        # something is wrong, and the run must FAIL saying so rather than
+        # have someone "fix" it by falling back to the one-hour default.
+        # A larger import needs a deliberate, reviewed lifetime change and a
+        # matching update to this timeout — never a silent default.
+        timeout-minutes: 4
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          FIREBASE_ADMIN_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_COUNT: ${{ inputs.confirm_count }}
+        run: |
+          set -euo pipefail
+          node scripts/import_source_pack.mjs \
+            source_packs/moia_mukhtasar_1446_umrah.json \
+            --staging --limit 1 --write \
+            --database="$FIREBASE_DATABASE_ID" \
+            --confirm-project="$CONFIRM_PROJECT" \
+            --confirm-count="$CONFIRM_COUNT"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Destination: supplications_staging — the production"
+          echo "collection is never named in this workflow."
+          echo "Records: 1. verificationStatus: unverified."
+          echo "Verification remains a human act performed against the printed page."
