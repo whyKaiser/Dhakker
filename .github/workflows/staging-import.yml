@@ -67,6 +67,29 @@ jobs:
     environment: firebase-staging
 
     steps:
+      # ── Gate 0: main only, before anything at all ─────────────────────
+      #
+      # The Workload Identity provider is configured to accept only
+      # `refs/heads/main` (see docs/STAGING_IMPORT_SETUP.md), and the
+      # protected environment restricts deployment branches as well. This
+      # step is the third, cheapest layer: it fails in seconds with a clear
+      # message instead of letting a run from a feature branch travel all
+      # the way to a confusing STS rejection.
+      #
+      # Belt and braces on purpose — the provider condition is the one that
+      # actually protects Google Cloud, but it lives in infrastructure this
+      # repository cannot verify, so the workflow states the rule too.
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
       # ── Gate 1: confirmations, BEFORE any credential exists ───────────
       #
       # This runs before checkout and before authentication on purpose. If
@@ -157,10 +180,29 @@ jobs:
       # ── Authentication: short-lived, no key file ──────────────────────
       #
       # google-github-actions/auth v3.0.0.
-      # `create_credentials_file: false` keeps nothing on disk; the access
-      # token lives only in this step's outputs and is masked by the action.
+      #
+      # TWO DIFFERENT TOKENS, often conflated:
+      #   1. The GitHub OIDC token — minted by GitHub because of
+      #      `permissions: id-token: write`. It only asserts *who this
+      #      workflow is*; its lifetime is GitHub's and is not configurable
+      #      here. It is consumed by the STS exchange and never touches the
+      #      importer.
+      #   2. The Google access token — what STS returns in exchange, and the
+      #      only token that can write to Firestore. Its lifetime IS ours to
+      #      set, via `access_token_lifetime`.
+      #
+      # The action's default for (2) is 3600s — a full hour of write-capable
+      # credential for a job that needs seconds. 300s is requested instead.
+      # (Verified against action.yml at the pinned commit: the input exists,
+      # defaults to '3600s', and applies when token_format is access_token.)
+      #
+      # `create_credentials_file: false` keeps nothing on disk. The
+      # `access_token` output does not depend on that flag — only
+      # `credentials_file_path` does — so the token still reaches the
+      # importer step below, and only that step.
       - name: Authenticate to Google Cloud (Workload Identity Federation)
         id: auth
+        # google-github-actions/auth v3.0.0
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           project_id: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -181,6 +223,13 @@ jobs:
       # pipefail` without `set -x` keeps it out of the log; the action also
       # registers it as a mask.
       - name: Write one record to supplications_staging
+        # Bounded below the 300s token lifetime on purpose. Writing one
+        # record takes a second or two; if this ever hits four minutes
+        # something is wrong, and the run must FAIL saying so rather than
+        # have someone "fix" it by falling back to the one-hour default.
+        # A larger import needs a deliberate, reviewed lifetime change and a
+        # matching update to this timeout — never a silent default.
+        timeout-minutes: 4
         env:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
