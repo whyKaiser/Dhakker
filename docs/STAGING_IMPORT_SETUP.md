@@ -6,7 +6,9 @@ for you** — no Google Cloud resource, Firebase setting, or GitHub setting was
 created or changed. Every command below is yours to run when you choose.
 
 The workflow writes **one** record to **`supplications_staging`**, always
-with `verificationStatus: unverified`. It cannot reach `supplications`.
+with `verificationStatus: unverified`. The *workflow* never names the
+production collection — but read the IAM note in 1.4 before assuming the
+*credential* cannot reach it: on a shared project, it can.
 
 ---
 
@@ -17,11 +19,30 @@ Secrets and it is valid until someone remembers to rotate it, it appears in
 every fork of a mistake, and its blast radius is "whatever that account can
 do, forever".
 
-Workload Identity Federation removes the key entirely. GitHub mints a
-short-lived OIDC token that says *this repository, this workflow, this ref*;
-Google verifies it against a trust policy you define and returns an access
-token that expires in five minutes. There is no secret to leak, rotate, or
-find in a log.
+Workload Identity Federation removes the key entirely — but it is worth
+being precise about what happens, because **two different tokens** are
+involved and they are routinely conflated:
+
+| | GitHub OIDC token | Google access token |
+|---|---|---|
+| Minted by | GitHub, because of `permissions: id-token: write` | Google STS, in exchange for the first |
+| Asserts | *this repository, this workflow, this ref* | authorisation to call Google APIs |
+| Can write to Firestore | **No** | **Yes** |
+| Lifetime | GitHub's; not configurable in this workflow | **ours to set** — `access_token_lifetime` |
+| Reaches the importer | never | yes, as `FIREBASE_ADMIN_TOKEN` |
+
+Only the second one matters for blast radius, and the auth action's default
+for it is **`3600s` — a full hour**. The workflow requests **`300s`**
+explicitly. (Verified against `action.yml` at the pinned commit: the input
+exists, defaults to `3600s`, and applies when `token_format: access_token`.)
+
+The write step also carries `timeout-minutes: 4`, deliberately under that
+lifetime. If an import ever cannot finish inside five minutes, the run
+**fails and says so**. Do not "fix" that by dropping back to the one-hour
+default: raise the lifetime deliberately, in review, and raise the timeout
+with it.
+
+There is no secret to leak, rotate, or find in a log.
 
 ---
 
@@ -61,14 +82,33 @@ gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" \
   --workload-identity-pool="$POOL" \
   --display-name="GitHub OIDC" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
-  --attribute-condition="assertion.repository_owner == 'whyKaiser' && assertion.repository == '${REPO}'"
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner,attribute.ref=assertion.ref" \
+  --attribute-condition="assertion.repository_owner == 'whyKaiser' && assertion.repository == '${REPO}' && assertion.ref == 'refs/heads/main'"
 ```
 
-> **The `--attribute-condition` is the load-bearing line.** Without it the
-> provider trusts *every* repository on GitHub — anyone could mint a token
-> for your project from their own repo. Do not omit it, and do not widen it
-> to just the owner.
+> **The `--attribute-condition` is the load-bearing line of this entire
+> setup.** Without it the provider trusts *every* repository on GitHub —
+> anyone could mint a token for your project from their own repo.
+
+All three clauses are required, and each blocks something different:
+
+| Clause | Blocks |
+|---|---|
+| `assertion.repository_owner == 'whyKaiser'` | every other GitHub account and org |
+| `assertion.repository == 'whyKaiser/Dhakker'` | your other repositories, and **forks** — a fork keeps the owner in some contexts but never this full name |
+| `assertion.ref == 'refs/heads/main'` | pull-request branches (`refs/pull/N/merge`), feature branches, and **tags** (`refs/tags/*`) |
+
+Without the `ref` clause, anyone who can push a branch to this repository
+could dispatch a workflow of their own writing against your Firestore. With
+it, only code that has already been merged to `main` can authenticate at
+all — the branch restriction is enforced by Google, not merely by GitHub.
+
+The workflow additionally refuses to start from any ref except
+`refs/heads/main` (a step that runs before checkout and before
+authentication), and the protected environment restricts deployment
+branches. Three independent layers; the provider condition is the one that
+actually protects Google Cloud, because it is the only one outside the
+repository's own control.
 
 ### 1.3 Create the service account the workflow impersonates
 
@@ -86,8 +126,29 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role="roles/datastore.user"
 ```
 
-**`roles/datastore.user` is the minimum role that works.** It grants read and
-write on documents and nothing else.
+**`roles/datastore.user` is the minimum role that works** for this task. It
+grants read and write on documents and nothing else — no index, database, or
+import/export administration.
+
+> ### ⚠️ It is NOT collection-level least privilege
+>
+> **`roles/datastore.user` is project-wide.** It permits read and write to
+> **every collection in the database**, including `supplications`, `zones`,
+> `users`, and anything added later. Firestore IAM has **no per-collection
+> granularity**, so no role can restrict this account to
+> `supplications_staging`.
+>
+> Nothing in the Google Cloud layer stops this credential from writing to
+> the production collection. What stops it is entirely in the layers above:
+> the workflow never names `supplications`, and the importer refuses
+> `--limit` against production and requires an explicit `--production` flag
+> that the workflow never passes. Those are code guards, protected by
+> review and by the static tests in
+> `.github/workflows/staging_import_workflow.test.mjs` — they are real, but
+> they are not IAM.
+>
+> If you want isolation that does not depend on the correctness of this
+> repository's code, see **"Stronger isolation"** below.
 
 Roles you should **not** use here, and why:
 
@@ -98,11 +159,41 @@ Roles you should **not** use here, and why:
 | `roles/owner` | Can also change IAM, i.e. grant itself anything later. |
 | `roles/datastore.viewer` | Read-only; the import would fail. |
 
-If you want to go tighter than `datastore.user`, Firestore IAM has no
-per-collection granularity — the correct way to narrow it further is a
-**separate Firebase project for staging**, not a narrower role.
+### Stronger isolation — the recommended option
 
-### 1.5 Let the repository impersonate that service account
+**Use a separate Firebase/GCP project for staging.** Create, say,
+`dhakker-staging`, run the whole of Part 1 against it, and point
+`FIREBASE_PROJECT_ID` at it. Then:
+
+- The service account has no grant of any kind on the production project, so
+  a bug, a bad merge, or a compromised action **cannot** reach production
+  data. The guarantee comes from IAM rather than from code being correct.
+- A mistaken import damages throwaway data.
+- The blast radius of the whole mechanism becomes "a staging project".
+
+That is the option to choose if you can.
+
+### Same-project path — an explicit risk acceptance
+
+Running staging inside `dhakker-160d0` is supported, and is what the
+variables in Part 2 describe, but **it is a documented risk acceptance, not
+a least-privilege design**. You are accepting that a project-wide
+`datastore.user` credential exists in CI and that only application-level
+guards keep it away from `supplications`.
+
+Accept it only with all four of these in place — they are the compensating
+controls, and removing any one of them changes the risk materially:
+
+| Control | What it stops |
+|---|---|
+| **GitHub Environment approval** on `firebase-staging` | any run starting without a named human approving it |
+| **`assertion.ref == 'refs/heads/main'`** in the provider condition | authentication from a PR branch, a tag, a fork, or another repo |
+| **Fixed staging collection** in the workflow | the destination ever being anything but `supplications_staging` |
+| **Importer production guards** (`--production` required, `--limit` refused against it, confirmations must match) | a production write even if the workflow were edited |
+
+Revisit this the moment the import stops being a one-record trial.
+
+### 1.5 Let ONLY this repository impersonate that service account
 
 ```sh
 gcloud iam service-accounts add-iam-policy-binding \
@@ -111,6 +202,24 @@ gcloud iam service-accounts add-iam-policy-binding \
   --role="roles/iam.workloadIdentityUser" \
   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}"
 ```
+
+The binding is scoped by `attribute.repository`, so the exact principal
+allowed to impersonate the account is:
+
+```
+principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/attribute.repository/whyKaiser/Dhakker
+```
+
+**Do not** substitute either of these broader forms:
+
+| Form | Why not |
+|---|---|
+| `.../workloadIdentityPools/github-pool/*` | every identity in the pool, i.e. any repo the provider ever accepts |
+| `.../attribute.repository_owner/whyKaiser` | every repository you own, including new and private ones |
+
+The pool membership condition (1.2) and this binding are two separate
+gates: the first decides who may *enter the pool*, the second who may
+*become this service account*. Set both.
 
 ### 1.6 Print the provider resource name
 
