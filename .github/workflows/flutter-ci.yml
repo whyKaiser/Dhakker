@@ -8,6 +8,7 @@ on:
       - "claude/quran-text-authority-u5-u12"
       - "claude/import-staging-guards"
       - "claude/importer-field-schema"
+      - "claude/language-routing-audit"
   pull_request:
     branches:
       - main
@@ -50,6 +51,8 @@ jobs:
             "test/no_bundled_third_party_test.dart"
             "lib/data/offline_knowledge_repository.dart"
             "lib/services/assistant_service.dart"
+            "lib/services/language_policy.dart"
+            "test/language_policy_test.dart"
             "lib/services/pilgrim_context_builder.dart"
             "test/assistant_response_widget_test.dart"
             "test/assistant_service_test.dart"

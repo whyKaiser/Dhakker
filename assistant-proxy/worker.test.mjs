@@ -976,6 +976,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
   assert.equal(docs.length, 1);
   assert.deepEqual(docs[0], {
     documentId: "dua-42",
+    // The language the record was selected for — carried so an honest
+    // language-fallback decision needs no second query.
+    language: "en",
     title: "PLACEHOLDER TITLE",
     authority: "Example Approving Authority",
     section: "section-3",
@@ -1275,4 +1278,376 @@ test("GATE: legacy records are excluded wholesale — no partial-credit citation
     [],
     "no legacy record may become citable without complete provenance"
   );
+});
+
+// ── Language policy ─────────────────────────────────────────────────────
+//
+// Before this, the reply language came from one `language` field the app
+// populated from a picker that defaulted to Arabic, and the dev path asked
+// the model to detect the language itself. These tests pin the single
+// precedence rule and prove every path applies it.
+
+test("app locale decides: Arabic locale + English message → Arabic", () => {
+  const p = __testing__.resolveLanguagePolicy(
+    { userLocale: "ar-SA" },
+    "What do I say at the Black Stone?",
+  );
+  assert.equal(p.responseLanguage, "ar");
+  assert.equal(p.source, "userLocale");
+});
+
+test("app locale decides: English locale + Arabic message → English", () => {
+  const p = __testing__.resolveLanguagePolicy(
+    { userLocale: "en-US" },
+    "ماذا أقول عند الحجر الأسود؟",
+  );
+  assert.equal(p.responseLanguage, "en");
+  assert.equal(p.source, "userLocale");
+});
+
+test("an explicit responseLanguage outranks userLocale and the message", () => {
+  const p = __testing__.resolveLanguagePolicy(
+    { responseLanguage: "fr", userLocale: "ar-SA" },
+    "ماذا أقول؟",
+  );
+  assert.equal(p.responseLanguage, "fr");
+  assert.equal(p.source, "responseLanguage");
+});
+
+test("missing locale falls back to the message language, and says so", () => {
+  const ar = __testing__.resolveLanguagePolicy({}, "كيف أطوف حول الكعبة؟");
+  assert.equal(ar.responseLanguage, "ar");
+  assert.equal(ar.source, "messageDetection");
+
+  const en = __testing__.resolveLanguagePolicy({}, "How do I do tawaf?");
+  assert.equal(en.responseLanguage, "en");
+  assert.equal(en.source, "messageDetection");
+});
+
+test("nothing usable → English, never Arabic by accident", () => {
+  const p = __testing__.resolveLanguagePolicy({}, "");
+  assert.equal(p.responseLanguage, "en");
+  assert.equal(p.source, "default");
+});
+
+test("the legacy `language` field still works, at lowest priority", () => {
+  const legacyOnly = __testing__.resolveLanguagePolicy({ language: "tr" }, "");
+  assert.equal(legacyOnly.responseLanguage, "tr");
+  assert.equal(legacyOnly.source, "language");
+
+  const outranked = __testing__.resolveLanguagePolicy(
+    { language: "tr", userLocale: "fr-FR" },
+    "",
+  );
+  assert.equal(outranked.responseLanguage, "fr");
+});
+
+test("Arabic canonicalises to ar-SA", () => {
+  assert.equal(__testing__.canonicalLocale("ar"), "ar-SA");
+  assert.equal(
+    __testing__.resolveLanguagePolicy({ responseLanguage: "ar" }, "").userLocale,
+    "ar-SA",
+  );
+});
+
+test("contentLanguage defaults to the reply language but can be pinned", () => {
+  const def = __testing__.resolveLanguagePolicy({ userLocale: "fr-FR" }, "");
+  assert.equal(def.contentLanguage, "fr");
+
+  const pinned = __testing__.resolveLanguagePolicy(
+    { userLocale: "fr-FR", contentLanguage: "ar" },
+    "",
+  );
+  assert.equal(pinned.responseLanguage, "fr");
+  assert.equal(pinned.contentLanguage, "ar");
+});
+
+test("allowLanguageFallback defaults true and is only false when explicit", () => {
+  assert.equal(__testing__.resolveLanguagePolicy({}, "x").allowLanguageFallback, true);
+  assert.equal(
+    __testing__.resolveLanguagePolicy({ allowLanguageFallback: false }, "x")
+      .allowLanguageFallback,
+    false,
+  );
+});
+
+test("validateRequestBody resolves the policy from the real request shape", () => {
+  const res = __testing__.validateRequestBody({
+    messages: [{ role: "user", content: "What do I say at the Black Stone?" }],
+    userLocale: "ar-SA",
+  });
+  assert.equal(res.ok, true);
+  assert.equal(res.value.language, "ar");
+  assert.equal(res.value.policy.responseLanguage, "ar");
+  assert.equal(res.value.policy.userLocale, "ar-SA");
+});
+
+// ── The prompt carries the rules, in English ───────────────────────────
+
+test("the system prompt states the language rules and stays in English", () => {
+  const policy = __testing__.resolveLanguagePolicy({ userLocale: "ar-SA" }, "");
+  const prompt = __testing__.buildSystemPrompt("ar", null, [], policy);
+
+  assert.match(prompt, /reply in "ar"/);
+  assert.match(prompt, /NOT from the language of their message/);
+  assert.match(prompt, /clear, natural Arabic/);
+  assert.match(prompt, /NEVER translate, paraphrase, regenerate, autocorrect, or alter/);
+  assert.match(prompt, /exactly as stored in the retrieved source/);
+  assert.match(prompt, /NEVER invent a translation/);
+  assert.match(prompt, /diacritic, Uthmanic glyph, waqf mark/);
+
+  // Internal prompts stay in English whatever the reply language: no Arabic
+  // letters anywhere in the instructions.
+  assert.equal(/[ء-ي]/.test(prompt), false);
+});
+
+test("primary and fallback providers get the identical prompt", () => {
+  // Both providers are handed the same `systemPrompt` string by fetch(); this
+  // pins the property that the prompt is a pure function of the policy, so
+  // the two paths cannot drift apart.
+  const policy = __testing__.resolveLanguagePolicy({ userLocale: "fr-FR" }, "");
+  const a = __testing__.buildSystemPrompt("fr", null, [], policy);
+  const b = __testing__.buildSystemPrompt("fr", null, [], policy);
+  assert.equal(a, b);
+  assert.match(a, /reply in "fr"/);
+});
+
+// ── Verified text is delivered by the server, verbatim ─────────────────
+
+const UTHMANI =
+  "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ";
+
+test("verified Arabic text is returned byte-for-byte, not via the model", () => {
+  const retrieved = [{
+    documentId: "d1",
+    title: "دعاء",
+    authority: "جهة",
+    section: "s",
+    url: "https://example.org/x",
+    version: "v1",
+    content: UTHMANI,
+  }];
+  const policy = __testing__.resolveLanguagePolicy(
+    { userLocale: "en-US", contentLanguage: "ar" },
+    "",
+  );
+
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "d1" }],
+    retrieved,
+    policy,
+  );
+
+  assert.equal(excerpts.length, 1);
+  // Identical code point sequence — not merely "looks the same".
+  assert.deepEqual([...excerpts[0].text], [...UTHMANI]);
+  assert.equal(excerpts[0].text, UTHMANI);
+  assert.equal(excerpts[0].isVerbatim, true);
+  // The reply is English, the scripture stays Arabic and is labelled so.
+  assert.equal(policy.responseLanguage, "en");
+  assert.equal(excerpts[0].textLanguage, "ar");
+});
+
+test("Uthmanic glyphs and waqf marks survive unchanged", () => {
+  const withMarks = "مُصَلّٗىۖ إِبۡرَٰهِـۧمَ ٱلصَّلَوٰةِ";
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "d1" }],
+    [{ documentId: "d1", title: "t", authority: "a", content: withMarks }],
+    { contentLanguage: "ar" },
+  );
+  const out = excerpts[0].text;
+
+  for (const cp of ["ۡ", "ٗ", "ۖ", "ۧ", "ٓ", "ٰ"]) {
+    assert.equal(
+      out.split(cp).length,
+      withMarks.split(cp).length,
+      `code point ${cp.codePointAt(0).toString(16)} was altered`,
+    );
+  }
+  assert.equal(out, withMarks);
+});
+
+test("an excerpt is only emitted for a citation that was actually retrieved", () => {
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "ghost" }],
+    [{ documentId: "d1", title: "t", authority: "a", content: "x" }],
+    {},
+  );
+  assert.deepEqual(excerpts, []);
+});
+
+// ── Every path reports the same policy ─────────────────────────────────
+
+test("the safe no-source response carries the selected language", () => {
+  for (const lang of __testing__.SUPPORTED_LANGUAGES) {
+    const policy = __testing__.resolveLanguagePolicy(
+      { responseLanguage: lang },
+      "",
+    );
+    const res = __testing__.noApprovedSourceResponse(lang, policy);
+    assert.equal(res.language, lang);
+    assert.equal(res.responseLanguage, lang);
+    assert.equal(res.grounded, false);
+    assert.deepEqual(res.verifiedExcerpts, []);
+    assert.equal(res.answer, __testing__.noApprovedSourceAnswer(lang));
+    assert.ok(res.answer.length > 0);
+  }
+});
+
+test("the unparseable-model fallback answer uses the selected language", () => {
+  for (const lang of __testing__.SUPPORTED_LANGUAGES) {
+    const policy = __testing__.resolveLanguagePolicy({ responseLanguage: lang }, "");
+    const parsed = __testing__.parseModelJson("not json at all", lang, policy);
+    assert.equal(parsed.language, lang);
+    assert.equal(parsed.responseLanguage, lang);
+    assert.equal(parsed.answer, __testing__.fallbackAnswer(lang));
+    assert.equal(parsed.grounded, false);
+  }
+});
+
+test("a model that answers in the wrong language cannot override the policy", () => {
+  const policy = __testing__.resolveLanguagePolicy({ userLocale: "en-US" }, "");
+  const parsed = __testing__.parseModelJson(
+    JSON.stringify({
+      answer: "Some answer",
+      language: "ar",
+      grounded: false,
+      confidence: "low",
+      citations: [],
+      recommendedAction: null,
+      requiresHumanGuide: true,
+      safetyNotice: null,
+    }),
+    "en",
+    policy,
+  );
+  assert.equal(parsed.language, "en");
+  assert.equal(parsed.responseLanguage, "en");
+});
+
+// ── Honest fallback when no reviewed translation exists ────────────────
+
+test("end-to-end: verified Arabic text reaches the client untouched, in an English reply", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("firestore.googleapis.com")) {
+      return new Response(
+        JSON.stringify([
+          verifiedRow({
+            duaId: "approved-ar-1",
+            titleEn: "Supplication",
+            titleAr: "دعاء",
+            textAr: UTHMANI,
+            textEn: UTHMANI,
+            sourceUrl: "https://example.org/ref/1",
+          }),
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              // The model "helpfully" paraphrases the āyah in its answer.
+              answer: "Rabbana atina — our Lord, give us good in this world.",
+              grounded: true,
+              confidence: "high",
+              citations: [{ documentId: "approved-ar-1" }],
+              requiresHumanGuide: false,
+            }),
+          },
+        }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer t" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "what do I say in tawaf" }],
+        userLocale: "en-US",
+        contentLanguage: "ar",
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      FIRESTORE_PROJECT_ID: "test-project",
+    });
+    const body = await res.json();
+
+    assert.equal(body.responseLanguage, "en");
+    assert.equal(body.contentLanguage, "ar");
+
+    // The scripture the client renders comes from the server's stored record,
+    // byte for byte — NOT from the model's paraphrase in `answer`.
+    assert.equal(body.verifiedExcerpts.length, 1);
+    assert.equal(body.verifiedExcerpts[0].text, UTHMANI);
+    assert.deepEqual([...body.verifiedExcerpts[0].text], [...UTHMANI]);
+    assert.equal(body.verifiedExcerpts[0].textLanguage, "ar");
+    assert.notEqual(body.verifiedExcerpts[0].text, body.answer);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("end-to-end: no reviewed translation + fallback forbidden → honest refusal, no invented translation", async () => {
+  const realFetch = globalThis.fetch;
+  let modelWasCalled = false;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("firestore.googleapis.com")) {
+      // The only reviewed record is Arabic-only.
+      return new Response(
+        JSON.stringify([
+          verifiedRow({
+            duaId: "approved-ar-only",
+            titleEn: "Supplication",
+            textEn: UTHMANI,
+            sourceUrl: "https://example.org/ref/1",
+            languageCodes: ["ar"],
+          }),
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    modelWasCalled = true;
+    return new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const req = new Request("https://worker.example/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer t" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "quelle invocation dire" }],
+        userLocale: "fr-FR",
+        contentLanguage: "fr",
+        allowLanguageFallback: false,
+      }),
+    });
+    const res = await worker.fetch(req, {
+      ENVIRONMENT: "development",
+      GROQ_API_KEY: "x",
+      FIRESTORE_PROJECT_ID: "test-project",
+    });
+    const body = await res.json();
+
+    // Honest refusal in the user's language, and — crucially — the model was
+    // never invited to fill the gap with a translation.
+    assert.equal(modelWasCalled, false);
+    assert.equal(body.responseLanguage, "fr");
+    assert.equal(body.grounded, false);
+    assert.equal(body.requiresHumanGuide, true);
+    assert.deepEqual(body.citations, []);
+    assert.deepEqual(body.verifiedExcerpts, []);
+    assert.equal(body.answer, __testing__.noApprovedSourceAnswer("fr"));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
