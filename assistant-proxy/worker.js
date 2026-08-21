@@ -605,6 +605,7 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       // still carries Arabic scripture, and the client must label it as such
       // rather than presenting it as translated.
       textLanguage: policy?.contentLanguage ?? "ar",
+      usageQualifier: doc.usageQualifier ?? null,
       isVerbatim: true,
     });
   }
@@ -633,6 +634,7 @@ function canonicalizeCitations(modelCitations, retrieved) {
       authority: record.authority,
       section: typeof record.section === "string" ? record.section : "",
       url: typeof record.url === "string" ? record.url : "",
+      usageQualifier: record.usageQualifier ?? null,
     });
   }
   return out;
@@ -1035,6 +1037,11 @@ function mapSupplicationRows(rows, language) {
       ).trim(),
       url: sourceUrl,
       version: sourceVersion,
+      // How the source described this text's USE. `null` = it described
+      // none, which is NOT a claim that the text is obligatory. Carried
+      // through so a cited optional addition is labelled as one instead of
+      // reading like the main text.
+      usageQualifier: (fields.usageQualifier?.stringValue || "").trim() || null,
       content,
     });
   }

@@ -310,3 +310,353 @@ test("every field the real pack uses is in the known set", () => {
   const unknown = [...used].filter((k) => !KNOWN_PACK_FIELDS.has(k));
   assert.deepEqual(unknown, []);
 });
+
+// ── usageQualifier ──────────────────────────────────────────────────────
+//
+// The field exists so an optional addition can be labelled as one. It must
+// survive import intact, and — just as importantly — its ABSENCE must
+// survive too: a record the source did not qualify may not acquire a
+// default that reads as an obligation.
+
+import { SUPPORTED_USAGE_QUALIFIERS } from "./import_source_pack.mjs";
+
+const TALBIYAH = "moia-mukhtasar-1446-umrah-talbiyah";
+const ZIYADAH = "moia-mukhtasar-1446-umrah-talbiyah-ziyadah";
+
+test("usageQualifier reaches the imported document", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  assert.equal(built.get(ZIYADAH).usageQualifier, "optional_addition");
+});
+
+test("an unqualified record imports as null, never as a mandatory value", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const base = built.get(TALBIYAH);
+  assert.ok("usageQualifier" in base, "the key must be written explicitly");
+  assert.equal(base.usageQualifier, null);
+
+  // Nothing anywhere in the pipeline may invent an opposing value.
+  for (const doc of built.values()) {
+    assert.ok(
+      doc.usageQualifier === null ||
+        SUPPORTED_USAGE_QUALIFIERS.includes(doc.usageQualifier),
+      `${doc.duaId} carries an unsupported qualifier`,
+    );
+  }
+});
+
+test("mandatory is not a supported qualifier, and must not become one", () => {
+  assert.deepEqual(SUPPORTED_USAGE_QUALIFIERS, ["optional_addition"]);
+  for (const bad of ["mandatory", "required", "obligatory"]) {
+    assert.throws(
+      () => buildRecords({
+        entries: [{ ...realPack.entries[0], usageQualifier: bad }],
+      }),
+      /unknown usageQualifier/,
+      `${bad} must be refused`,
+    );
+  }
+});
+
+test("a non-string qualifier is refused rather than coerced", () => {
+  assert.throws(
+    () => buildRecords({
+      entries: [{ ...realPack.entries[0], usageQualifier: true }],
+    }),
+    /must be a string or null/,
+  );
+});
+
+test("an explicit null qualifier is preserved, not defaulted away", () => {
+  const [doc] = buildRecords({
+    entries: [{ ...realPack.entries[0], usageQualifier: null }],
+  });
+  assert.equal(doc.usageQualifier, null);
+});
+
+test("the Talbiyah keeps its ritual scope and its empty zoneKey", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  for (const id of [TALBIYAH, ZIYADAH]) {
+    const doc = built.get(id);
+    // Pinning it to one miqat would hide it from the other two; this is the
+    // pairing that keeps it reachable from all three without being tied to
+    // any of them.
+    assert.equal(doc.zoneKey, "", `${id} must not be pinned to a place`);
+    assert.equal(doc.ritualKey, "ihram");
+    assert.deepEqual(doc.appliesToZoneKeys, [
+      "miqat_dhul_hulayfah",
+      "miqat_yalamlam",
+      "miqat_qarn_manazil",
+    ]);
+  }
+});
+
+// ── The ledger as an operational gate ───────────────────────────────────
+//
+// Until this existed the ledger was documentation: it recorded that a record
+// must not ship, and nothing stopped an import from shipping it. These tests
+// pin the enforcement, because a hold nobody enforces expires the first time
+// someone runs an import in a hurry.
+
+import {
+  applyLedger,
+  assertLedgerMatchesPack,
+  contentHashOf,
+  loadLedger,
+  LEDGER_PATH,
+} from "./import_source_pack.mjs";
+
+const G009 = "moia-mukhtasar-1446-general-009";
+
+test("the real ledger currently blocks general-009 and the ziyadah", () => {
+  const { included, excluded } = applyLedger(buildRecords(realPack), loadLedger());
+  const excludedIds = excluded.map((e) => e.duaId).sort();
+
+  assert.deepEqual(excludedIds, [G009, ZIYADAH].sort());
+  for (const id of [G009, ZIYADAH]) {
+    assert.ok(
+      !included.some((r) => r.duaId === id),
+      `${id} must not be writable while the ledger holds it back`,
+    );
+  }
+  // Every exclusion states why — an unexplained hold outlives its cause.
+  for (const e of excluded) assert.ok(e.reasons.length > 0);
+});
+
+test("each of the three grounds excludes on its own", () => {
+  const records = buildRecords(realPack);
+  const one = records[0];
+  for (const review of [
+    { recordId: one.duaId, reviewStatus: "blocked", blockReason: "x" },
+    { recordId: one.duaId, deploymentBlocked: true, deploymentBlockReason: "y" },
+    { recordId: one.duaId, excludedFromImport: true },
+  ]) {
+    const { included, excluded } = applyLedger([one], { reviews: [review] });
+    assert.equal(included.length, 0);
+    assert.equal(excluded.length, 1);
+  }
+});
+
+test("a passed record with no hold is still included", () => {
+  const one = buildRecords(realPack)[0];
+  const { included } = applyLedger([one], {
+    reviews: [{ recordId: one.duaId, reviewStatus: "passed" }],
+  });
+  assert.equal(included.length, 1);
+});
+
+test("an unreviewed record is not blocked by the ledger's silence", () => {
+  // The ledger says which records must NOT ship. Absence from it is not a
+  // hold — otherwise every import would be empty until all 85 are reviewed.
+  const one = buildRecords(realPack)[0];
+  const { included } = applyLedger([one], { reviews: [] });
+  assert.equal(included.length, 1);
+});
+
+test("staging --limit 1 still selects the base Talbiyah, not the addition", () => {
+  // Exclusion must run BEFORE the slice. If --limit were applied first, the
+  // single staging slot could be handed to a record the ledger holds back.
+  const { included } = applyLedger(buildRecords(realPack), loadLedger());
+  assert.equal(included.slice(0, 1)[0].duaId, "moia-mukhtasar-1446-umrah-talbiyah");
+});
+
+test("production refuses to run without a ledger", () => {
+  assert.throws(
+    () => assertLedgerMatchesPack(null, buildRecords(realPack), { strict: true }),
+    new RegExp(LEDGER_PATH.replace(/\//g, "\\/")),
+  );
+});
+
+test("a dry run tolerates a missing ledger, since it writes nothing", () => {
+  assert.doesNotThrow(() =>
+    assertLedgerMatchesPack(null, buildRecords(realPack), { strict: false }),
+  );
+});
+
+test("production refuses a ledger whose hashes no longer match the pack", () => {
+  const records = buildRecords(realPack);
+  assert.throws(
+    () =>
+      assertLedgerMatchesPack(
+        { reviews: [{ recordId: records[0].duaId, reviewedTextHash: "b".repeat(64) }] },
+        records,
+        { strict: true },
+      ),
+    /text changed since review/,
+  );
+});
+
+test("production refuses a ledger naming a record the pack does not have", () => {
+  assert.throws(
+    () =>
+      assertLedgerMatchesPack(
+        { reviews: [{ recordId: "ghost-record", reviewedTextHash: "a".repeat(64) }] },
+        buildRecords(realPack),
+        { strict: true },
+      ),
+    /absent from the pack/,
+  );
+});
+
+test("the real ledger matches the real pack today", () => {
+  assert.doesNotThrow(() =>
+    assertLedgerMatchesPack(loadLedger(), buildRecords(realPack), { strict: true }),
+  );
+});
+
+test("contentHashOf agrees with the hashes recorded in the ledger", () => {
+  // The same sha256(ar + NUL + en) the admin screen and the Dart suite use.
+  // If these three ever diverge, the production gate would reject a pack
+  // that is in fact unchanged.
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  for (const review of loadLedger().reviews) {
+    assert.equal(
+      contentHashOf(built.get(review.recordId)),
+      review.reviewedTextHash,
+      `${review.recordId} hash mismatch`,
+    );
+  }
+});
+
+// ── Production is fail-closed ───────────────────────────────────────────
+//
+// Staging may write a record nobody has read yet — that is what a trial is
+// for. Production may not. The difference is that absence from the ledger
+// counts as `unreviewed`, not as `fine`: 83 of 85 records passing the
+// staging filter was never a statement that 83 records had been reviewed.
+
+import {
+  classifyForProduction,
+  assertProductionSetIsClean,
+} from "./import_source_pack.mjs";
+
+const prodClass = () => classifyForProduction(buildRecords(realPack), loadLedger());
+
+test("production includes only records the ledger positively cleared", () => {
+  const c = prodClass();
+  const ledger = loadLedger();
+  const cleared = new Set(
+    ledger.reviews
+      .filter(
+        (r) =>
+          (r.reviewStatus === "passed" || r.textReviewStatus === "passed") &&
+          r.deploymentBlocked !== true &&
+          r.excludedFromImport !== true,
+      )
+      .map((r) => r.recordId),
+  );
+  assert.deepEqual(
+    c.reviewedIncluded.map((r) => r.duaId).sort(),
+    [...cleared].sort(),
+  );
+});
+
+test("every record is accounted for in exactly one bucket", () => {
+  const c = prodClass();
+  const total =
+    c.reviewedIncluded.length +
+    c.unreviewedExcluded.length +
+    c.blockedExcluded.length +
+    c.deploymentHeld.length;
+  assert.equal(total, realPack.entries.length);
+
+  const ids = [
+    ...c.reviewedIncluded.map((r) => r.duaId),
+    ...c.unreviewedExcluded,
+    ...c.blockedExcluded,
+    ...c.deploymentHeld,
+  ];
+  assert.equal(new Set(ids).size, ids.length, "a record appears twice");
+});
+
+test("general-009 is excluded from production as blocked", () => {
+  const c = prodClass();
+  assert.ok(c.blockedExcluded.includes(G009));
+  assert.ok(!c.reviewedIncluded.some((r) => r.duaId === G009));
+});
+
+test("the ziyadah is excluded from production by its deployment hold", () => {
+  const c = prodClass();
+  // Its TEXT passed. It is held for a product reason, and must be reported
+  // in its own bucket rather than lumped in with a text defect.
+  assert.ok(c.deploymentHeld.includes(ZIYADAH));
+  assert.ok(!c.blockedExcluded.includes(ZIYADAH));
+  assert.ok(!c.reviewedIncluded.some((r) => r.duaId === ZIYADAH));
+});
+
+test("a record absent from the ledger is unreviewed, not importable", () => {
+  const records = buildRecords(realPack);
+  const c = classifyForProduction(records, { reviews: [] });
+  assert.equal(c.reviewedIncluded.length, 0);
+  assert.equal(c.unreviewedExcluded.length, records.length);
+});
+
+test("no ledger at all means nothing may be written to production", () => {
+  const c = classifyForProduction(buildRecords(realPack), null);
+  assert.equal(c.reviewedIncluded.length, 0);
+});
+
+test("a ledger entry that is neither passed nor blocked counts as unreviewed", () => {
+  const one = buildRecords(realPack)[0];
+  const c = classifyForProduction([one], {
+    reviews: [{ recordId: one.duaId, reviewStatus: "in_progress" }],
+  });
+  assert.deepEqual(c.unreviewedExcluded, [one.duaId]);
+  assert.equal(c.reviewedIncluded.length, 0);
+});
+
+test("no command-line flag can slip a held record past the final guard", () => {
+  // Every filter can be bypassed by a flag nobody thought about. This
+  // asserts on the final set instead of trusting the filter that built it.
+  const records = buildRecords(realPack);
+  const c = classifyForProduction(records, loadLedger());
+  const smuggled = [
+    ...c.reviewedIncluded,
+    records.find((r) => r.duaId === G009),
+  ];
+  assert.throws(
+    () => assertProductionSetIsClean(smuggled, c),
+    /Refusing to write/,
+  );
+  assert.throws(
+    () =>
+      assertProductionSetIsClean(
+        [...c.reviewedIncluded, records.find((r) => r.duaId === ZIYADAH)],
+        c,
+      ),
+    new RegExp(ZIYADAH),
+  );
+  // The clean set passes, so the guard is not simply always throwing.
+  assert.doesNotThrow(() => assertProductionSetIsClean(c.reviewedIncluded, c));
+});
+
+test("production halts on a page-provenance mismatch, not just a hash one", () => {
+  const records = buildRecords(realPack);
+  const target = records.find((r) => r.printedPage != null);
+  assert.throws(
+    () =>
+      assertLedgerMatchesPack(
+        {
+          reviews: [
+            {
+              recordId: target.duaId,
+              reviewedTextHash: contentHashOf(target),
+              reviewedPage: target.printedPage + 7,
+            },
+          ],
+        },
+        records,
+        { strict: true },
+      ),
+    /reviewed page .* but the record now cites page/,
+  );
+});
+
+test("imported records are still written unverified", () => {
+  // Being reviewed is not being verified. The ledger clears a record for
+  // import; an admin verifies it afterwards, in the app.
+  for (const r of prodClass().reviewedIncluded) {
+    assert.equal(r.verificationStatus, "unverified");
+    assert.equal(r.verifiedAt, null);
+    assert.equal(r.verifiedBy, null);
+  }
+});

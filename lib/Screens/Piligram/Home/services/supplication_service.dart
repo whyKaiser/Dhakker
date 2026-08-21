@@ -1,17 +1,50 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/supplication_model.dart';
+
+/// لماذا عادت القائمة فارغة. `null` يعني «لم يفشل شيء — لا نصوص هنا فعلًا».
+///
+/// الفرق ليس تجميليًّا: فهرس غير جاهز، وقواعد ترفض الاستعلام، ومنطقة بلا
+/// نصوص — ثلاثتها تنتج قائمة فارغة. بلا هذا التمييز يظهر عطل النشر كأنه
+/// سلوك طبيعي، ولا يبقى له أثر يُشخَّص به.
+class SupplicationQueryFailure {
+  const SupplicationQueryFailure({
+    required this.code,
+    required this.cacheKey,
+    required this.hint,
+  });
+
+  final String code;
+  final String cacheKey;
+  final String hint;
+
+  @override
+  String toString() => 'SupplicationQueryFailure($code, $cacheKey): $hint';
+}
 
 class SupplicationService {
   final FirebaseFirestore firestore;
 
   final Map<String, List<SupplicationModel>> _zoneCache = {};
 
+  /// آخر فشل استعلام، أو `null` إن كان آخر جلب سليمًا. تقرؤه الواجهة
+  /// لتفرّق بين «لا نصوص هنا» و«تعذّر الجلب».
+  SupplicationQueryFailure? lastQueryFailure;
+
   SupplicationService({required this.firestore});
 
   static String _prefKey(String cacheKey) => 'duas_cache_$cacheKey';
+
+  /// هل يجوز عرض هذا السجل للحاج؟ موثَّق، فعّال، غير ملغى.
+  ///
+  /// المرشِّح نفسه مطبَّق في ثلاثة مواضع مستقلة عمدًا: في `firestore.rules`
+  /// (فلا يُقرأ أصلًا)، وفي كل استعلام (فلا يصل إلى الجهاز)، وهنا (فما
+  /// حُفظ في الكاش أيام قاعدة أضعف لا يُعرض اليوم).
+  static bool isDisplayable(SupplicationModel item) =>
+      item.isActive && item.isVerifiedSource;
 
   /// يجلب نصوص المنطقة.
   ///
@@ -35,10 +68,38 @@ class SupplicationService {
             .collection('supplications')
             .where('zoneKey', isEqualTo: zoneKey.trim())
             .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
             .get();
         for (final doc in keyQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
           byId[item.duaId.isNotEmpty ? item.duaId : doc.id] = item;
+        }
+      }
+
+      // ثالثًا — النصوص المرتبطة بنُسك لا بموضع.
+      //
+      // التلبية مثالها: `zoneKey: ""` و`zoneId: ""`، لأن المصدر يربطها
+      // بالإحرام لا بميقات بعينه. فلا الاستعلام بـzoneKey ولا الاستعلام
+      // بـzoneId يجدها — كانت تختفي عن **كل** ميقات. الحل ليس تثبيتها
+      // بميقات واحد (فتختفي عن الاثنين الآخرين) بل الاستعلام بقائمة
+      // المناطق التي ينطبق عليها النص.
+      //
+      // القيود الثلاثة إلزامية في الاستعلامات الثلاثة كلها: القواعد تُقيَّم
+      // على كل مستند يطابق الاستعلام، فاستعلام لا يحملها يطابق سجلًا غير
+      // موثّق ويفشل كاملًا بـ permission-denied. القواعد ليست مرشِّحًا.
+      // ويحتاج كل مزيج منها فهرسًا مركّبًا (انظر firestore.indexes.json).
+      if (zoneKey.trim().isNotEmpty) {
+        final ritualQuery = await firestore
+            .collection('supplications')
+            .where('appliesToZoneKeys', arrayContains: zoneKey.trim())
+            .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
+            .get();
+        for (final doc in ritualQuery.docs) {
+          final item = SupplicationModel.fromFirestore(doc);
+          byId.putIfAbsent(item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
         }
       }
 
@@ -47,6 +108,8 @@ class SupplicationService {
             .collection('supplications')
             .where('zoneId', isEqualTo: zoneId)
             .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
             .get();
         for (final doc in idQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
@@ -60,8 +123,41 @@ class SupplicationService {
 
       // احفظ في SharedPreferences للاستخدام offline.
       _persistToCache(cacheKey, items);
+      lastQueryFailure = null;
       return items;
-    } catch (_) {}
+    } on FirebaseException catch (e) {
+      // لا يُبتلع الفشل صامتًا.
+      //
+      // أخطر حالتين متشابهتان في النتيجة ومختلفتان تمامًا في السبب:
+      //   failed-precondition → فهرس مركّب غير جاهز بعدُ (انظر
+      //       firestore.indexes.json وترتيب النشر في docs/).
+      //   permission-denied   → استعلام لا يحمل القيود الثلاثة، أو قواعد
+      //       نُشرت قبل نسخة التطبيق التي تحملها.
+      //
+      // كلاهما يُنتج قائمة فارغة، وبلا هذا الأثر يبدوان «لا أدعية هنا».
+      lastQueryFailure = SupplicationQueryFailure(
+        code: e.code,
+        cacheKey: cacheKey,
+        // بلا نص الاستعلام ولا محتوى أي سجل — تشخيص لا تسريب.
+        hint: e.code == 'failed-precondition'
+            ? 'فهرس مركّب مفقود أو ما يزال يُبنى — انشر firestore.indexes.json وانتظر READY.'
+            : e.code == 'permission-denied'
+                ? 'القواعد ترفض الاستعلام: يجب أن يحمل isActive وverificationStatus وrevokedAt.'
+                : 'فشل استعلام Firestore.',
+      );
+      debugPrint(
+        '[supplications] query failed (${e.code}) for "$cacheKey": '
+        '${lastQueryFailure!.hint}',
+      );
+      // لا ارتداد إلى بيانات غير موثّقة: الكاش نفسه مُرشَّح عند القراءة.
+    } catch (e) {
+      lastQueryFailure = SupplicationQueryFailure(
+        code: 'unknown',
+        cacheKey: cacheKey,
+        hint: 'فشل غير متوقع أثناء جلب النصوص.',
+      );
+      debugPrint('[supplications] unexpected query failure for "$cacheKey": $e');
+    }
 
     // ثانياً: إذا فشل Firestore (بدون نت) → ارجع للكاش المحلي.
     final cached = await _loadFromCache(cacheKey);
@@ -76,7 +172,8 @@ class SupplicationService {
   Future<void> _persistToCache(String cacheKey, List<SupplicationModel> items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json = jsonEncode(items.map((e) => e.toJson()).toList());
+      final json =
+          jsonEncode(items.where(isDisplayable).map((e) => e.toJson()).toList());
       await prefs.setString(_prefKey(cacheKey), json);
     } catch (_) {}
   }
@@ -86,8 +183,12 @@ class SupplicationService {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_prefKey(cacheKey));
       if (raw == null) return null;
+      // يُرشَّح عند القراءة لا عند الكتابة فقط: كاش كُتب بنسخة أقدم قد
+      // يحوي سجلًا غير موثّق أو أُلغي بعد حفظه، وحذفه من الجهاز ليس بيدنا.
+      // فالفلترة هنا هي ما يحمي الحاج من نصّ سُحب بعد أن خُزِّن عنده.
       final list = (jsonDecode(raw) as List)
           .map((e) => SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where(isDisplayable)
           .toList();
       return list;
     } catch (_) {

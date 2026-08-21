@@ -77,6 +77,10 @@ class _AdminSupplicationEditScreenState
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
 
+  /// Did the loaded document carry a `revokedAt` key at all? Absent is not
+  /// the same as null here — see `_loadData`.
+  bool _hadRevokedAtField = true;
+
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -160,6 +164,14 @@ class _AdminSupplicationEditScreenState
       _reviewNotesController.text = (data['reviewNotes'] ?? '').toString();
       final loadedLang = (data['sourceLanguage'] ?? 'ar').toString().trim();
       _sourceLanguage = (loadedLang == 'en') ? 'en' : 'ar';
+      // Records created before `revokedAt` was written explicitly lack the
+      // key entirely. That matters beyond tidiness: the pilgrim queries
+      // filter on `revokedAt == null`, and a Firestore equality filter does
+      // NOT match a document where the field is absent — such a record is
+      // invisible in the app while looking perfectly correct here. Saving
+      // backfills it (see the payload below); nothing else about the record
+      // is touched.
+      _hadRevokedAtField = data.containsKey('revokedAt');
       // A revoked record is never shown as verified, whatever its status says.
       final isRevoked = data['revokedAt'] != null;
       _isVerifiedSource = !isRevoked &&
@@ -292,6 +304,11 @@ class _AdminSupplicationEditScreenState
         'languageCodes': ['ar', 'en'],
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
+        // Backfill ONLY when the key is missing. Writing it unconditionally
+        // would clear a real revocation on every save — silently restoring a
+        // text that was deliberately withdrawn, which is the worst outcome
+        // this whole pipeline exists to prevent.
+        if (!_hadRevokedAtField) 'revokedAt': null,
       };
 
       await FirebaseFirestore.instance
