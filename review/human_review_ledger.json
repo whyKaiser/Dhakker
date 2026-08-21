@@ -519,11 +519,12 @@
       ],
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الدمج يجعل الحقل موجودًا في المستودع، لا في الجهاز الذي يحمله الحاج. الشروط الثلاثة تراكمية، ولا يُرفع الحظر حتى تتحقق جميعًا ويُسجَّل ذلك هنا بتاريخه.",
-        "codeMerged": false,
+        "codeMerged": true,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
-        "liftedBy": null
+        "liftedBy": null,
+        "codeMergedVia": "PR #10"
       },
       "deploymentBlockLiftNote": "merge وحده لا يرفع الحظر. عميل قديم على جهاز حاجّ لا يعرف usageQualifier سيعرض الزيادة بلا شارة ويُشغّلها تلقائيًّا — وهو الضرر نفسه الذي أُنشئ الحقل لمنعه. الاستيراد يضع السجل في متناول كل النسخ المنشورة، لا النسخة الأحدث وحدها، فالشرط الحاسم هو (ج): التحقق الفعلي على جهاز من ظهور الشارة ومن عدم التشغيل التلقائي."
     },
@@ -575,11 +576,12 @@
       "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. العرض الحالي لا يفرّق: كان النص مصنّفًا specific_text فيظهر بشارة «وارد في هذا الموضع» ومعه زر تشغيل، فيردّده الحاج. أُعيد تصنيفه في فرع claude/content-kind-contextual-evidence، ويُرفع الحظر بعد نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل. ولم يُستخدم procedural_guidance لأنه أثر تعليمي لا تعليمات تنفيذية.",
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية، ولا يُرفع حتى تتحقق جميعًا ويُسجَّل ذلك بتاريخه وصاحبه.",
-        "codeMerged": false,
+        "codeMerged": true,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
-        "liftedBy": null
+        "liftedBy": null,
+        "codeMergedVia": "PR #11"
       }
     },
     {
@@ -606,11 +608,12 @@
       "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. العرض الحالي لا يفرّق: كان النص مصنّفًا specific_text فيظهر بشارة «وارد في هذا الموضع» ومعه زر تشغيل، فيردّده الحاج. أُعيد تصنيفه في فرع claude/content-kind-contextual-evidence، ويُرفع الحظر بعد نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل. نوع المحتوى نفسه إرشادي، فلا يُعالج بـusageQualifier.",
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية، ولا يُرفع حتى تتحقق جميعًا ويُسجَّل ذلك بتاريخه وصاحبه.",
-        "codeMerged": false,
+        "codeMerged": true,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
-        "liftedBy": null
+        "liftedBy": null,
+        "codeMergedVia": "PR #11"
       }
     }
   ],
