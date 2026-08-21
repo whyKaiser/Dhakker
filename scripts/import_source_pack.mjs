@@ -117,6 +117,98 @@ export const RECITABLE_CONTENT_KINDS = [
 // source never qualified.
 export const SUPPORTED_USAGE_QUALIFIERS = ["optional_addition"];
 
+// ── Structured source references ────────────────────────────────────────
+//
+// Where the MINISTRY says a text comes from — «أخرجه البخاري (1597)» — as
+// data rather than prose buried in an admin-only note.
+//
+// Two rules matter more than the shape:
+//
+//   1. `citedBy` records WHO made the citation. We are not vouching for a
+//      chain of narration; we are reporting that the reviewed page cites
+//      one. A reference nobody printed must never appear here.
+//   2. A source named without a number gets `referenceKind: "unspecified"`
+//      and NO `reference` key. An empty string would read as "we looked and
+//      found nothing", and a number recalled from memory would be an
+//      invention dressed as provenance.
+export const SUPPORTED_REFERENCE_TYPES = [
+  "hadith",
+  "athar",
+  "quran",
+  "book",
+  "fatwa",
+];
+
+export const SUPPORTED_REFERENCE_KINDS = [
+  "hadith_number",
+  "page",
+  "volume_page",
+  "surah_ayah",
+  "unspecified",
+];
+
+const REFERENCE_REQUIRED_KEYS = [
+  "type",
+  "collection",
+  "referenceKind",
+  "citedBy",
+  "citedOnPage",
+];
+const REFERENCE_KNOWN_KEYS = new Set([...REFERENCE_REQUIRED_KEYS, "reference"]);
+
+/** Validates one entry's sourceReferences array. Throws on the first fault. */
+export function validateSourceReferences(refs, where) {
+  if (refs === undefined) return;
+  if (!Array.isArray(refs)) {
+    throw new Error(`${where}: sourceReferences must be an array.`);
+  }
+  refs.forEach((r, i) => {
+    const at = `${where}: sourceReferences[${i}]`;
+    if (!r || typeof r !== "object" || Array.isArray(r)) {
+      throw new Error(`${at} must be an object.`);
+    }
+    for (const key of Object.keys(r)) {
+      if (!REFERENCE_KNOWN_KEYS.has(key)) {
+        throw new Error(`${at}: unknown field "${key}".`);
+      }
+    }
+    for (const key of REFERENCE_REQUIRED_KEYS) {
+      if (r[key] === undefined || r[key] === null || r[key] === "") {
+        throw new Error(`${at}: missing ${key}.`);
+      }
+    }
+    if (!SUPPORTED_REFERENCE_TYPES.includes(r.type)) {
+      throw new Error(`${at}: unknown type "${r.type}".`);
+    }
+    if (!SUPPORTED_REFERENCE_KINDS.includes(r.referenceKind)) {
+      throw new Error(`${at}: unknown referenceKind "${r.referenceKind}".`);
+    }
+    if (typeof r.collection !== "string" || !r.collection.trim()) {
+      throw new Error(`${at}: collection must be a non-empty string.`);
+    }
+    if (!Number.isInteger(r.citedOnPage) || r.citedOnPage <= 0) {
+      throw new Error(`${at}: citedOnPage must be a positive integer.`);
+    }
+    if ("reference" in r) {
+      // Never "" — an empty reference is indistinguishable from a missing
+      // one, and the two mean different things.
+      if (typeof r.reference !== "string" || !r.reference.trim()) {
+        throw new Error(`${at}: reference must be a non-empty string, or absent.`);
+      }
+      if (r.referenceKind === "unspecified") {
+        throw new Error(
+          `${at}: referenceKind "unspecified" must not carry a reference.`,
+        );
+      }
+    } else if (r.referenceKind !== "unspecified") {
+      throw new Error(
+        `${at}: referenceKind "${r.referenceKind}" requires a reference; ` +
+          'use "unspecified" when the printed page names no number.',
+      );
+    }
+  });
+}
+
 // ── The document schema ─────────────────────────────────────────────────
 //
 // Every field written to Firestore is listed here explicitly. This replaces
@@ -188,6 +280,10 @@ const OPTIONAL_FIELDS = {
   // them obligatory merely for lacking one would assert a ruling nobody
   // made. See SUPPORTED_USAGE_QUALIFIERS.
   usageQualifier: null,
+
+  // Where the ministry says the text comes from. Empty array = the page
+  // cited nothing, which is different from "we have not looked".
+  sourceReferences: [],
 
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
@@ -292,6 +388,8 @@ export function buildRecords(pack) {
         );
       }
     }
+
+    validateSourceReferences(entry.sourceReferences, where);
 
     const textAr = String(entry?.text?.ar || "").trim();
     if (!textAr) throw new Error(`${where}: empty Arabic text.`);

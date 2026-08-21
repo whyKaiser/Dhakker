@@ -731,3 +731,120 @@ test("B1 keeps its full page range in sourceSection", () => {
   assert.match(b1.sourceSection, /65-67/);
   assert.equal(b1.printedPage, 65);
 });
+
+// ── sourceReferences validation ─────────────────────────────────────────
+
+import {
+  SUPPORTED_REFERENCE_TYPES,
+  SUPPORTED_REFERENCE_KINDS,
+  validateSourceReferences,
+} from "./import_source_pack.mjs";
+
+const goodRef = () => ({
+  type: "hadith",
+  collection: "صحيح البخاري",
+  reference: "1597",
+  referenceKind: "hadith_number",
+  citedBy: "moia_1446",
+  citedOnPage: 66,
+});
+
+test("a well-formed reference passes", () => {
+  assert.doesNotThrow(() => validateSourceReferences([goodRef()], "e"));
+  assert.doesNotThrow(() => validateSourceReferences([], "e"));
+  assert.doesNotThrow(() => validateSourceReferences(undefined, "e"));
+});
+
+test("every required field is required", () => {
+  for (const key of ["type", "collection", "referenceKind", "citedBy", "citedOnPage"]) {
+    const r = goodRef();
+    delete r[key];
+    assert.throws(() => validateSourceReferences([r], "e"), new RegExp(`missing ${key}`));
+  }
+});
+
+test("an empty reference string is refused outright", () => {
+  // "" reads as "we looked and found none". Absent means "the page printed
+  // no number". They are different claims.
+  for (const bad of ["", "   "]) {
+    const r = { ...goodRef(), reference: bad };
+    assert.throws(() => validateSourceReferences([r], "e"), /non-empty string, or absent/);
+  }
+});
+
+test("unspecified must not carry a reference, and vice versa", () => {
+  const withBoth = { ...goodRef(), referenceKind: "unspecified" };
+  assert.throws(() => validateSourceReferences([withBoth], "e"),
+    /must not carry a reference/);
+
+  const numberedButAbsent = goodRef();
+  delete numberedButAbsent.reference;
+  assert.throws(() => validateSourceReferences([numberedButAbsent], "e"),
+    /requires a reference/);
+
+  // The legitimate unnumbered shape.
+  const ok = { ...goodRef(), referenceKind: "unspecified" };
+  delete ok.reference;
+  assert.doesNotThrow(() => validateSourceReferences([ok], "e"));
+});
+
+test("unknown types, kinds and fields are refused, never ignored", () => {
+  assert.throws(() => validateSourceReferences([{ ...goodRef(), type: "tweet" }], "e"),
+    /unknown type/);
+  assert.throws(
+    () => validateSourceReferences([{ ...goodRef(), referenceKind: "vibes" }], "e"),
+    /unknown referenceKind/);
+  assert.throws(
+    () => validateSourceReferences([{ ...goodRef(), isAuthentic: true }], "e"),
+    /unknown field "isAuthentic"/);
+});
+
+test("the supported vocabularies are the documented ones", () => {
+  assert.deepEqual(SUPPORTED_REFERENCE_TYPES,
+    ["hadith", "athar", "quran", "book", "fatwa"]);
+  assert.ok(SUPPORTED_REFERENCE_KINDS.includes("unspecified"));
+});
+
+test("citedOnPage must be a real page number", () => {
+  for (const bad of [0, -1, "66", 66.5, null]) {
+    assert.throws(
+      () => validateSourceReferences([{ ...goodRef(), citedOnPage: bad }], "e"));
+  }
+});
+
+test("the real pack's references all import intact", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const umar = built.get("moia-1446-hajar-umar").sourceReferences;
+  assert.equal(umar.length, 2);
+  assert.ok(umar.every((r) => r.citedBy === "moia_1446"));
+
+  const crowding = built.get("moia-1446-hajar-crowding").sourceReferences;
+  assert.equal(crowding.length, 4);
+  assert.equal(crowding.filter((r) => "reference" in r).length, 2);
+  assert.ok(
+    crowding.filter((r) => !("reference" in r))
+      .every((r) => r.referenceKind === "unspecified"),
+  );
+
+  // A record nobody cited keeps an explicit empty array.
+  assert.deepEqual(built.get("moia-mukhtasar-1446-tawaf-takbir-hajar").sourceReferences, []);
+});
+
+test("references do not make a record importable to production", () => {
+  // Citations are provenance, not clearance.
+  const c = classifyForProduction(buildRecords(realPack), loadLedger());
+  for (const id of ["moia-1446-hajar-umar", "moia-1446-hajar-crowding"]) {
+    assert.ok(c.deploymentHeld.includes(id), `${id} must still be held`);
+  }
+});
+
+test("the two reclassified Batch C records are held out of production", () => {
+  const c = classifyForProduction(buildRecords(realPack), loadLedger());
+  for (const id of ["moia-1446-hijr-not-valid", "moia-1446-maqam-rakatayn"]) {
+    assert.ok(c.deploymentHeld.includes(id));
+  }
+  // The one whose classification did not change is cleared.
+  assert.ok(
+    c.reviewedIncluded.some((r) => r.duaId === "moia-mukhtasar-1446-tawaf-takbir-hajar"),
+  );
+});

@@ -584,6 +584,34 @@ async function fetchWithTimeout(url, options, timeoutMs) {
  * the authority published, and the only way to guarantee that is never to
  * touch it.
  */
+/**
+ * Firestore array-of-maps → plain objects. A malformed entry is dropped
+ * rather than half-read: a citation missing its collection says nothing, and
+ * a blank `reference` would read as "checked, none found".
+ */
+function mapSourceReferences(field) {
+  const values = field?.arrayValue?.values;
+  if (!Array.isArray(values)) return [];
+  const out = [];
+  for (const v of values) {
+    const f = v?.mapValue?.fields;
+    if (!f) continue;
+    const collection = (f.collection?.stringValue || "").trim();
+    if (!collection) continue;
+    const reference = (f.reference?.stringValue || "").trim();
+    const entry = {
+      type: (f.type?.stringValue || "").trim(),
+      collection,
+      referenceKind: (f.referenceKind?.stringValue || "unspecified").trim(),
+      citedBy: (f.citedBy?.stringValue || "").trim(),
+      citedOnPage: Number(f.citedOnPage?.integerValue ?? 0) || 0,
+    };
+    if (reference) entry.reference = reference;
+    out.push(entry);
+  }
+  return out;
+}
+
 function buildVerifiedExcerpts(citations, retrieved, policy) {
   const byId = new Map(
     (Array.isArray(retrieved) ? retrieved : []).map((d) => [d.documentId, d]),
@@ -607,6 +635,9 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       textLanguage: policy?.contentLanguage ?? "ar",
       usageQualifier: doc.usageQualifier ?? null,
       contentKind: doc.contentKind ?? null,
+      sourceReferences: Array.isArray(doc.sourceReferences)
+        ? doc.sourceReferences
+        : [],
       isVerbatim: true,
     });
   }
@@ -1064,6 +1095,9 @@ function mapSupplicationRows(rows, language) {
       // but neither is something a pilgrim recites — the client must be able
       // to label it rather than render every excerpt as a supplication.
       contentKind: (fields.contentKind?.stringValue || "").trim() || null,
+      // What the MINISTRY cited as the text's source. Reported, never
+      // vouched for, and never derived from anything but the stored record.
+      sourceReferences: mapSourceReferences(fields.sourceReferences),
       content,
     });
   }
@@ -1465,6 +1499,7 @@ export const __testing__ = {
   languageFromLocale,
   canonicalLocale,
   buildVerifiedExcerpts,
+  mapSourceReferences,
   fallbackAnswer,
   SUPPORTED_LANGUAGES,
 };
