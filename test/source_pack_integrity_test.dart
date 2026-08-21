@@ -43,6 +43,9 @@ void main() {
     'general_dhikr',
     'mosque_entry',
     'procedural_guidance',
+    // A narration cited to teach rather than to be recited — see
+    // test/content_kind_batch_b_test.dart.
+    'contextual_evidence',
   };
 
   group('pack structure', () {

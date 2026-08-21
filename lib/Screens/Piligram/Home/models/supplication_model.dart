@@ -20,7 +20,16 @@ enum SupplicationContentKind {
   mosqueEntry,
 
   /// إرشاد عملي أو حكم — **ليس دعاءً يُتلىٰ**، ويجب ألا يُعرض تحت عنوان دعاء.
-  proceduralGuidance;
+  proceduralGuidance,
+
+  /// أثر أو حديث يسوقه المصدر **للتعليم والاستدلال**، لا للترديد.
+  ///
+  /// مثاله قول عمر رضي الله عنه عند الحجر: «إني أعلم أنك حجر…». هو نصّ
+  /// مرويّ صحيح الإسناد، لكنه ليس ذكرًا يقوله الحاج، وليس إجراءً يتّبعه.
+  /// عرضه دعاءً يجعل الحاج يردّده، وعرضه إرشادًا يطمس كونه أثرًا مرويًّا
+  /// ويقدّمه كأنه صياغة إدارية. فله نوعه الخاص: بطاقة «أثر موثّق» تحفظ
+  /// نسبته ومصدره، بلا زر تشغيل.
+  contextualEvidence;
 
   static SupplicationContentKind fromRaw(String? raw) {
     switch ((raw ?? '').trim()) {
@@ -32,6 +41,8 @@ enum SupplicationContentKind {
         return SupplicationContentKind.mosqueEntry;
       case 'procedural_guidance':
         return SupplicationContentKind.proceduralGuidance;
+      case 'contextual_evidence':
+        return SupplicationContentKind.contextualEvidence;
       case 'general_dua':
         return SupplicationContentKind.generalDua;
       default:
@@ -53,15 +64,22 @@ enum SupplicationContentKind {
         return 'mosque_entry';
       case SupplicationContentKind.proceduralGuidance:
         return 'procedural_guidance';
+      case SupplicationContentKind.contextualEvidence:
+        return 'contextual_evidence';
     }
   }
 }
 
 extension SupplicationContentKindX on SupplicationContentKind {
-  /// هل هذا نص يُتلىٰ (دعاء/ذكر)؟ الإرشاد ليس كذلك.
-  bool get isRecitable => this != SupplicationContentKind.proceduralGuidance;
+  /// هل هذا نص يُتلىٰ (دعاء/ذكر)؟
+  ///
+  /// الإرشاد ليس كذلك، والأثر التعليمي ليس كذلك أيضًا: صحّة الإسناد لا
+  /// تجعل النص ذكرًا يقوله الحاج.
+  bool get isRecitable =>
+      this != SupplicationContentKind.proceduralGuidance &&
+      this != SupplicationContentKind.contextualEvidence;
 
-  /// هل يجوز عرضه في قسم «الأدعية»؟ الإرشاد يُعرض في بطاقة منفصلة.
+  /// هل يجوز عرضه في قسم «الأدعية»؟ ما ليس ذكرًا يُعرض في بطاقته الخاصة.
   bool get belongsInDuaSection => isRecitable;
 
   /// هل يربطه المصدر بهذا الموضع تحديدًا؟
@@ -81,6 +99,8 @@ extension SupplicationContentKindX on SupplicationContentKind {
         return 'عام لدخول المساجد';
       case SupplicationContentKind.proceduralGuidance:
         return 'إرشاد — ليس دعاءً';
+      case SupplicationContentKind.contextualEvidence:
+        return 'أثر موثّق — للفائدة لا للترديد';
     }
   }
 }
@@ -171,6 +191,20 @@ class SupplicationModel {
   /// المناطق التي ينطبق عليها نصٌّ مرتبط بنُسك. فارغة = لا قيد إضافي.
   final List<String> appliesToZoneKeys;
 
+  /// الجهة المُصدِرة، والموضع في المطبوع. يحملهما النموذج لأن بطاقة الأثر
+  /// الموثّق لا تقوم بدونهما: نصّ مرويّ بلا عزو يفقد سبب عرضه. ويُحفظان في
+  /// الكاش أيضًا، فلا يسقط العزو بمجرد انقطاع الشبكة.
+  final String authority;
+  final String sourceSection;
+
+  /// سطر العزو الظاهر: الموضع في المطبوع ثم الجهة. فارغ إن غابا معًا.
+  String get attribution {
+    final parts = [sourceSection.trim(), authority.trim()]
+        .where((e) => e.isNotEmpty)
+        .toList();
+    return parts.join(' — ');
+  }
+
   const SupplicationModel({
     required this.duaId,
     required this.zoneId,
@@ -188,6 +222,8 @@ class SupplicationModel {
     this.usageQualifier,
     this.ritualKey = '',
     this.appliesToZoneKeys = const [],
+    this.authority = '',
+    this.sourceSection = '',
   });
 
   /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
@@ -265,6 +301,8 @@ class SupplicationModel {
           data['usageQualifier']?.toString()),
       ritualKey: (data['ritualKey'] ?? '').toString().trim(),
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
+      authority: (data['authority'] ?? '').toString().trim(),
+      sourceSection: (data['sourceSection'] ?? '').toString().trim(),
     );
   }
 
@@ -320,6 +358,10 @@ class SupplicationModel {
         // from one that was never approved — or from one revoked since.
         'verificationStatus': isVerifiedSource ? 'verified' : 'unverified',
         'revokedAt': null,
+        // Persisted so an evidence card keeps its attribution offline. A
+        // narration shown without its chain has lost the reason it is there.
+        'authority': authority,
+        'sourceSection': sourceSection,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -369,6 +411,8 @@ class SupplicationModel {
           data['usageQualifier']?.toString()),
       ritualKey: (data['ritualKey'] ?? '').toString().trim(),
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
+      authority: (data['authority'] ?? '').toString().trim(),
+      sourceSection: (data['sourceSection'] ?? '').toString().trim(),
     );
   }
 }

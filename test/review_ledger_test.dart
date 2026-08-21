@@ -43,7 +43,12 @@ List<int> _pagesFromSection(String section) {
       .allMatches(section.substring(i))
       .map((m) => int.parse(m.group(0)!))
       .toList();
-  if (nums.length == 2 && nums[1] == nums[0] + 1) return nums;
+  // «صفحتا 96-97» and «صفحات 65-67» are ranges, not two loose numbers: an
+  // excerpt spanning 65 to 67 was read on 66 as well, and recording only the
+  // endpoints would understate the review.
+  if (nums.length == 2 && nums[1] > nums[0]) {
+    return [for (var i = nums[0]; i <= nums[1]; i++) i];
+  }
   return (nums.toSet().toList())..sort();
 }
 

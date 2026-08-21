@@ -849,7 +849,33 @@ class VerifiedExcerptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF2E7D32);
+    // The heading depends on what the text IS. Labelling a narration or a
+    // ruling «نص موثّق» in the same green box as a supplication invites the
+    // reader to recite it, which is precisely what the classification exists
+    // to prevent.
+    final isEvidence = excerpt.contentKind == 'contextual_evidence';
+    final isGuidance = excerpt.contentKind == 'procedural_guidance';
+    final accent = isEvidence
+        ? const Color(0xFF5D4037)
+        : isGuidance
+            ? const Color(0xFF1565C0)
+            : const Color(0xFF2E7D32);
+    final heading = isEvidence
+        ? (isRtl
+            ? 'أثر موثّق — للفائدة لا للترديد'
+            : 'Recorded narration — for benefit, not recitation')
+        : isGuidance
+            ? (isRtl
+                ? 'توجيه — ليس نصًّا يُتلىٰ'
+                : 'Guidance — not a text to recite')
+            : (isRtl
+                ? 'نص موثّق — كما ورد في المصدر'
+                : 'Verified text — as recorded in the source');
+    final icon = isEvidence
+        ? Icons.menu_book_rounded
+        : isGuidance
+            ? Icons.info_outline_rounded
+            : Icons.menu_book_rounded;
     // The text keeps its own direction: Arabic scripture stays RTL inside an
     // English reply.
     final textIsRtl =
@@ -868,13 +894,11 @@ class VerifiedExcerptCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.menu_book_rounded, size: 14, color: accent),
+              Icon(icon, size: 14, color: accent),
               const SizedBox(width: 5),
               Text(
-                isRtl
-                    ? 'نص موثّق — كما ورد في المصدر'
-                    : 'Verified text — as recorded in the source',
-                style: const TextStyle(
+                heading,
+                style: TextStyle(
                   color: accent,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,

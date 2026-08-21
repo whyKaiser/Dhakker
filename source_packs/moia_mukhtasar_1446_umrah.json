@@ -38,7 +38,9 @@
     "specific_text": "نص يربطه المصدر صراحةً بموضع أو نُسك معيّن.",
     "general_dhikr": "ذكر عام من فصل الأذكار — غير مخصّص لمكان.",
     "general_dua": "دعاء عام من فصل «أدعية مختارة من الكتاب والسنة» — غير مخصّص لمكان.",
-    "procedural_guidance": "إرشاد عملي (كيفية أداء) لا نص يُتلىٰ."
+    "procedural_guidance": "إرشاد عملي (كيفية أداء) لا نص يُتلىٰ.",
+    "mosque_entry": "نص دخول المسجد — عام لكل المساجد بنص المصدر، لا خاص بموضع بعينه.",
+    "contextual_evidence": "أثر أو حديث يسوقه المصدر للتعليم والاستدلال، لا للترديد — يُعرض ببطاقة «أثر موثّق» بنسبته ومصدره، بلا زر تشغيل."
   },
   "structuralRules": [
     "لا يوجد دعاء مخصّص لكل شوط من أشواط الطواف — سجل واحد للطواف كله.",
@@ -3281,7 +3283,7 @@
       "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
       "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
       "sourceLanguage": "ar",
-      "sourceSection": "قسم العمرة — ما يقال عند الحجر الأسود — صفحة 65",
+      "sourceSection": "قسم العمرة — ما يقال عند الحجر الأسود — صفحات 65-67",
       "printedPage": 65,
       "verifiedAt": null,
       "verifiedBy": null,
@@ -3295,7 +3297,7 @@
       "zoneNameAr": "الحجر الأسود",
       "zoneKey": "hajar_aswad",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "contextual_evidence",
       "title": {
         "ar": "أثر عمر رضي الله عنه عند الحجر",
         "en": "Umar's statement at the Black Stone"
@@ -3336,7 +3338,7 @@
       "zoneNameAr": "الحجر الأسود",
       "zoneKey": "hajar_aswad",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "procedural_guidance",
       "title": {
         "ar": "النهي عن المزاحمة عند الحجر",
         "en": "Do not crowd at the Stone"
