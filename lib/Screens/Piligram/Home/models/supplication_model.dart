@@ -159,6 +159,66 @@ enum SupplicationUsageQualifier {
   }
 }
 
+/// مرجع منسوب: ما عزا إليه **المصدر المطبوع**، لا ما نصادق نحن عليه.
+///
+/// [reference] اختياري عمدًا: صفحة تسمّي «الشافعي» بلا رقم تُسجَّل بلا رقم،
+/// و`""` ممنوعة لأنها تُقرأ «بحثنا فلم نجد» وهو خبر لم نقله.
+class SourceReference {
+  const SourceReference({
+    required this.type,
+    required this.collection,
+    required this.referenceKind,
+    required this.citedBy,
+    required this.citedOnPage,
+    this.reference,
+  });
+
+  final String type;
+  final String collection;
+  final String referenceKind;
+  final String citedBy;
+  final int citedOnPage;
+  final String? reference;
+
+  /// «صحيح البخاري (1597)» أو «الشافعي» حين لا رقم.
+  String get display {
+    final r = reference?.trim() ?? '';
+    return r.isEmpty ? collection : '$collection ($r)';
+  }
+
+  static List<SourceReference> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    final out = <SourceReference>[];
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final m = Map<String, dynamic>.from(item);
+      final collection = (m['collection'] ?? '').toString().trim();
+      if (collection.isEmpty) continue;
+      final ref = (m['reference'] ?? '').toString().trim();
+      out.add(SourceReference(
+        type: (m['type'] ?? '').toString().trim(),
+        collection: collection,
+        referenceKind: (m['referenceKind'] ?? 'unspecified').toString().trim(),
+        citedBy: (m['citedBy'] ?? '').toString().trim(),
+        citedOnPage: (m['citedOnPage'] as num?)?.toInt() ?? 0,
+        // Absent stays absent: an empty string would claim something the
+        // printed page did not say.
+        reference: ref.isEmpty ? null : ref,
+      ));
+    }
+    return out;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'collection': collection,
+        'referenceKind': referenceKind,
+        'citedBy': citedBy,
+        'citedOnPage': citedOnPage,
+        if (reference != null) 'reference': reference,
+      };
+}
+
 class SupplicationModel {
   final String duaId;
   final String zoneId;
@@ -197,6 +257,10 @@ class SupplicationModel {
   final String authority;
   final String sourceSection;
 
+  /// ما عزا إليه المصدر المطبوع. لا يؤثر في كون النص متلوًّا ولا في تشغيله
+  /// ولا في توثيقه — هو بيان مصدر لا صفة محتوى.
+  final List<SourceReference> sourceReferences;
+
   /// سطر العزو الظاهر: الموضع في المطبوع ثم الجهة. فارغ إن غابا معًا.
   String get attribution {
     final parts = [sourceSection.trim(), authority.trim()]
@@ -224,6 +288,7 @@ class SupplicationModel {
     this.appliesToZoneKeys = const [],
     this.authority = '',
     this.sourceSection = '',
+    this.sourceReferences = const [],
   });
 
   /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
@@ -303,6 +368,7 @@ class SupplicationModel {
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
       authority: (data['authority'] ?? '').toString().trim(),
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
+      sourceReferences: SourceReference.listFrom(data['sourceReferences']),
     );
   }
 
@@ -362,6 +428,9 @@ class SupplicationModel {
         // narration shown without its chain has lost the reason it is there.
         'authority': authority,
         'sourceSection': sourceSection,
+        // Persisted so an evidence card keeps its citations offline too.
+        'sourceReferences':
+            sourceReferences.map((e) => e.toJson()).toList(growable: false),
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -413,6 +482,7 @@ class SupplicationModel {
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
       authority: (data['authority'] ?? '').toString().trim(),
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
+      sourceReferences: SourceReference.listFrom(data['sourceReferences']),
     );
   }
 }
