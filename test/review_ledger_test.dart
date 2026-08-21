@@ -199,30 +199,53 @@ void main() {
       }
     });
 
-    test('a passed record is never also marked excluded', () {
+    test('a passed record is excluded only under a declared deployment hold',
+        () {
+      // A text that passed review is importable by default. The single
+      // exception is a record the app cannot yet present correctly, and that
+      // exception has to be declared — otherwise an exclusion with no stated
+      // reason silently outlives whatever caused it.
       for (final r in reviews) {
         if (r['reviewStatus'] != 'passed') continue;
-        expect(r['excludedFromImport'], anyOf(isNull, isFalse),
-            reason: '${r['recordId']} is both passed and excluded');
         expect(r['blockReason'], isNull,
             reason: '${r['recordId']} passed but carries a blockReason');
+        if (r['excludedFromImport'] == true) {
+          expect(r['deploymentBlocked'], isTrue,
+              reason: '${r['recordId']} is passed and excluded, but names no '
+                  'deployment hold to justify the exclusion');
+        }
       }
     });
 
-    test('a blocked record can never read as ready for import', () {
-      // The two ways a rejection could quietly evaporate: the status flips
-      // to passed while the exclusion stays, or the exclusion is dropped
-      // while the status stays blocked. Neither may pass silently.
+    test('nothing held back can read as ready for import', () {
+      // Two distinct reasons a record may be held back, and they must not be
+      // conflated:
+      //
+      //   reviewStatus: blocked  → something is wrong with the TEXT.
+      //   deploymentBlocked      → the text is fine; the APP cannot yet
+      //                            present it correctly.
+      //
+      // Both must be excluded from import. Only the first says the religious
+      // text is at fault, and using it for a product limitation would put
+      // blame on the source where none belongs.
       final blocked = reviews
           .where((r) => r['reviewStatus'] == 'blocked')
+          .map((r) => r['recordId'])
+          .toSet();
+      final deploymentBlocked = reviews
+          .where((r) => r['deploymentBlocked'] == true)
           .map((r) => r['recordId'])
           .toSet();
       final excluded = reviews
           .where((r) => r['excludedFromImport'] == true)
           .map((r) => r['recordId'])
           .toSet();
-      expect(excluded, blocked,
-          reason: 'the excluded set and the blocked set must be identical');
+
+      expect(excluded, blocked.union(deploymentBlocked),
+          reason: 'every held-back record, for either reason, must be '
+              'excluded from import — and nothing else may be');
+      expect(blocked.intersection(deploymentBlocked), isEmpty,
+          reason: 'the two kinds of hold are distinct');
 
       final passed = reviews
           .where((r) => r['reviewStatus'] == 'passed')
@@ -230,6 +253,27 @@ void main() {
           .toSet();
       expect(passed.intersection(blocked), isEmpty,
           reason: 'a record cannot be both passed and blocked');
+    });
+
+    test('a deployment hold names its reason and never blames the text', () {
+      for (final r in reviews) {
+        if (r['deploymentBlocked'] != true) continue;
+        expect(r['deploymentBlockReason'], isNotNull,
+            reason: '${r['recordId']} is held back with no reason given');
+        expect((r['deploymentBlockReason'] as String).trim(), isNotEmpty);
+        expect(r['excludedFromImport'], isTrue);
+        // The text itself passed — that is the whole point of the
+        // distinction, and it must be stated on the record.
+        expect(r['textReviewStatus'], 'passed',
+            reason: '${r['recordId']}: a deployment hold applies only to a '
+                'record whose text passed review');
+        expect(r['reviewStatus'], isNot('blocked'),
+            reason: '${r['recordId']}: a product limitation must not be '
+                'recorded as a defect in the religious text');
+        expect(r['blockReason'], isNull,
+            reason: '${r['recordId']} mixes a text block with a '
+                'deployment block');
+      }
     });
 
     test('no record is reviewed twice under conflicting outcomes', () {
@@ -294,6 +338,17 @@ void main() {
           .map((a) => a['duaId'] as String)
           .toSet();
       expect(u5.map((r) => r['recordId']).toSet(), expected);
+    });
+
+    test('the named deployment-blocked ids are the real ones', () {
+      expect(
+          (summary['deploymentBlockedRecordIds'] as List)
+              .cast<String>()
+              .toSet(),
+          reviews
+              .where((r) => r['deploymentBlocked'] == true)
+              .map((r) => r['recordId'] as String)
+              .toSet());
     });
 
     test('the named blocked and excluded ids are the real ones', () {

@@ -85,6 +85,60 @@ extension SupplicationContentKindX on SupplicationContentKind {
   }
 }
 
+/// كيف يُستعمل النص، لا ما هو. منفصل عن [SupplicationContentKind] عمدًا:
+/// ذاك يقول *نوع المحتوى*، وهذا يقول *صفة الاستعمال*.
+///
+/// **الغياب لا يعني الوجوب.** لا يوجد `mandatory` ولا `required` في هذا
+/// التعداد، ولن يُضاف: أكثر نصوص الكتاب لم يصفها المصدر بلزوم ولا بجواز،
+/// فوسمها «واجبة» لمجرد خلوّها من وصف يُلبِس الحاج حكمًا لم يقله أحد.
+/// السجل بلا qualifier يُعرض بلا أي وصف إلزامي — نصًّا كما ورد.
+enum SupplicationUsageQualifier {
+  /// زيادة يذكرها المصدر بصيغة الجواز («وإن زاد … فلا بأس»).
+  /// تُعرض بشارتها، ولا تدخل التشغيل التلقائي، ولا تُدمج بالنص الأساسي.
+  optionalAddition;
+
+  /// القيم المدعومة اليوم. قيمة غير معروفة تُقرأ `null` — أي «بلا وصف»،
+  /// وهو الافتراض الآمن: لا نخترع صفة لسجل لا نفهم وسمه.
+  static SupplicationUsageQualifier? fromRaw(String? raw) {
+    switch ((raw ?? '').trim()) {
+      case 'optional_addition':
+        return SupplicationUsageQualifier.optionalAddition;
+      default:
+        return null;
+    }
+  }
+
+  String get raw {
+    switch (this) {
+      case SupplicationUsageQualifier.optionalAddition:
+        return 'optional_addition';
+    }
+  }
+
+  String badgeAr() {
+    switch (this) {
+      case SupplicationUsageQualifier.optionalAddition:
+        return 'زيادة جائزة';
+    }
+  }
+
+  String badgeEn() {
+    switch (this) {
+      case SupplicationUsageQualifier.optionalAddition:
+        return 'Optional addition';
+    }
+  }
+
+  /// هل يدخل هذا السجل التشغيل التلقائي عند دخول المنطقة؟
+  /// الزيادة الجائزة لا تُقرأ إلا باختيار المستخدم.
+  bool get isAutoPlayable {
+    switch (this) {
+      case SupplicationUsageQualifier.optionalAddition:
+        return false;
+    }
+  }
+}
+
 class SupplicationModel {
   final String duaId;
   final String zoneId;
@@ -106,6 +160,17 @@ class SupplicationModel {
   /// موثّق بمصدر معتمد؟ لا يُستشهد به في المساعد إلا إذا كان true.
   final bool isVerifiedSource;
 
+  /// صفة الاستعمال إن وصفها المصدر. `null` = لم يصفه المصدر بشيء،
+  /// **لا** أنه واجب. انظر [SupplicationUsageQualifier].
+  final SupplicationUsageQualifier? usageQualifier;
+
+  /// النُّسك الذي يرتبط به النص (مثل `ihram`) حين لا يكون مرتبطًا بموضع.
+  /// التلبية مثالها: لا تخصّ ميقاتًا بعينه، بل تخصّ الإحرام.
+  final String ritualKey;
+
+  /// المناطق التي ينطبق عليها نصٌّ مرتبط بنُسك. فارغة = لا قيد إضافي.
+  final List<String> appliesToZoneKeys;
+
   const SupplicationModel({
     required this.duaId,
     required this.zoneId,
@@ -120,7 +185,28 @@ class SupplicationModel {
     this.contentKind = SupplicationContentKind.generalDua,
     this.zoneKey = '',
     this.isVerifiedSource = false,
+    this.usageQualifier,
+    this.ritualKey = '',
+    this.appliesToZoneKeys = const [],
   });
+
+  /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
+  /// يُتلىٰ أصلًا (لا إرشادًا)، وألا تمنعه صفة استعماله.
+  bool get isAutoPlayable =>
+      contentKind.belongsInDuaSection &&
+      (usageQualifier?.isAutoPlayable ?? true);
+
+  /// هل ينطبق هذا السجل على المنطقة المعطاة؟
+  ///
+  /// السجل المرتبط بنُسك (مثل التلبية، `ritualKey: ihram`) لا يحمل zoneKey —
+  /// فربطه بميقات واحد يخفيه عن بقية المواقيت. تحديد انطباقه يمرّ عبر
+  /// [appliesToZoneKeys]، وقائمةٌ غير فارغة تعني: هنا فقط، ولا شيء سواه.
+  bool appliesToZone(String candidateZoneKey) {
+    final key = candidateZoneKey.trim();
+    if (appliesToZoneKeys.isNotEmpty) return appliesToZoneKeys.contains(key);
+    if (zoneKey.trim().isNotEmpty) return zoneKey.trim() == key;
+    return false;
+  }
 
   factory SupplicationModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -137,6 +223,14 @@ class SupplicationModel {
         );
       }
       return {};
+    }
+
+    List<String> safeStringList(dynamic raw) {
+      if (raw is! List) return const [];
+      return raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
     }
 
     final langs = <String>[];
@@ -167,6 +261,10 @@ class SupplicationModel {
       isVerifiedSource:
           (data['verificationStatus'] ?? '').toString().trim() == 'verified' &&
               data['revokedAt'] == null,
+      usageQualifier: SupplicationUsageQualifier.fromRaw(
+          data['usageQualifier']?.toString()),
+      ritualKey: (data['ritualKey'] ?? '').toString().trim(),
+      appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
     );
   }
 
@@ -209,6 +307,13 @@ class SupplicationModel {
         'usage_count': usageCount,
         'contentKind': contentKind.raw,
         'zoneKey': zoneKey,
+        // Passed through explicitly, never spread: a field that is only
+        // carried by accident is a field that gets dropped by accident.
+        // `null` is preserved as null — it means "the source described no
+        // usage", which is not the same as any value we could invent.
+        'usageQualifier': usageQualifier?.raw,
+        'ritualKey': ritualKey,
+        'appliesToZoneKeys': appliesToZoneKeys,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -219,6 +324,14 @@ class SupplicationModel {
         );
       }
       return {};
+    }
+
+    List<String> safeStringList(dynamic raw) {
+      if (raw is! List) return const [];
+      return raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
     }
 
     final langs = <String>[];
@@ -246,6 +359,10 @@ class SupplicationModel {
       isVerifiedSource:
           (data['verificationStatus'] ?? '').toString().trim() == 'verified' &&
               data['revokedAt'] == null,
+      usageQualifier: SupplicationUsageQualifier.fromRaw(
+          data['usageQualifier']?.toString()),
+      ritualKey: (data['ritualKey'] ?? '').toString().trim(),
+      appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
     );
   }
 }

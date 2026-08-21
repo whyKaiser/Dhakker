@@ -95,6 +95,13 @@ export const KNOWN_CONTENT_KINDS = [
   "procedural_guidance",
 ];
 
+// The only usage qualifiers a pack may name. `null`/absent is always
+// allowed and means "unqualified". An unknown string is a hard error rather
+// than a silent pass-through: a qualifier the app cannot render would
+// display as nothing at all, which is indistinguishable from a text the
+// source never qualified.
+export const SUPPORTED_USAGE_QUALIFIERS = ["optional_addition"];
+
 // ── The document schema ─────────────────────────────────────────────────
 //
 // Every field written to Firestore is listed here explicitly. This replaces
@@ -158,6 +165,14 @@ const OPTIONAL_FIELDS = {
   // to prevent.
   ritualKey: "",
   appliesToZoneKeys: [],
+
+  // How the source describes the text's USE, as opposed to what it is.
+  // Default `null` means "the source described no usage" — deliberately
+  // NOT "mandatory". There is no mandatory value and there will not be
+  // one: most texts in the book carry no such description, and labelling
+  // them obligatory merely for lacking one would assert a ruling nobody
+  // made. See SUPPORTED_USAGE_QUALIFIERS.
+  usageQualifier: null,
 
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
@@ -244,6 +259,22 @@ export function buildRecords(pack) {
         if (!KNOWN_ZONE_KEYS.includes(String(key))) {
           throw new Error(`${where}: appliesToZoneKeys has unknown "${key}".`);
         }
+      }
+    }
+
+    // A usage qualifier the app cannot render would show as no badge at
+    // all — the same as a text the source never qualified. Refuse rather
+    // than let the distinction disappear.
+    const qualifier = entry.usageQualifier;
+    if (qualifier !== undefined && qualifier !== null) {
+      if (typeof qualifier !== "string") {
+        throw new Error(`${where}: usageQualifier must be a string or null.`);
+      }
+      if (!SUPPORTED_USAGE_QUALIFIERS.includes(qualifier)) {
+        throw new Error(
+          `${where}: unknown usageQualifier "${qualifier}". ` +
+            `Supported: ${SUPPORTED_USAGE_QUALIFIERS.join(", ")}.`,
+        );
       }
     }
 

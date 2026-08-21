@@ -880,6 +880,30 @@ class VerifiedExcerptCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+              // Shown only when the source qualified the text. There is no
+              // opposing badge: an unqualified text carries no label, because
+              // the source made no claim about it either way.
+              if (excerpt.isOptionalAddition) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00695C).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: const Color(0xFF00695C).withOpacity(0.45)),
+                  ),
+                  child: Text(
+                    isRtl ? 'زيادة جائزة' : 'Optional addition',
+                    style: const TextStyle(
+                      color: Color(0xFF00695C),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),

@@ -72,6 +72,50 @@ class ContentKindBadge extends StatelessWidget {
   }
 }
 
+/// وسم صفة الاستعمال — يُعرض إلى جانب [ContentKindBadge]، لا بدلًا منه.
+///
+/// يظهر **فقط** حين يصف المصدر الاستعمال. غيابه لا يعني وجوبًا ولا يُعرض
+/// له أي وصف مقابل: لا «واجب» ولا «أساسي» ولا «لازم». النص غير الموصوف
+/// يُعرض كما ورد، بلا حكم لم يقله المصدر.
+class UsageQualifierBadge extends StatelessWidget {
+  const UsageQualifierBadge({
+    super.key,
+    required this.qualifier,
+    this.isArabic = true,
+  });
+
+  final SupplicationUsageQualifier? qualifier;
+  final bool isArabic;
+
+  static const Color _color = Color(0xFF00695C);
+
+  @override
+  Widget build(BuildContext context) {
+    final q = qualifier;
+    if (q == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _color.withOpacity(0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.add_circle_outline_rounded, size: 13, color: _color),
+          const SizedBox(width: 4),
+          Text(
+            isArabic ? q.badgeAr() : q.badgeEn(),
+            style: const TextStyle(
+                color: _color, fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// بطاقة الإرشاد — منفصلة تمامًا عن بطاقات الأدعية.
 ///
 /// لا تحمل زر تشغيل ولا تُسمّىٰ «دعاء»، لأن محتواها حكم أو توجيه عملي مثل
