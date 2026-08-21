@@ -407,11 +407,28 @@ import {
 
 const G009 = "moia-mukhtasar-1446-general-009";
 
-test("the real ledger currently blocks general-009 and the ziyadah", () => {
-  const { included, excluded } = applyLedger(buildRecords(realPack), loadLedger());
+test("the real ledger holds back exactly what it says it holds back", () => {
+  const ledger = loadLedger();
+  const { included, excluded } = applyLedger(buildRecords(realPack), ledger);
   const excludedIds = excluded.map((e) => e.duaId).sort();
 
-  assert.deepEqual(excludedIds, [G009, ZIYADAH].sort());
+  // Derived from the ledger rather than pinned to a snapshot: this set grows
+  // as records are reviewed, and a test that had to be edited on every review
+  // would soon be edited without being read.
+  const expected = ledger.reviews
+    .filter(
+      (r) =>
+        r.reviewStatus === "blocked" ||
+        r.deploymentBlocked === true ||
+        r.excludedFromImport === true,
+    )
+    .map((r) => r.recordId)
+    .sort();
+  assert.deepEqual(excludedIds, expected);
+
+  // The two that must never silently drop off it.
+  assert.ok(excludedIds.includes(G009));
+  assert.ok(excludedIds.includes(ZIYADAH));
   for (const id of [G009, ZIYADAH]) {
     assert.ok(
       !included.some((r) => r.duaId === id),
@@ -659,4 +676,58 @@ test("imported records are still written unverified", () => {
     assert.equal(r.verifiedAt, null);
     assert.equal(r.verifiedBy, null);
   }
+});
+
+// ── contextual_evidence ─────────────────────────────────────────────────
+//
+// A narration cited to teach is neither a supplication nor an instruction.
+// The importer must accept the kind and must not let it drift into the
+// recitable set, which is what decides whether a play button appears.
+
+import {
+  KNOWN_CONTENT_KINDS,
+  RECITABLE_CONTENT_KINDS,
+} from "./import_source_pack.mjs";
+
+test("contextual_evidence is a known kind but is not recitable", () => {
+  assert.ok(KNOWN_CONTENT_KINDS.includes("contextual_evidence"));
+  assert.ok(!RECITABLE_CONTENT_KINDS.includes("contextual_evidence"));
+  assert.ok(!RECITABLE_CONTENT_KINDS.includes("procedural_guidance"));
+  // Everything a pilgrim actually says stays recitable.
+  for (const kind of ["specific_text", "general_dua", "general_dhikr", "mosque_entry"]) {
+    assert.ok(RECITABLE_CONTENT_KINDS.includes(kind), kind);
+  }
+});
+
+test("the recitable set is a strict subset of the known kinds", () => {
+  for (const kind of RECITABLE_CONTENT_KINDS) {
+    assert.ok(KNOWN_CONTENT_KINDS.includes(kind), `${kind} is not a known kind`);
+  }
+  assert.ok(RECITABLE_CONTENT_KINDS.length < KNOWN_CONTENT_KINDS.length);
+});
+
+test("the batch B records import with their reviewed classifications", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  assert.equal(built.get("moia-1446-hajar-tasmiya").contentKind, "specific_text");
+  assert.equal(built.get("moia-1446-hajar-umar").contentKind, "contextual_evidence");
+  assert.equal(
+    built.get("moia-1446-hajar-crowding").contentKind,
+    "procedural_guidance",
+  );
+});
+
+test("B2 and B3 are held out of production; B1 is not", () => {
+  const c = classifyForProduction(buildRecords(realPack), loadLedger());
+  assert.ok(c.deploymentHeld.includes("moia-1446-hajar-umar"));
+  assert.ok(c.deploymentHeld.includes("moia-1446-hajar-crowding"));
+  assert.ok(
+    c.reviewedIncluded.some((r) => r.duaId === "moia-1446-hajar-tasmiya"),
+    "the recitable text of the batch is cleared",
+  );
+});
+
+test("B1 keeps its full page range in sourceSection", () => {
+  const b1 = realPack.entries.find((e) => e.duaId === "moia-1446-hajar-tasmiya");
+  assert.match(b1.sourceSection, /65-67/);
+  assert.equal(b1.printedPage, 65);
 });

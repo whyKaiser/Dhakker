@@ -606,6 +606,7 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       // rather than presenting it as translated.
       textLanguage: policy?.contentLanguage ?? "ar",
       usageQualifier: doc.usageQualifier ?? null,
+      contentKind: doc.contentKind ?? null,
       isVerbatim: true,
     });
   }
@@ -1042,6 +1043,11 @@ function mapSupplicationRows(rows, language) {
       // through so a cited optional addition is labelled as one instead of
       // reading like the main text.
       usageQualifier: (fields.usageQualifier?.stringValue || "").trim() || null,
+      // What KIND of text this is. A `contextual_evidence` narration or a
+      // `procedural_guidance` ruling may legitimately be cited in an answer,
+      // but neither is something a pilgrim recites — the client must be able
+      // to label it rather than render every excerpt as a supplication.
+      contentKind: (fields.contentKind?.stringValue || "").trim() || null,
       content,
     });
   }

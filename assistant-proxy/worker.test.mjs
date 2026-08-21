@@ -991,6 +991,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     // How the source described the text's USE. A row that carries no such
     // description maps to null — NOT to any value implying obligation.
     usageQualifier: null,
+    // What KIND of text it is. Null when the row does not say; the client
+    // then treats it as recitable, which is the pre-existing behaviour.
+    contentKind: null,
     content: "PLACEHOLDER BODY",
   });
 });
@@ -1770,4 +1773,77 @@ test("the model cannot invent or override a usage qualifier", () => {
     retrieved,
   );
   assert.equal(out[0].usageQualifier, null);
+});
+
+// ── contentKind through the proxy ───────────────────────────────────────
+//
+// A narration cited for evidence and a ruling cited for instruction may both
+// legitimately ground an answer, but neither is a text the pilgrim recites.
+// The client can only label them if the kind survives the trip.
+
+test("mapSupplicationRows carries contentKind out of Firestore", () => {
+  const row = supplicationRow({
+    duaId: "umar",
+    titleEn: "T",
+    textEn: "B",
+    authority: "Example Approving Authority",
+    verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    sourceUrl: "https://example.org/ref/3",
+    sourceVersion: "2026-01",
+    section: "s",
+  });
+  row.document.fields.contentKind = { stringValue: "contextual_evidence" };
+  assert.equal(mapSupplicationRows([row], "en")[0].contentKind,
+    "contextual_evidence");
+});
+
+test("a row with no contentKind maps to null, not to a supplication kind", () => {
+  const docs = mapSupplicationRows(
+    [
+      supplicationRow({
+        duaId: "plain",
+        titleEn: "T",
+        textEn: "B",
+        authority: "Example Approving Authority",
+        verificationStatus: VERIFICATION_STATUS_VERIFIED,
+        sourceUrl: "https://example.org/ref/4",
+        sourceVersion: "2026-01",
+        section: "s",
+      }),
+    ],
+    "en",
+  );
+  assert.equal(docs[0].contentKind, null);
+});
+
+test("verified excerpts carry contentKind alongside the verbatim text", () => {
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "umar" }, { documentId: "dua" }],
+    [
+      {
+        documentId: "umar",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/x",
+        contentKind: "contextual_evidence",
+        content: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ",
+      },
+      {
+        documentId: "dua",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/y",
+        contentKind: "specific_text",
+        content: "بسم الله والله أكبر",
+      },
+    ],
+    { contentLanguage: "ar" },
+  );
+  assert.equal(excerpts[0].contentKind, "contextual_evidence");
+  assert.equal(excerpts[1].contentKind, "specific_text");
+  // The text is still untouched — the kind is metadata beside it.
+  assert.equal(excerpts[0].text, "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ");
+  assert.equal(excerpts[0].isVerbatim, true);
 });
