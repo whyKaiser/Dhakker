@@ -310,3 +310,82 @@ test("every field the real pack uses is in the known set", () => {
   const unknown = [...used].filter((k) => !KNOWN_PACK_FIELDS.has(k));
   assert.deepEqual(unknown, []);
 });
+
+// ── usageQualifier ──────────────────────────────────────────────────────
+//
+// The field exists so an optional addition can be labelled as one. It must
+// survive import intact, and — just as importantly — its ABSENCE must
+// survive too: a record the source did not qualify may not acquire a
+// default that reads as an obligation.
+
+import { SUPPORTED_USAGE_QUALIFIERS } from "./import_source_pack.mjs";
+
+const TALBIYAH = "moia-mukhtasar-1446-umrah-talbiyah";
+const ZIYADAH = "moia-mukhtasar-1446-umrah-talbiyah-ziyadah";
+
+test("usageQualifier reaches the imported document", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  assert.equal(built.get(ZIYADAH).usageQualifier, "optional_addition");
+});
+
+test("an unqualified record imports as null, never as a mandatory value", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const base = built.get(TALBIYAH);
+  assert.ok("usageQualifier" in base, "the key must be written explicitly");
+  assert.equal(base.usageQualifier, null);
+
+  // Nothing anywhere in the pipeline may invent an opposing value.
+  for (const doc of built.values()) {
+    assert.ok(
+      doc.usageQualifier === null ||
+        SUPPORTED_USAGE_QUALIFIERS.includes(doc.usageQualifier),
+      `${doc.duaId} carries an unsupported qualifier`,
+    );
+  }
+});
+
+test("mandatory is not a supported qualifier, and must not become one", () => {
+  assert.deepEqual(SUPPORTED_USAGE_QUALIFIERS, ["optional_addition"]);
+  for (const bad of ["mandatory", "required", "obligatory"]) {
+    assert.throws(
+      () => buildRecords({
+        entries: [{ ...realPack.entries[0], usageQualifier: bad }],
+      }),
+      /unknown usageQualifier/,
+      `${bad} must be refused`,
+    );
+  }
+});
+
+test("a non-string qualifier is refused rather than coerced", () => {
+  assert.throws(
+    () => buildRecords({
+      entries: [{ ...realPack.entries[0], usageQualifier: true }],
+    }),
+    /must be a string or null/,
+  );
+});
+
+test("an explicit null qualifier is preserved, not defaulted away", () => {
+  const [doc] = buildRecords({
+    entries: [{ ...realPack.entries[0], usageQualifier: null }],
+  });
+  assert.equal(doc.usageQualifier, null);
+});
+
+test("the Talbiyah keeps its ritual scope and its empty zoneKey", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  for (const id of [TALBIYAH, ZIYADAH]) {
+    const doc = built.get(id);
+    // Pinning it to one miqat would hide it from the other two; this is the
+    // pairing that keeps it reachable from all three without being tied to
+    // any of them.
+    assert.equal(doc.zoneKey, "", `${id} must not be pinned to a place`);
+    assert.equal(doc.ritualKey, "ihram");
+    assert.deepEqual(doc.appliesToZoneKeys, [
+      "miqat_dhul_hulayfah",
+      "miqat_yalamlam",
+      "miqat_qarn_manazil",
+    ]);
+  }
+});

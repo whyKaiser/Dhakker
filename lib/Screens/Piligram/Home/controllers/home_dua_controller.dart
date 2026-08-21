@@ -63,6 +63,14 @@ class HomeDuaController extends ChangeNotifier {
       .where((e) => e.contentKind.belongsInDuaSection)
       .toList(growable: false);
 
+  /// ما يجوز تشغيله تلقائيًّا عند دخول المنطقة.
+  ///
+  /// أضيق من [recitableDuas]: الزيادة الجائزة تُعرض للحاج ويستطيع تشغيلها
+  /// بنفسه، لكنها لا تُقرأ عليه دون أن يطلبها. تشغيلها تلقائيًّا بعد النص
+  /// الأساسي يجعلها تُسمع امتدادًا له — وهو بالضبط ما يوهم بلزومها.
+  List<SupplicationModel> get autoPlayableDuas =>
+      currentDuasList.where((e) => e.isAutoPlayable).toList(growable: false);
+
   /// الإرشادات والأحكام — تُعرض في بطاقة منفصلة، ولا تُشغَّل صوتيًّا أبدًا.
   List<SupplicationModel> get guidanceItems => currentDuasList
       .where((e) => e.contentKind == SupplicationContentKind.proceduralGuidance)
@@ -276,7 +284,8 @@ class HomeDuaController extends ChangeNotifier {
     }
 
     // الإرشادات مستبعدة هنا: لا يُشغَّل حكمٌ أو توجيه عملي على أنه دعاء.
-    final playableCandidates = recitableDuas;
+    // والزيادة الجائزة مستبعدة كذلك: تُعرض ويُشغّلها المستخدم بنفسه إن شاء.
+    final playableCandidates = autoPlayableDuas;
     if (playableCandidates.isEmpty) {
       _isCurrentZoneHandled = false;
       notifyListeners();

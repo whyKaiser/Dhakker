@@ -42,6 +42,25 @@ class SupplicationService {
         }
       }
 
+      // ثالثًا — النصوص المرتبطة بنُسك لا بموضع.
+      //
+      // التلبية مثالها: `zoneKey: ""` و`zoneId: ""`، لأن المصدر يربطها
+      // بالإحرام لا بميقات بعينه. فلا الاستعلام بـzoneKey ولا الاستعلام
+      // بـzoneId يجدها — كانت تختفي عن **كل** ميقات. الحل ليس تثبيتها
+      // بميقات واحد (فتختفي عن الاثنين الآخرين) بل الاستعلام بقائمة
+      // المناطق التي ينطبق عليها النص.
+      if (zoneKey.trim().isNotEmpty) {
+        final ritualQuery = await firestore
+            .collection('supplications')
+            .where('appliesToZoneKeys', arrayContains: zoneKey.trim())
+            .where('isActive', isEqualTo: true)
+            .get();
+        for (final doc in ritualQuery.docs) {
+          final item = SupplicationModel.fromFirestore(doc);
+          byId.putIfAbsent(item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
+        }
+      }
+
       if (zoneId.trim().isNotEmpty) {
         final idQuery = await firestore
             .collection('supplications')

@@ -182,6 +182,7 @@
       "zoneKey": "",
       "zoneId": "",
       "contentKind": "specific_text",
+      "usageQualifier": "optional_addition",
       "title": {
         "ar": "الزيادة في التلبية",
         "en": "Optional addition to the Talbiyah"
