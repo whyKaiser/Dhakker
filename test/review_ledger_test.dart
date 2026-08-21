@@ -312,6 +312,34 @@ void main() {
       }
     });
 
+    test('a merged PR advances one condition and lifts nothing', () {
+      // The live case: PR #10 and PR #11 are merged, so `codeMerged` is true
+      // for all three held records — and all three are still held. This is
+      // the assertion that would fail if someone read "merged" as "done".
+      final merged = reviews.where((r) =>
+          (r['deploymentBlockLiftConditions']
+              as Map<String, dynamic>?)?['codeMerged'] ==
+          true);
+      expect(merged, isNotEmpty,
+          reason: 'the live ledger should exercise this path');
+
+      for (final r in merged) {
+        final lift = r['deploymentBlockLiftConditions'] as Map<String, dynamic>;
+        // Merging says the code exists in the repository. It says nothing
+        // about the handset a pilgrim is holding.
+        expect(lift['appAndWorkerReleased'], isFalse,
+            reason: '${r['recordId']}: merging is not releasing');
+        expect(lift['badgeAndNoAutoPlayVerifiedOnDevice'], isFalse,
+            reason: '${r['recordId']}: merging is not verifying on a device');
+        expect(r['deploymentBlocked'], isTrue);
+        expect(r['excludedFromImport'], isTrue);
+        expect(lift['liftedAt'], isNull);
+        // And it must say WHICH change merged, so the claim is checkable.
+        expect(lift['codeMergedVia'], isNotNull);
+        expect((lift['codeMergedVia'] as String).trim(), isNotEmpty);
+      }
+    });
+
     test('a deployment hold names its reason and never blames the text', () {
       for (final r in reviews) {
         if (r['deploymentBlocked'] != true) continue;

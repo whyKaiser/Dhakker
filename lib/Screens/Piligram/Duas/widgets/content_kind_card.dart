@@ -124,6 +124,53 @@ class UsageQualifierBadge extends StatelessWidget {
   }
 }
 
+/// أسطر «أخرجه…» أسفل بطاقة الأثر أو الإرشاد.
+///
+/// تُعرض في هاتين البطاقتين فقط: بطاقة الدعاء تعرض نصًّا يقوله الحاج، وسردُ
+/// تخريجٍ تحته يحوّل الذكر إلى مُدخل مرجعي. ولا تُعرض `reviewNotes` أبدًا —
+/// فهي ملاحظات مراجعة إدارية، لا محتوى موجّه للحاج.
+class SourceReferenceList extends StatelessWidget {
+  const SourceReferenceList({
+    super.key,
+    required this.references,
+    required this.accent,
+    this.textColor,
+  });
+
+  final List<SourceReference> references;
+  final Color accent;
+  final Color? textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (references.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'عزاه المصدر إلى:',
+          style: TextStyle(
+              color: accent, fontSize: 11, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        for (final r in references)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '• ${r.display}',
+              style: TextStyle(
+                color: textColor?.withOpacity(0.8),
+                fontSize: 11.5,
+                height: 1.6,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// بطاقة الإرشاد — منفصلة تمامًا عن بطاقات الأدعية.
 ///
 /// لا تحمل زر تشغيل ولا تُسمّىٰ «دعاء»، لأن محتواها حكم أو توجيه عملي مثل
@@ -134,6 +181,7 @@ class GuidanceCard extends StatelessWidget {
     required this.title,
     required this.body,
     this.attribution,
+    this.references = const [],
     this.isPropheticDirective = false,
     this.cardColor,
     this.textColor,
@@ -145,6 +193,9 @@ class GuidanceCard extends StatelessWidget {
   /// من قاله وأين خُرِّج. يُعرض تحت النص حين يكون الإرشاد منقولًا لا مصوغًا،
   /// فلا يظهر توجيه النبي ﷺ كأنه صياغة إدارية.
   final String? attribution;
+
+  /// ما عزا إليه المصدر. عرض فقط: لا يجعل الإرشاد نصًّا يُتلىٰ.
+  final List<SourceReference> references;
 
   /// هل هذا الإرشاد حديث نبوي بلفظه؟ يغيّر العنوان الظاهر وحده — لا يمنحه
   /// زر تشغيل ولا يجعله ذكرًا يُتلىٰ.
@@ -197,6 +248,8 @@ class GuidanceCard extends StatelessWidget {
                     height: 1.7,
                     fontStyle: FontStyle.italic)),
           ],
+          SourceReferenceList(
+              references: references, accent: accent, textColor: textColor),
           const SizedBox(height: 10),
           const ContentKindBadge(
               kind: SupplicationContentKind.proceduralGuidance),
@@ -217,6 +270,7 @@ class ContextualEvidenceCard extends StatelessWidget {
     required this.title,
     required this.body,
     required this.attribution,
+    this.references = const [],
     this.cardColor,
     this.textColor,
   });
@@ -226,6 +280,9 @@ class ContextualEvidenceCard extends StatelessWidget {
 
   /// من قاله وأين خُرِّج — إلزامي في هذه البطاقة، بخلاف [GuidanceCard].
   final String attribution;
+
+  /// ما عزا إليه المصدر من كتب الحديث والآثار.
+  final List<SourceReference> references;
 
   final Color? cardColor;
   final Color? textColor;
@@ -272,6 +329,8 @@ class ContextualEvidenceCard extends StatelessWidget {
                   fontSize: 11.5,
                   height: 1.7,
                   fontStyle: FontStyle.italic)),
+          SourceReferenceList(
+              references: references, accent: accent, textColor: textColor),
           const SizedBox(height: 10),
           const ContentKindBadge(
               kind: SupplicationContentKind.contextualEvidence),

@@ -519,11 +519,12 @@
       ],
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الدمج يجعل الحقل موجودًا في المستودع، لا في الجهاز الذي يحمله الحاج. الشروط الثلاثة تراكمية، ولا يُرفع الحظر حتى تتحقق جميعًا ويُسجَّل ذلك هنا بتاريخه.",
-        "codeMerged": false,
+        "codeMerged": true,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
-        "liftedBy": null
+        "liftedBy": null,
+        "codeMergedVia": "PR #10"
       },
       "deploymentBlockLiftNote": "merge وحده لا يرفع الحظر. عميل قديم على جهاز حاجّ لا يعرف usageQualifier سيعرض الزيادة بلا شارة ويُشغّلها تلقائيًّا — وهو الضرر نفسه الذي أُنشئ الحقل لمنعه. الاستيراد يضع السجل في متناول كل النسخ المنشورة، لا النسخة الأحدث وحدها، فالشرط الحاسم هو (ج): التحقق الفعلي على جهاز من ظهور الشارة ومن عدم التشغيل التلقائي."
     },
@@ -565,7 +566,8 @@
         "النص مطابق للمطبوع",
         "منسوب إلى عمر رضي الله عنه كأثر، لا كحديث مرفوع",
         "المراجع صحيحة: البخاري (1597) ومسلم (1270)",
-        "لا يُعرض دعاءً ولا ذكرًا للترديد، ولا يدخل auto-play ولا recitableDuas"
+        "لا يُعرض دعاءً ولا ذكرًا للترديد، ولا يدخل auto-play ولا recitableDuas",
+        "المراجع المسجّلة في sourceReferences ظاهرة في المطبوع، ولم يُستكمل منها شيء من خارجه"
       ],
       "contentKindConfirmed": "contextual_evidence",
       "contentKindChangedFrom": "specific_text",
@@ -575,12 +577,14 @@
       "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. العرض الحالي لا يفرّق: كان النص مصنّفًا specific_text فيظهر بشارة «وارد في هذا الموضع» ومعه زر تشغيل، فيردّده الحاج. أُعيد تصنيفه في فرع claude/content-kind-contextual-evidence، ويُرفع الحظر بعد نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل. ولم يُستخدم procedural_guidance لأنه أثر تعليمي لا تعليمات تنفيذية.",
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية، ولا يُرفع حتى تتحقق جميعًا ويُسجَّل ذلك بتاريخه وصاحبه.",
-        "codeMerged": false,
+        "codeMerged": true,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
-        "liftedBy": null
-      }
+        "liftedBy": null,
+        "codeMergedVia": "PR #11"
+      },
+      "sourceReferencesConfirmed": true
     },
     {
       "recordId": "moia-1446-hajar-crowding",
@@ -596,7 +600,8 @@
       "reviewerConfirmed": [
         "لفظ الحديث مطابق للمطبوع",
         "توجيه نبوي بعدم المزاحمة، ويُعرض بالمصدر والعزو",
-        "لا زر تشغيل ولا auto-play ولا يُحتسب ضمن الأدعية"
+        "لا زر تشغيل ولا auto-play ولا يُحتسب ضمن الأدعية",
+        "المراجع المسجّلة في sourceReferences ظاهرة في المطبوع، ولم يُستكمل منها شيء من خارجه"
       ],
       "contentKindConfirmed": "procedural_guidance",
       "contentKindChangedFrom": "specific_text",
@@ -606,18 +611,101 @@
       "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. العرض الحالي لا يفرّق: كان النص مصنّفًا specific_text فيظهر بشارة «وارد في هذا الموضع» ومعه زر تشغيل، فيردّده الحاج. أُعيد تصنيفه في فرع claude/content-kind-contextual-evidence، ويُرفع الحظر بعد نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل. نوع المحتوى نفسه إرشادي، فلا يُعالج بـusageQualifier.",
       "deploymentBlockLiftConditions": {
         "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية، ولا يُرفع حتى تتحقق جميعًا ويُسجَّل ذلك بتاريخه وصاحبه.",
+        "codeMerged": true,
+        "appAndWorkerReleased": false,
+        "badgeAndNoAutoPlayVerifiedOnDevice": false,
+        "liftedAt": null,
+        "liftedBy": null,
+        "codeMergedVia": "PR #11"
+      },
+      "sourceReferencesConfirmed": true
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-tawaf-takbir-hajar",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 69,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "ec92767e22e5ad5e6103c896201e27b8f831ffe53e8918ffca9bbeb642462d82",
+      "reviewedAt": "2026-08-21T08:10:00Z",
+      "contentKindConfirmed": "specific_text",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "النص «الله أكبر» مطابق للمطبوع ص69",
+        "سجل واحد للطواف كله، غير مرتبط برقم شوط",
+        "المصدر ينص أن تكرار التكبير والوقوف عند الحجر لم يرد عن النبي ﷺ"
+      ]
+    },
+    {
+      "recordId": "moia-1446-hijr-not-valid",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 71,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "d1d11c73b7ca82d1b00bd05086510781c92746320f6503702463b36e12c859d8",
+      "reviewedAt": "2026-08-21T08:10:00Z",
+      "contentKindConfirmed": "procedural_guidance",
+      "contentKindChangedFrom": "specific_text",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "deploymentBlocked": true,
+      "deploymentBlockReason": "content_kind_not_yet_deployed",
+      "excludedFromImport": true,
+      "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. أُعيد تصنيفه إرشادًا، ويبقى محظورًا حتى نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل.",
+      "deploymentBlockLiftConditions": {
+        "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية ولا يُرفع حتى تتحقق جميعًا.",
         "codeMerged": false,
         "appAndWorkerReleased": false,
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
         "liftedBy": null
-      }
+      },
+      "reviewerConfirmed": [
+        "النص مطابق للمطبوع ص71، ويبدأ بواو عاطفة كما نُقل",
+        "حكم فقهي مقرَّر بتعليله، لا نص يُتلىٰ",
+        "ليس حديثًا، فلا يأخذ عنوان «توجيه نبوي»"
+      ]
+    },
+    {
+      "recordId": "moia-1446-maqam-rakatayn",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 71,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "ffb53bdc5c1355941e9709fdc7d003ca5d7915f6c914f81aa13ae2f5f87de5e4",
+      "reviewedAt": "2026-08-21T08:10:00Z",
+      "contentKindConfirmed": "procedural_guidance",
+      "contentKindChangedFrom": "specific_text",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "deploymentBlocked": true,
+      "deploymentBlockReason": "content_kind_not_yet_deployed",
+      "excludedFromImport": true,
+      "deploymentBlockDetail": "النص صحيح ولا مأخذ عليه — العائق منتجي. أُعيد تصنيفه إرشادًا، ويبقى محظورًا حتى نشر التطبيق والWorker والتحقق على جهاز فعلي من البطاقة الصحيحة ومن غياب زر التشغيل.",
+      "deploymentBlockLiftConditions": {
+        "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية ولا يُرفع حتى تتحقق جميعًا.",
+        "codeMerged": false,
+        "appAndWorkerReleased": false,
+        "badgeAndNoAutoPlayVerifiedOnDevice": false,
+        "liftedAt": null,
+        "liftedBy": null
+      },
+      "reviewerConfirmed": [
+        "نص الوزارة مطابق للمطبوع ص71، ولم يُعدَّل",
+        "وصفٌ لما يفعله الحاج بصيغة الغائب، لا نص يقوله",
+        "المقطعان القرآنيان داخل ﴿﴾ يطابقان لفظ المصحف؛ ورسمهما إملائي كما طبعته الوزارة"
+      ],
+      "embeddedQuranNote": "يحوي مقطعين قرآنيين (الكافرون 1، الإخلاص 1) داخل ﴿﴾. طوبقا مع بيانات مجمع الملك فهد: اللفظ مطابق، والفرق في الرسم وحده (سكون U+0652 بدل U+06E1). لم يُعدَّل نص الوزارة — تعديل رسم مقطع داخل جملتها تحريرٌ لجملتها لا تصحيحُ اقتباس. المراجع مسجّلة في sourceReferences."
     }
   ],
   "summary": {
-    "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات. لا يُكتب يدويًا ولا يُعدَّل بمعزل عن المراجعات.",
-    "totalReviews": 28,
-    "passed": 27,
+    "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
+    "totalReviews": 31,
+    "passed": 30,
     "blocked": 1,
     "failed": 0,
     "byUncertainty": {
@@ -630,12 +718,16 @@
     "excludedFromImportRecordIds": [
       "moia-1446-hajar-crowding",
       "moia-1446-hajar-umar",
+      "moia-1446-hijr-not-valid",
+      "moia-1446-maqam-rakatayn",
       "moia-mukhtasar-1446-general-009",
       "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
     "deploymentBlockedRecordIds": [
       "moia-1446-hajar-crowding",
       "moia-1446-hajar-umar",
+      "moia-1446-hijr-not-valid",
+      "moia-1446-maqam-rakatayn",
       "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
     "firestoreVerificationPerformed": false,

@@ -38,8 +38,16 @@ void main() {
   final byId = {for (final e in entries) e['duaId'].toString(): e};
 
   group('the manifest describes the right records', () {
-    test('all 23 Quranic records are enumerated', () {
-      expect(ayat.length, 23);
+    test('every Quranic record in the pack is enumerated', () {
+      // Derived, not pinned to 23: the manifest grew when a pack-wide rescan
+      // found two Quranic records that carried no quranRef and had therefore
+      // never been compared to anything. A hardcoded count would have had to
+      // be edited by hand — and would not have failed when they were missing.
+      final withRef = entries
+          .where((e) => e['quranRef'] != null)
+          .map((e) => e['duaId'] as String)
+          .toSet();
+      expect(ayat.map((a) => a['duaId'] as String).toSet(), withRef);
     });
 
     test('every referenced record exists in the pack', () {
@@ -56,7 +64,8 @@ void main() {
         expect((a['ayahNumbers'] as List), isNotEmpty);
         expect(a['contextPrintedPage'], isA<int>(),
             reason: '${a['duaId']} has no page in the Ministry book');
-        expect(['U5', 'U12'], contains(a['uncertainty']));
+        // U15 marks the records the pack-wide rescan recovered.
+        expect(['U5', 'U12', 'U15'], contains(a['uncertainty']));
       }
     });
 

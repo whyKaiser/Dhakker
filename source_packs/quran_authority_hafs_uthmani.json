@@ -498,6 +498,50 @@
       "edition": "KFGQPC Hafs Uthmanic Data v2.0",
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
+    },
+    {
+      "duaId": "moia-mukhtasar-1446-tawaf-between-corners",
+      "surahName": "البقرة",
+      "surahNumber": 2,
+      "ayahNumbers": [
+        201
+      ],
+      "contextPrintedPage": 69,
+      "uncertainty": "U15",
+      "uncertaintyNote": "سجل قرآني لم يكن يحمل quranRef فأفلت من تدقيق U5؛ اكتُشف بمسح الحزمة كاملة، واستُخرج نصه حرفيًّا من ملف المجمع المثبَّت لا نقلًا يدويًّا.",
+      "officialText": "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ",
+      "fetched": true,
+      "officialFullAyahText": "وَمِنۡهُم مَّن يَقُولُ رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ",
+      "isPortionOfAyah": true,
+      "riwayah": "حفص عن عاصم",
+      "rasm": "الرسم العثماني",
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "edition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
+    },
+    {
+      "duaId": "moia-1446-safa-ayah",
+      "surahName": "البقرة",
+      "surahNumber": 2,
+      "ayahNumbers": [
+        158
+      ],
+      "contextPrintedPage": 72,
+      "uncertainty": "U15",
+      "uncertaintyNote": "سجل قرآني لم يكن يحمل quranRef فأفلت من تدقيق U5؛ اكتُشف بمسح الحزمة كاملة، واستُخرج نصه حرفيًّا من ملف المجمع المثبَّت لا نقلًا يدويًّا.",
+      "officialText": "إِنَّ ٱلصَّفَا وَٱلۡمَرۡوَةَ مِن شَعَآئِرِ ٱللَّهِۖ",
+      "fetched": true,
+      "officialFullAyahText": "۞ إِنَّ ٱلصَّفَا وَٱلۡمَرۡوَةَ مِن شَعَآئِرِ ٱللَّهِۖ فَمَنۡ حَجَّ ٱلۡبَيۡتَ أَوِ ٱعۡتَمَرَ فَلَا جُنَاحَ عَلَيۡهِ أَن يَطَّوَّفَ بِهِمَاۚ وَمَن تَطَوَّعَ خَيۡرٗا فَإِنَّ ٱللَّهَ شَاكِرٌ عَلِيمٌ",
+      "isPortionOfAyah": true,
+      "riwayah": "حفص عن عاصم",
+      "rasm": "الرسم العثماني",
+      "textAuthority": "مجمع الملك فهد لطباعة المصحف الشريف",
+      "textAuthoritySourceUrl": "https://qurancomplex.gov.sa/techquran/dev/",
+      "edition": "KFGQPC Hafs Uthmanic Data v2.0",
+      "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
+      "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582"
     }
   ],
   "editionDate": "2022-09-07",
