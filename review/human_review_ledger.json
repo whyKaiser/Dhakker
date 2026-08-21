@@ -124,6 +124,110 @@
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
       ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-006",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 95,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "6d62c80f1ad414d4adbeaeb513c0a7c1f3681b63b6cb50008629cea238da28f2",
+      "reviewedAt": "2026-08-21T02:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "لا توجد علامة وقف في المطبوع",
+        "السجل دعاء عام، غير مرتبط بموضع أو نسك",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-007",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 95,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "f4d3b54833676380322c5b1e79d1d6c123e923499f6e737f8f89434c0668af69",
+      "reviewedAt": "2026-08-21T02:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "«رَّبَّنَآ» بشدّة على الراء كما رُسمت",
+        "«فَـَٔامَنَّا» و«سَيِّـَٔاتِنَا» كما رُسمتا",
+        "آيتان كاملتان (193 و194)، لا مقطع منهما",
+        "علامتا الوقف ۚ و ۖ موجودتان في المطبوع",
+        "السجل دعاء عام، غير مرتبط بموضع أو نسك",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-008",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 95,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "d8b35f1b57c48dde364380362a1098c73f670049bbf1c2c084775b4cbc03f14e",
+      "reviewedAt": "2026-08-21T02:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "لا توجد علامة وقف في المطبوع",
+        "السجل دعاء عام، غير مرتبط بموضع أو نسك",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-010",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 95,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "37ad1d254f35284556b95d58b5c6f4f41bcb92fcef3f6bb4a5a631f688bea353",
+      "reviewedAt": "2026-08-21T02:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "معروض في باب الأدعية العامة، لا مقرونًا بمكة كموضع",
+        "لا توجد علامة وقف في المطبوع",
+        "السجل دعاء عام، غير مرتبط بموضع أو نسك",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-009",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "blocked",
+      "reviewedPage": 95,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "e5101f9b8cdc12ff662f2072d42fa305976fe2dada87d4ceedb6b0c85309b43e",
+      "reviewedAt": "2026-08-21T02:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "blockReason": "ministry_source_omits_end_of_quranic_phrase",
+      "excludedFromImport": true,
+      "blockDetail": "النص الرسمي للآية من مجمع الملك فهد ينتهي بـ«رَبُّ ٱلۡعَرۡشِ ٱلۡعَظِيمِ»، بينما مطبوع الوزارة (ص95) يتوقف عند «رَبُّ ٱلۡعَرۡشِ» ولا يطبع «ٱلۡعَظِيمِ». المقطع مقطوع في وسط تركيب إضافي: الموصوف بلا صفته. لا تُضاف «ٱلۡعَظِيمِ» لأنها لن تكون منقولة من سياق صفحة الوزارة، ولا يُعتمد النص المبتور. السجل مستبعد من أي استيراد معتمد حتى يصدر قرار تصحيح منفصل.",
+      "reviewerConfirmed": [
+        "مطبوع الوزارة ص95 يتوقف عند «رب العرش» ثم يضع المرجع [التوبة:129]",
+        "المطبوع لا يطبع كلمة «العظيم»"
+      ]
     }
   ]
 }

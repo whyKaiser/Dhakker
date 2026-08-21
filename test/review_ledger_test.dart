@@ -127,6 +127,32 @@ void main() {
       }
     });
 
+    test('a record that did not pass carries a reason and is excluded', () {
+      // A review that fails or is blocked must say why, and must be marked
+      // out of scope for import. Without both, a rejected record looks the
+      // same as an unreviewed one, and the rejection is silently lost the
+      // next time someone runs the importer.
+      for (final r in reviews) {
+        if (r['reviewStatus'] == 'passed') continue;
+        expect(r['blockReason'], isNotNull,
+            reason: '${r['recordId']} did not pass but gives no blockReason');
+        expect((r['blockReason'] as String).trim(), isNotEmpty);
+        expect(r['excludedFromImport'], isTrue,
+            reason: '${r['recordId']} did not pass but is not excluded '
+                'from import');
+      }
+    });
+
+    test('a passed record is never also marked excluded', () {
+      for (final r in reviews) {
+        if (r['reviewStatus'] != 'passed') continue;
+        expect(r['excludedFromImport'], anyOf(isNull, isFalse),
+            reason: '${r['recordId']} is both passed and excluded');
+        expect(r['blockReason'], isNull,
+            reason: '${r['recordId']} passed but carries a blockReason');
+      }
+    });
+
     test('no record is reviewed twice under conflicting outcomes', () {
       final seen = <String, String>{};
       for (final r in reviews) {
