@@ -94,6 +94,20 @@ export const KNOWN_CONTENT_KINDS = [
   "general_dhikr",
   "mosque_entry",
   "procedural_guidance",
+  // A narration the source cites to TEACH, not to be repeated — Umar's
+  // words at the Black Stone, for instance. Shipping it as a supplication
+  // has pilgrims reciting it; shipping it as guidance hides that it is a
+  // narration with a chain, and presents it as ministry prose.
+  "contextual_evidence",
+];
+
+// Content kinds a pilgrim may recite, and which may therefore be played
+// aloud. Everything else renders in its own card with no play button.
+export const RECITABLE_CONTENT_KINDS = [
+  "specific_text",
+  "general_dua",
+  "general_dhikr",
+  "mosque_entry",
 ];
 
 // The only usage qualifiers a pack may name. `null`/absent is always

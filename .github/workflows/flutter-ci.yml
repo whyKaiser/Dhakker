@@ -13,6 +13,7 @@ on:
       - "claude/staging-collection-rules"
       - "claude/human-review-ledger"
       - "claude/usage-qualifier-optional-addition"
+      - "claude/content-kind-contextual-evidence"
   pull_request:
     branches:
       - main
@@ -64,6 +65,7 @@ jobs:
             "test/review_ledger_test.dart"
             "test/usage_qualifier_test.dart"
             "test/supplication_writers_test.dart"
+            "test/content_kind_batch_b_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

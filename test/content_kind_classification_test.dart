@@ -73,13 +73,18 @@ void main() {
   });
 
   group('classification rules', () {
-    test('only procedural guidance is non-recitable', () {
+    test('guidance and contextual evidence are the non-recitable kinds', () {
+      // Two ways a text can be in the collection without being something a
+      // pilgrim says: it instructs (procedural_guidance), or it is cited as
+      // evidence (contextual_evidence). Everything else is recited.
+      const nonRecitable = {
+        SupplicationContentKind.proceduralGuidance,
+        SupplicationContentKind.contextualEvidence,
+      };
       for (final kind in SupplicationContentKind.values) {
-        expect(
-          kind.isRecitable,
-          kind != SupplicationContentKind.proceduralGuidance,
-          reason: '$kind',
-        );
+        expect(kind.isRecitable, !nonRecitable.contains(kind), reason: '$kind');
+        expect(kind.belongsInDuaSection, !nonRecitable.contains(kind),
+            reason: '$kind');
       }
     });
 
@@ -141,10 +146,16 @@ void main() {
       final partition = SupplicationPartition.of(items);
 
       expect(
-          partition.recitable.length + partition.guidance.length, items.length);
+          partition.recitable.length +
+              partition.guidance.length +
+              partition.evidence.length,
+          items.length);
       final recitableIds = partition.recitable.map((e) => e.duaId).toSet();
       final guidanceIds = partition.guidance.map((e) => e.duaId).toSet();
+      final evidenceIds = partition.evidence.map((e) => e.duaId).toSet();
       expect(recitableIds.intersection(guidanceIds), isEmpty);
+      expect(recitableIds.intersection(evidenceIds), isEmpty);
+      expect(guidanceIds.intersection(evidenceIds), isEmpty);
     });
   });
 
