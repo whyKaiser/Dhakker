@@ -63,6 +63,7 @@ jobs:
             "test/offline_knowledge_repository_test.dart"
             "test/review_ledger_test.dart"
             "test/usage_qualifier_test.dart"
+            "test/supplication_writers_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

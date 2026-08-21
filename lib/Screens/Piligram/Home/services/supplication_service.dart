@@ -1,13 +1,38 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/supplication_model.dart';
+
+/// لماذا عادت القائمة فارغة. `null` يعني «لم يفشل شيء — لا نصوص هنا فعلًا».
+///
+/// الفرق ليس تجميليًّا: فهرس غير جاهز، وقواعد ترفض الاستعلام، ومنطقة بلا
+/// نصوص — ثلاثتها تنتج قائمة فارغة. بلا هذا التمييز يظهر عطل النشر كأنه
+/// سلوك طبيعي، ولا يبقى له أثر يُشخَّص به.
+class SupplicationQueryFailure {
+  const SupplicationQueryFailure({
+    required this.code,
+    required this.cacheKey,
+    required this.hint,
+  });
+
+  final String code;
+  final String cacheKey;
+  final String hint;
+
+  @override
+  String toString() => 'SupplicationQueryFailure($code, $cacheKey): $hint';
+}
 
 class SupplicationService {
   final FirebaseFirestore firestore;
 
   final Map<String, List<SupplicationModel>> _zoneCache = {};
+
+  /// آخر فشل استعلام، أو `null` إن كان آخر جلب سليمًا. تقرؤه الواجهة
+  /// لتفرّق بين «لا نصوص هنا» و«تعذّر الجلب».
+  SupplicationQueryFailure? lastQueryFailure;
 
   SupplicationService({required this.firestore});
 
@@ -98,8 +123,41 @@ class SupplicationService {
 
       // احفظ في SharedPreferences للاستخدام offline.
       _persistToCache(cacheKey, items);
+      lastQueryFailure = null;
       return items;
-    } catch (_) {}
+    } on FirebaseException catch (e) {
+      // لا يُبتلع الفشل صامتًا.
+      //
+      // أخطر حالتين متشابهتان في النتيجة ومختلفتان تمامًا في السبب:
+      //   failed-precondition → فهرس مركّب غير جاهز بعدُ (انظر
+      //       firestore.indexes.json وترتيب النشر في docs/).
+      //   permission-denied   → استعلام لا يحمل القيود الثلاثة، أو قواعد
+      //       نُشرت قبل نسخة التطبيق التي تحملها.
+      //
+      // كلاهما يُنتج قائمة فارغة، وبلا هذا الأثر يبدوان «لا أدعية هنا».
+      lastQueryFailure = SupplicationQueryFailure(
+        code: e.code,
+        cacheKey: cacheKey,
+        // بلا نص الاستعلام ولا محتوى أي سجل — تشخيص لا تسريب.
+        hint: e.code == 'failed-precondition'
+            ? 'فهرس مركّب مفقود أو ما يزال يُبنى — انشر firestore.indexes.json وانتظر READY.'
+            : e.code == 'permission-denied'
+                ? 'القواعد ترفض الاستعلام: يجب أن يحمل isActive وverificationStatus وrevokedAt.'
+                : 'فشل استعلام Firestore.',
+      );
+      debugPrint(
+        '[supplications] query failed (${e.code}) for "$cacheKey": '
+        '${lastQueryFailure!.hint}',
+      );
+      // لا ارتداد إلى بيانات غير موثّقة: الكاش نفسه مُرشَّح عند القراءة.
+    } catch (e) {
+      lastQueryFailure = SupplicationQueryFailure(
+        code: 'unknown',
+        cacheKey: cacheKey,
+        hint: 'فشل غير متوقع أثناء جلب النصوص.',
+      );
+      debugPrint('[supplications] unexpected query failure for "$cacheKey": $e');
+    }
 
     // ثانياً: إذا فشل Firestore (بدون نت) → ارجع للكاش المحلي.
     final cached = await _loadFromCache(cacheKey);
