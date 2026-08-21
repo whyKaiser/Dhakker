@@ -11,6 +11,7 @@ on:
       - "claude/staging-import-workflow"
       - "claude/language-routing-audit"
       - "claude/staging-collection-rules"
+      - "claude/human-review-ledger"
   pull_request:
     branches:
       - main
@@ -59,6 +60,7 @@ jobs:
             "test/assistant_response_widget_test.dart"
             "test/assistant_service_test.dart"
             "test/offline_knowledge_repository_test.dart"
+            "test/review_ledger_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
