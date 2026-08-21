@@ -391,6 +391,10 @@ test("canonicalizeCitations rebuilds every field from the retrieved record, disc
       authority: "Real Approved Authority",
       section: "real-section",
       url: "https://real.example/doc-1",
+      // Rebuilt from the record like every other field: the model cannot
+      // add, remove, or alter a usage qualifier any more than it can
+      // fabricate an authority.
+      usageQualifier: null,
     },
   ]);
 });
@@ -984,6 +988,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     section: "section-3",
     url: "https://example.org/ref/42",
     version: "2026-01",
+    // How the source described the text's USE. A row that carries no such
+    // description maps to null — NOT to any value implying obligation.
+    usageQualifier: null,
     content: "PLACEHOLDER BODY",
   });
 });
@@ -1650,4 +1657,117 @@ test("end-to-end: no reviewed translation + fallback forbidden → honest refusa
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+// ── usageQualifier through the proxy ────────────────────────────────────
+//
+// A cited optional addition must reach the client labelled as one. If the
+// qualifier is lost in transit the excerpt renders identically to the main
+// text — which is exactly the confusion the field exists to prevent.
+
+test("mapSupplicationRows carries usageQualifier out of Firestore", () => {
+  const row = supplicationRow({
+    duaId: "ziyadah",
+    titleEn: "Addition",
+    textEn: "BODY",
+    authority: "Example Approving Authority",
+    verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    sourceUrl: "https://example.org/ref/9",
+    sourceVersion: "2026-01",
+    section: "s",
+  });
+  row.document.fields.usageQualifier = { stringValue: "optional_addition" };
+
+  const docs = mapSupplicationRows([row], "en");
+  assert.equal(docs[0].usageQualifier, "optional_addition");
+});
+
+test("a row with no qualifier maps to null, never to an obligation", () => {
+  const docs = mapSupplicationRows(
+    [
+      supplicationRow({
+        duaId: "plain",
+        titleEn: "T",
+        textEn: "B",
+        authority: "Example Approving Authority",
+        verificationStatus: VERIFICATION_STATUS_VERIFIED,
+        sourceUrl: "https://example.org/ref/1",
+        sourceVersion: "2026-01",
+        section: "s",
+      }),
+    ],
+    "en",
+  );
+  assert.equal(docs[0].usageQualifier, null);
+});
+
+test("an empty-string qualifier is normalised to null, not passed through", () => {
+  const row = supplicationRow({
+    duaId: "blank",
+    titleEn: "T",
+    textEn: "B",
+    authority: "Example Approving Authority",
+    verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    sourceUrl: "https://example.org/ref/2",
+    sourceVersion: "2026-01",
+    section: "s",
+  });
+  row.document.fields.usageQualifier = { stringValue: "   " };
+  assert.equal(mapSupplicationRows([row], "en")[0].usageQualifier, null);
+});
+
+test("verified excerpts carry the qualifier alongside the verbatim text", () => {
+  const retrieved = [
+    {
+      documentId: "ziyadah",
+      title: "Addition",
+      authority: "A",
+      section: "s",
+      url: "https://example.org/x",
+      version: "v1",
+      usageQualifier: "optional_addition",
+      content: "لَبَّيْكَ",
+    },
+    {
+      documentId: "plain",
+      title: "Talbiyah",
+      authority: "A",
+      section: "s",
+      url: "https://example.org/y",
+      version: "v1",
+      usageQualifier: null,
+      content: "لَبَّيْكَ اللهُمَّ",
+    },
+  ];
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "ziyadah" }, { documentId: "plain" }],
+    retrieved,
+    { contentLanguage: "ar" },
+  );
+  assert.equal(excerpts.length, 2);
+  assert.equal(excerpts[0].usageQualifier, "optional_addition");
+  assert.equal(excerpts[1].usageQualifier, null);
+  // The text itself is still untouched — the qualifier is metadata beside
+  // the scripture, never mixed into it.
+  assert.equal(excerpts[0].text, "لَبَّيْكَ");
+  assert.equal(excerpts[0].isVerbatim, true);
+});
+
+test("the model cannot invent or override a usage qualifier", () => {
+  const retrieved = [
+    {
+      documentId: "plain",
+      title: "T",
+      authority: "A",
+      section: "s",
+      url: "https://example.org/z",
+      usageQualifier: null,
+      content: "…",
+    },
+  ];
+  const out = canonicalizeCitations(
+    [{ documentId: "plain", usageQualifier: "mandatory" }],
+    retrieved,
+  );
+  assert.equal(out[0].usageQualifier, null);
 });

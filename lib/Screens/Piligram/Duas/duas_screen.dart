@@ -89,9 +89,14 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
         .where('isActive', isEqualTo: true)
         .get();
 
+    // شاشة البحث تقرأ المجموعة كاملة، فتلزمها القيود الثلاثة نفسها التي
+    // تلزم استعلامات المنطقة. بدونها يطابق الاستعلام سجلًا غير موثّق
+    // فيفشل كاملًا بـ permission-denied — لا يعود بنتائج أقل.
     final duasQuery = await FirebaseFirestore.instance
         .collection('supplications')
         .where('isActive', isEqualTo: true)
+        .where('verificationStatus', isEqualTo: 'verified')
+        .where('revokedAt', isNull: true)
         .get();
 
     final zones = zonesQuery.docs.map(ZoneModel.fromFirestore).toList()

@@ -60,7 +60,8 @@
  * duplicates.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 // The 19 zone slugs defined by `lib/shared/data/hajj_zones_seed.dart`.
 // Kept in sync by `test/source_pack_integrity_test.dart`, which reads both
@@ -94,6 +95,13 @@ export const KNOWN_CONTENT_KINDS = [
   "mosque_entry",
   "procedural_guidance",
 ];
+
+// The only usage qualifiers a pack may name. `null`/absent is always
+// allowed and means "unqualified". An unknown string is a hard error rather
+// than a silent pass-through: a qualifier the app cannot render would
+// display as nothing at all, which is indistinguishable from a text the
+// source never qualified.
+export const SUPPORTED_USAGE_QUALIFIERS = ["optional_addition"];
 
 // ── The document schema ─────────────────────────────────────────────────
 //
@@ -158,6 +166,14 @@ const OPTIONAL_FIELDS = {
   // to prevent.
   ritualKey: "",
   appliesToZoneKeys: [],
+
+  // How the source describes the text's USE, as opposed to what it is.
+  // Default `null` means "the source described no usage" — deliberately
+  // NOT "mandatory". There is no mandatory value and there will not be
+  // one: most texts in the book carry no such description, and labelling
+  // them obligatory merely for lacking one would assert a ruling nobody
+  // made. See SUPPORTED_USAGE_QUALIFIERS.
+  usageQualifier: null,
 
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
@@ -247,6 +263,22 @@ export function buildRecords(pack) {
       }
     }
 
+    // A usage qualifier the app cannot render would show as no badge at
+    // all — the same as a text the source never qualified. Refuse rather
+    // than let the distinction disappear.
+    const qualifier = entry.usageQualifier;
+    if (qualifier !== undefined && qualifier !== null) {
+      if (typeof qualifier !== "string") {
+        throw new Error(`${where}: usageQualifier must be a string or null.`);
+      }
+      if (!SUPPORTED_USAGE_QUALIFIERS.includes(qualifier)) {
+        throw new Error(
+          `${where}: unknown usageQualifier "${qualifier}". ` +
+            `Supported: ${SUPPORTED_USAGE_QUALIFIERS.join(", ")}.`,
+        );
+      }
+    }
+
     const textAr = String(entry?.text?.ar || "").trim();
     if (!textAr) throw new Error(`${where}: empty Arabic text.`);
 
@@ -297,6 +329,183 @@ function toFirestoreValue(value) {
 // The collection is NEVER taken from user input. Two fixed destinations
 // exist, each behind its own explicit flag, so a typo can never invent a
 // collection and `--staging` can never silently become production.
+
+// ── The review ledger, as an operational gate ───────────────────────────
+//
+// `review/human_review_ledger.json` records what a human checked against the
+// printed page, and which records must NOT be shipped. Until now that was
+// documentation only: nothing stopped this script from writing a record the
+// ledger had rejected. A hold nobody enforces is a hold that expires the
+// first time someone runs an import in a hurry.
+//
+// Three independent grounds for exclusion, kept separate because they mean
+// different things:
+//
+//   reviewStatus: "blocked"   → something is wrong with the TEXT.
+//   excludedFromImport: true  → the explicit instruction, whatever the cause.
+//   deploymentBlocked: true   → the text is fine; the APP cannot yet present
+//                               it correctly.
+//
+// Any one of them is disqualifying.
+
+export const LEDGER_PATH = "review/human_review_ledger.json";
+
+export function loadLedger(pathOrNull = LEDGER_PATH) {
+  if (!existsSync(pathOrNull)) return null;
+  return JSON.parse(readFileSync(pathOrNull, "utf8"));
+}
+
+/** sha256(ar + NUL + en) — the same construction the admin screen uses. */
+export function contentHashOf(record) {
+  const ar = record?.text?.ar ?? "";
+  const en = record?.text?.en ?? "";
+  return createHash("sha256").update(`${ar}\u0000${en}`, "utf8").digest("hex");
+}
+
+/**
+ * Classifies every record for a PRODUCTION write. Fail-closed: a record is
+ * included only if the ledger positively says a human passed its text and
+ * nothing holds it back. Everything else lands in one of three excluded
+ * buckets, each reported separately because they need different actions.
+ *
+ * Absence from the ledger is `unreviewed`, not `fine`. That is the whole
+ * difference between this and the staging path: staging may write a record
+ * nobody has read yet (that is what a trial is for), production may not.
+ */
+export function classifyForProduction(records, ledger) {
+  const byId = new Map();
+  for (const r of ledger?.reviews ?? []) byId.set(r.recordId, r);
+
+  const reviewedIncluded = [];
+  const unreviewedExcluded = [];
+  const blockedExcluded = [];
+  const deploymentHeld = [];
+
+  for (const record of records) {
+    const review = byId.get(record.duaId);
+    if (!review) {
+      unreviewedExcluded.push(record.duaId);
+      continue;
+    }
+    if (review.reviewStatus === "blocked" || review.reviewStatus === "failed") {
+      blockedExcluded.push(record.duaId);
+      continue;
+    }
+    if (review.deploymentBlocked === true) {
+      deploymentHeld.push(record.duaId);
+      continue;
+    }
+    if (review.excludedFromImport === true) {
+      // Excluded without either specific flag — treat as blocked rather than
+      // guessing which bucket it belongs to.
+      blockedExcluded.push(record.duaId);
+      continue;
+    }
+    const passed =
+      review.reviewStatus === "passed" || review.textReviewStatus === "passed";
+    if (!passed) {
+      unreviewedExcluded.push(record.duaId);
+      continue;
+    }
+    reviewedIncluded.push(record);
+  }
+
+  return {
+    reviewedIncluded,
+    unreviewedExcluded,
+    blockedExcluded,
+    deploymentHeld,
+  };
+}
+
+/**
+ * Splits built records into what may be written and what may not.
+ * Pure: takes the ledger as data so tests need no filesystem.
+ */
+export function applyLedger(records, ledger) {
+  const byId = new Map();
+  for (const r of ledger?.reviews ?? []) byId.set(r.recordId, r);
+
+  const included = [];
+  const excluded = [];
+  for (const record of records) {
+    const review = byId.get(record.duaId);
+    const reasons = [];
+    if (review) {
+      if (review.reviewStatus === "blocked") {
+        reasons.push(
+          `review blocked (${review.blockReason || "no reason recorded"})`,
+        );
+      }
+      if (review.deploymentBlocked === true) {
+        reasons.push(
+          `deployment blocked (${review.deploymentBlockReason || "no reason recorded"})`,
+        );
+      }
+      if (review.excludedFromImport === true) {
+        reasons.push("excludedFromImport");
+      }
+    }
+    if (reasons.length) {
+      excluded.push({ duaId: record.duaId, reasons });
+    } else {
+      included.push(record);
+    }
+  }
+  return { included, excluded };
+}
+
+/**
+ * Production refuses to guess. A missing ledger, an entry naming a record the
+ * pack does not contain, or a recorded hash that no longer matches the text
+ * all mean the reviews on file no longer describe what is about to be
+ * written — and a review that does not describe the text is not a review.
+ */
+export function assertLedgerMatchesPack(ledger, records, { strict }) {
+  if (!strict) return;
+  if (!ledger) {
+    throw new Error(
+      `A production write requires ${LEDGER_PATH}, and it was not found. ` +
+        "Writing records nobody has reviewed is exactly what the ledger exists to prevent.",
+    );
+  }
+  const byId = new Map(records.map((r) => [r.duaId, r]));
+  const problems = [];
+  for (const review of ledger.reviews ?? []) {
+    const record = byId.get(review.recordId);
+    if (!record) {
+      problems.push(`${review.recordId}: reviewed but absent from the pack`);
+      continue;
+    }
+    const actual = contentHashOf(record);
+    if (review.reviewedTextHash && review.reviewedTextHash !== actual) {
+      problems.push(
+        `${review.recordId}: text changed since review ` +
+          `(reviewed ${review.reviewedTextHash.slice(0, 12)}…, ` +
+          `pack now ${actual.slice(0, 12)}…)`,
+      );
+    }
+    // Page provenance: a reviewer who read page 71 has not vouched for a
+    // record that now cites page 94. The citation and the review must
+    // describe the same page.
+    const reviewedPages = review.reviewedPages ?? [review.reviewedPage];
+    if (review.reviewedPage != null && record.printedPage != null) {
+      if (reviewedPages[0] !== record.printedPage) {
+        problems.push(
+          `${review.recordId}: reviewed page ${reviewedPages[0]} but the ` +
+            `record now cites page ${record.printedPage}`,
+        );
+      }
+    }
+  }
+  if (problems.length) {
+    throw new Error(
+      "The review ledger no longer matches the pack:\n  " +
+        problems.join("\n  "),
+    );
+  }
+}
+
 export const STAGING_COLLECTION = "supplications_staging";
 export const PRODUCTION_COLLECTION = "supplications";
 
@@ -438,10 +647,54 @@ export function assertConfirmations(plan, recordCount) {
   }
 }
 
-function printPlan(plan, records) {
+function printProductionPlan(plan, c) {
   console.log(`Pack:       ${plan.inputPath}`);
-  console.log(`Records:    ${records.length}  (zone-tied: ` +
+  console.log(`Collection: ${plan.collection}`);
+  console.log("");
+  console.log(`reviewedIncluded:    ${c.reviewedIncluded.length}`);
+  for (const r of c.reviewedIncluded) console.log(`  + ${r.duaId}`);
+  console.log(`unreviewedExcluded:  ${c.unreviewedExcluded.length}`);
+  for (const id of c.unreviewedExcluded) console.log(`  - ${id}`);
+  console.log(`blockedExcluded:     ${c.blockedExcluded.length}`);
+  for (const id of c.blockedExcluded) console.log(`  - ${id}`);
+  console.log(`deploymentHeld:      ${c.deploymentHeld.length}`);
+  for (const id of c.deploymentHeld) console.log(`  - ${id}`);
+  console.log("");
+  console.log("verificationStatus: unverified for every record written.");
+  console.log("A reviewed record is imported unverified; an admin verifies it");
+  console.log("afterwards in the app. Import never confers verification.");
+}
+
+/**
+ * The last thing standing between a held-back record and production.
+ *
+ * Everything above is a filter, and a filter can be bypassed by a flag
+ * nobody thought about. This is an assertion on the final set: if any id in
+ * it is one the classifier excluded, the run dies rather than writes.
+ */
+export function assertProductionSetIsClean(records, classification) {
+  const forbidden = new Set([
+    ...classification.unreviewedExcluded,
+    ...classification.blockedExcluded,
+    ...classification.deploymentHeld,
+  ]);
+  const leaked = records.map((r) => r.duaId).filter((id) => forbidden.has(id));
+  if (leaked.length) {
+    throw new Error(
+      "Refusing to write: records the ledger holds back reached the " +
+        `production set: ${leaked.join(", ")}`,
+    );
+  }
+}
+
+function printPlan(plan, records, excluded = []) {
+  console.log(`Pack:       ${plan.inputPath}`);
+  console.log(`Included:   ${records.length}  (zone-tied: ` +
     `${records.filter((r) => r.zoneKey).length})`);
+  console.log(`Excluded:   ${excluded.length}  (held back by the review ledger)`);
+  for (const e of excluded) {
+    console.log(`  - ${e.duaId}: ${e.reasons.join("; ")}`);
+  }
   console.log(`Project:    ${plan.projectId ?? "(not read in dry-run)"}`);
   console.log(`Database:   ${plan.database ?? "(not read in dry-run)"}`);
   console.log(`Collection: ${plan.collection ?? "(none — dry-run)"}`);
@@ -466,9 +719,46 @@ async function main() {
 
   const pack = JSON.parse(readFileSync(plan.inputPath, "utf8"));
   const all = buildRecords(pack);
-  const records = plan.limit ? all.slice(0, plan.limit) : all;
 
-  printPlan(plan, records);
+  // The ledger is applied BEFORE --limit. Slicing first could hand the one
+  // staging slot to a record the ledger holds back, which is precisely the
+  // accident the hold exists to prevent.
+  const ledger = loadLedger();
+  try {
+    assertLedgerMatchesPack(ledger, all, {
+      strict: plan.collection === PRODUCTION_COLLECTION && plan.mode === "write",
+    });
+  } catch (err) {
+    console.error(`\n${err.message}`);
+    process.exit(1);
+  }
+  const isProduction = plan.collection === PRODUCTION_COLLECTION;
+
+  let records;
+  let excluded;
+  if (isProduction) {
+    // Fail-closed. Anything the ledger does not positively clear stays out,
+    // including every record nobody has read yet.
+    const c = classifyForProduction(all, ledger);
+    records = c.reviewedIncluded;
+    excluded = [
+      ...c.blockedExcluded.map((id) => ({ duaId: id, reasons: ["blocked"] })),
+      ...c.deploymentHeld.map((id) => ({ duaId: id, reasons: ["deployment hold"] })),
+      ...c.unreviewedExcluded.map((id) => ({ duaId: id, reasons: ["unreviewed"] })),
+    ];
+    printProductionPlan(plan, c);
+    // Belt and braces: prove the set about to be written really is the
+    // cleared set, whatever any flag above may have done to `records`.
+    assertProductionSetIsClean(records, c);
+  } else {
+    const r = applyLedger(all, ledger);
+    excluded = r.excluded;
+    records = plan.limit ? r.included.slice(0, plan.limit) : r.included;
+    if (!ledger) {
+      console.log(`(no ${LEDGER_PATH} found — nothing is held back)`);
+    }
+    printPlan(plan, records, excluded);
+  }
 
   if (plan.mode === "dry-run") {
     console.log("\nDRY RUN — validated only. Nothing was sent anywhere.");

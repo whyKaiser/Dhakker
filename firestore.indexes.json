@@ -56,6 +56,69 @@
       ]
     },
     {
+      "//": [
+        "The three pilgrim-facing retrieval paths, all carrying the same",
+        "read gate: isActive == true, verificationStatus == 'verified',",
+        "revokedAt == null.",
+        "",
+        "Those three filters are NOT optional. firestore.rules evaluates the",
+        "read condition against every document a query matches, and rejects",
+        "the whole query if any matched document fails. A query missing one",
+        "of them matches an unverified record and dies with",
+        "permission-denied — it does not quietly return less.",
+        "",
+        "revokedAt is queried with an equality filter on null, which does",
+        "NOT match documents where the field is absent. Every writer must",
+        "therefore write it explicitly: the importer forces revokedAt: null,",
+        "and the admin console writes it too. A record created without it is",
+        "invisible to the app while looking correct in the console.",
+        "",
+        "Which of these are strictly REQUIRED, stated honestly: Firestore",
+        "serves multiple equality filters by merging single-field indexes, so",
+        "the zoneKey and zoneId variants would work without a composite index",
+        "and are declared for predictable performance. The appliesToZoneKeys",
+        "variant is genuinely required — array-contains combined with",
+        "equality filters cannot be served without one.",
+        "",
+        "A missing or still-building index fails the query with",
+        "failed-precondition. getSupplicationsByZone no longer swallows that:",
+        "it records a SupplicationQueryFailure and logs a diagnostic, because",
+        "an empty list is indistinguishable from \"no duas in this zone\".",
+        "",
+        "Deployment order matters — see docs/DEPLOYMENT_ORDER.md."
+      ],
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
+        { "fieldPath": "zoneKey", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Same read gate, legacy zoneId fallback path.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
+        { "fieldPath": "zoneId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Same read gate, ritual-scoped path (the Talbiyah at each miqat).",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
+        { "fieldPath": "appliesToZoneKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
       "//": "Future knowledge_chunks registry (empty today; see KNOWLEDGE_COLLECTION).",
       "collectionGroup": "knowledge_chunks",
       "queryScope": "COLLECTION",

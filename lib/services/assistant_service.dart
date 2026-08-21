@@ -56,13 +56,23 @@ class VerifiedExcerpt {
   /// Arabic scripture, and the UI labels it accordingly.
   final String textLanguage;
 
+  /// How the source described this text's use, if it described one at all.
+  /// `null` means it did not — which is NOT a claim that the text is
+  /// obligatory. The UI shows a badge only when this is non-null, and never
+  /// shows an opposing "required" label.
+  final String? usageQualifier;
+
   const VerifiedExcerpt({
     required this.documentId,
     required this.title,
     required this.authority,
     required this.text,
     required this.textLanguage,
+    this.usageQualifier,
   });
+
+  /// True when the source called this an optional addition.
+  bool get isOptionalAddition => usageQualifier == 'optional_addition';
 
   static List<VerifiedExcerpt> listFrom(dynamic raw) {
     // An older proxy simply does not send this field. That is not an error:
@@ -82,6 +92,13 @@ class VerifiedExcerpt {
         authority: (map['authority'] as String?)?.trim() ?? '',
         text: text,
         textLanguage: (map['textLanguage'] as String?)?.trim() ?? 'ar',
+        // Absent or empty stays null: "no qualifier" and "the proxy is too
+        // old to send one" are both "we were told nothing", and neither
+        // may be rendered as an obligation.
+        usageQualifier: () {
+          final q = (map['usageQualifier'] as String?)?.trim() ?? '';
+          return q.isEmpty ? null : q;
+        }(),
       ));
     }
     return out;

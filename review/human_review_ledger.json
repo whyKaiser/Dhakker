@@ -7,7 +7,8 @@
     "reviewedTextHash is sha256(text.ar + U+0000 + text.en) over the source-pack record AS IT STANDS. It is the same construction the admin screen uses for contentHash, so a reviewed record whose text is later edited can be detected: the ledger hash stops matching the pack.",
     "A ledger entry pinned to a hash means: 'a human reviewed THESE bytes'. It says nothing about any other bytes.",
     "reviewStatus 'passed' means ready-for-verification, NOT verified.",
-    "reviewedPages is present only when a record spans more than one printed page, and must list exactly the pages its own sourceSection names. A record that spans pages 96-97 may not be recorded as though only page 96 was read."
+    "reviewedPages is present only when a record spans more than one printed page, and must list exactly the pages its own sourceSection names. A record that spans pages 96-97 may not be recorded as though only page 96 was read.",
+    "A record may pass its TEXT review and still be held back from import. That is recorded as deploymentBlocked with a deploymentBlockReason, never as reviewStatus \"blocked\" — blocked is reserved for a problem with the text itself, and using it for a product limitation would wrongly suggest the religious text is at fault."
   ],
   "reviews": [
     {
@@ -479,12 +480,58 @@
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية الآية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
       ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-talbiyah",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 59,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "61dd4cbcb9a6f89b05dc7ddf63c6e1f203541cfca7747651cd1208667c75375e",
+      "reviewedAt": "2026-08-21T05:10:00Z",
+      "hadithReference": "حديث جابر رضي الله عنه — مسلم (1218)",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "التلبية الأساسية موجودة كما نقلها الكتاب عن مسلم (1218)",
+        "ربط السجل بنسك الإحرام صحيح، وzoneKey الفارغ مقصود"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "deploymentBlocked": true,
+      "deploymentBlockReason": "optionality_not_yet_supported",
+      "excludedFromImport": true,
+      "reviewedPage": 59,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "2b148236c1bb7c0c81bd8914335e645b3e2f12022939910995738351ee89ea3d",
+      "reviewedAt": "2026-08-21T05:10:00Z",
+      "hadithReference": "عن عمر بن الخطاب وابنه عبدالله رضي الله عنهما — مسلم (1184)",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "deploymentBlockDetail": "النص الديني مطابق للمطبوع ولا مأخذ عليه — العائق منتجي بحت. كان التطبيق يعرض الزيادة الجائزة والتلبية اللازمة بالشارة نفسها، فلا يميّز الحاجُّ بينهما. أُضيف حقل usageQualifier=optional_addition في فرع claude/usage-qualifier-optional-addition؛ ويُرفع هذا الحظر بعد دمجه ونجاح اختبارات الواجهة. لا يُستورد السجل قبل ذلك حتى لا يُعرض بمظهر يوهم بلزوم الزيادة.",
+      "reviewerConfirmed": [
+        "الزيادة سجل مستقل، والكتاب يقدّمها بصيغة «وإن زاد» فهي اختيارية وليست جزءًا لازمًا",
+        "ربط السجل بنسك الإحرام صحيح، وzoneKey الفارغ مقصود"
+      ],
+      "deploymentBlockLiftConditions": {
+        "//": "الحظر لا يُرفع بدمج الكود. الدمج يجعل الحقل موجودًا في المستودع، لا في الجهاز الذي يحمله الحاج. الشروط الثلاثة تراكمية، ولا يُرفع الحظر حتى تتحقق جميعًا ويُسجَّل ذلك هنا بتاريخه.",
+        "codeMerged": false,
+        "appAndWorkerReleased": false,
+        "badgeAndNoAutoPlayVerifiedOnDevice": false,
+        "liftedAt": null,
+        "liftedBy": null
+      },
+      "deploymentBlockLiftNote": "merge وحده لا يرفع الحظر. عميل قديم على جهاز حاجّ لا يعرف usageQualifier سيعرض الزيادة بلا شارة ويُشغّلها تلقائيًّا — وهو الضرر نفسه الذي أُنشئ الحقل لمنعه. الاستيراد يضع السجل في متناول كل النسخ المنشورة، لا النسخة الأحدث وحدها، فالشرط الحاسم هو (ج): التحقق الفعلي على جهاز من ظهور الشارة ومن عدم التشغيل التلقائي."
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات. لا يُكتب يدويًا ولا يُعدَّل بمعزل عن المراجعات.",
-    "totalReviews": 23,
-    "passed": 22,
+    "totalReviews": 25,
+    "passed": 24,
     "blocked": 1,
     "failed": 0,
     "byUncertainty": {
@@ -495,7 +542,11 @@
       "moia-mukhtasar-1446-general-009"
     ],
     "excludedFromImportRecordIds": [
-      "moia-mukhtasar-1446-general-009"
+      "moia-mukhtasar-1446-general-009",
+      "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
+    ],
+    "deploymentBlockedRecordIds": [
+      "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
     "firestoreVerificationPerformed": false,
     "verifiedRecords": 0
