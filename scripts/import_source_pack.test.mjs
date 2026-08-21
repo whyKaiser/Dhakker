@@ -861,12 +861,15 @@ import {
 const once = () => ({
   frequency: "once_per_ritual",
   trigger: "first_safa_approach",
+  // Required alongside that trigger: the app has no event for it.
+  autoPlayCapability: "manual_only_until_trigger_supported",
   autoRepeat: false,
 });
 const thrice = () => ({
   frequency: "repeat_count",
   repeatCount: 3,
   interleave: "personal_dua",
+  autoPlayCapability: "manual_only_until_trigger_supported",
   autoRepeat: false,
 });
 
@@ -943,12 +946,14 @@ test("the pack's policies import intact", () => {
   assert.deepEqual(built.get("moia-1446-safa-ayah").recitationPolicy, {
     frequency: "once_per_ritual",
     trigger: "first_safa_approach",
+    autoPlayCapability: "manual_only_until_trigger_supported",
     autoRepeat: false,
   });
   assert.deepEqual(built.get("moia-1446-safa-dhikr").recitationPolicy, {
     frequency: "repeat_count",
     repeatCount: 3,
     interleave: "personal_dua",
+    autoPlayCapability: "manual_only_until_trigger_supported",
     autoRepeat: false,
   });
   // A record the source did not qualify keeps an explicit null.
@@ -970,4 +975,81 @@ test("a policy does not make a record importable", () => {
   // Provenance and performance are different axes; neither is clearance.
   const c = classifyForProduction(buildRecords(realPack), loadLedger());
   assert.ok(!c.reviewedIncluded.some((r) => r.duaId === "moia-1446-safa-dhikr"));
+});
+
+// ── autoPlayCapability: the importer is strict, clients are lenient ─────
+//
+// These two behaviours are deliberately different and must not be conflated:
+//
+//   IMPORTER — an unknown value is a HARD ERROR. A pack is authored by us;
+//   a typo there is a mistake to surface now, not to ship.
+//   CLIENT   — an unknown value is IGNORED. An older app must keep working
+//   when a newer pack adds a value it has never heard of.
+//
+// "Unknown values are read as no policy" is true of clients ONLY.
+
+import { SUPPORTED_AUTOPLAY_CAPABILITIES } from "./import_source_pack.mjs";
+
+test("the importer rejects every unknown frequency, trigger and interleave", () => {
+  for (const bad of ["mandatory", "sometimes", "ONCE_PER_RITUAL", " "]) {
+    assert.throws(
+      () => validateRecitationPolicy({ frequency: bad }, "e"),
+      /frequency must be one of/,
+      `frequency ${bad}`,
+    );
+  }
+  for (const bad of ["on_arrival", "first_safa", "FIRST_SAFA_APPROACH"]) {
+    assert.throws(
+      () => validateRecitationPolicy(
+        { frequency: "once_per_ritual", trigger: bad }, "e"),
+      /unknown recitationPolicy.trigger/,
+      `trigger ${bad}`,
+    );
+  }
+  for (const bad of ["a_song", "silence", "PERSONAL_DUA"]) {
+    assert.throws(
+      () => validateRecitationPolicy(
+        { frequency: "repeat_count", repeatCount: 3, interleave: bad }, "e"),
+      /unknown recitationPolicy.interleave/,
+      `interleave ${bad}`,
+    );
+  }
+});
+
+test("the importer rejects an unknown autoPlayCapability", () => {
+  assert.deepEqual(SUPPORTED_AUTOPLAY_CAPABILITIES,
+    ["manual_only_until_trigger_supported"]);
+  assert.throws(
+    () => validateRecitationPolicy(
+      { frequency: "once_per_ritual", autoPlayCapability: "always" }, "e"),
+    /unknown recitationPolicy.autoPlayCapability/,
+  );
+});
+
+test("a trigger with no supporting event must declare manual-only", () => {
+  // The gap this closes: declaring `first_safa_approach` while leaving
+  // auto-play enabled would have the app fire on the nearest coarse event it
+  // has — entering the whole Sa'i corridor — and call that the trigger the
+  // source named.
+  assert.throws(
+    () => validateRecitationPolicy(
+      { frequency: "once_per_ritual", trigger: "first_safa_approach" }, "e"),
+    /has no supporting event/,
+  );
+  assert.doesNotThrow(() => validateRecitationPolicy({
+    frequency: "once_per_ritual",
+    trigger: "first_safa_approach",
+    autoPlayCapability: "manual_only_until_trigger_supported",
+  }, "e"));
+});
+
+test("both Safa records declare manual-only in the real pack", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  for (const id of ["moia-1446-safa-ayah", "moia-1446-safa-dhikr"]) {
+    assert.equal(
+      built.get(id).recitationPolicy.autoPlayCapability,
+      "manual_only_until_trigger_supported",
+      id,
+    );
+  }
 });

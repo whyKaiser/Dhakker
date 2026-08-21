@@ -235,6 +235,7 @@ class RecitationPolicy {
     this.trigger,
     this.interleave,
     this.autoRepeat = false,
+    this.autoPlayCapability,
   });
 
   /// `once_per_ritual` أو `repeat_count`.
@@ -252,6 +253,26 @@ class RecitationPolicy {
   /// هل يُعاد تلقائيًّا؟ الافتراض `false`، ويلزم بقاؤه false مع [interleave]:
   /// تكرارٌ يتخلّله دعاء المرء لا يمكن أن يؤدّيه المشغّل عنه.
   final bool autoRepeat;
+
+  /// قدرة التشغيل التلقائي المتاحة اليوم لهذا السجل.
+  ///
+  /// `manual_only_until_trigger_supported` تعني: **لا تشغيل تلقائي بحال**،
+  /// لأن الحدث الذي يقتضيه [trigger] غير موجود في التطبيق بعد.
+  ///
+  /// مثاله `first_safa_approach`: منطقة `masaa` مضلّع واحد يغطي الممر كله،
+  /// فدخولها لا يثبت أن الحاج عند الصفا أول مرة — قد يكون عند المروة أو في
+  /// وسط المسعى. حاجز «مرة واحدة» يمنع التكرار ولا يثبت أن الأولى في محلّها.
+  /// فالفشل المغلق: يُعرض النص ويشغّله الحاج بنفسه، ولا يُقرأ عليه بموقعه.
+  ///
+  /// تُكتب صراحةً في الحزمة، ولا تُستنتج من عنوان ولا من معرّف سجل.
+  final String? autoPlayCapability;
+
+  static const String manualOnlyUntilTriggerSupported =
+      'manual_only_until_trigger_supported';
+
+  /// هل يمنع هذا السجلُّ التشغيلَ التلقائي بنفسه؟
+  bool get blocksAutoPlay =>
+      autoPlayCapability == manualOnlyUntilTriggerSupported;
 
   bool get isOncePerRitual => frequency == 'once_per_ritual';
 
@@ -286,6 +307,8 @@ class RecitationPolicy {
 
     final interleave = controlled('interleave', const ['personal_dua']);
     return RecitationPolicy(
+      autoPlayCapability: controlled(
+          'autoPlayCapability', const [manualOnlyUntilTriggerSupported]),
       frequency: freq,
       repeatCount: freq == 'repeat_count' ? count : null,
       trigger: controlled('trigger',
@@ -301,6 +324,8 @@ class RecitationPolicy {
         if (repeatCount != null) 'repeatCount': repeatCount,
         if (trigger != null) 'trigger': trigger,
         if (interleave != null) 'interleave': interleave,
+        if (autoPlayCapability != null)
+          'autoPlayCapability': autoPlayCapability,
         'autoRepeat': autoRepeat,
       };
 }
@@ -381,11 +406,21 @@ class SupplicationModel {
     this.recitationPolicy,
   });
 
-  /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
-  /// يُتلىٰ أصلًا (لا إرشادًا)، وألا تمنعه صفة استعماله.
+  /// هل يجوز للحاج تشغيله بنفسه؟ شرطٌ واحد: أن يكون نصًّا يُتلىٰ.
+  ///
+  /// الإرشاد والأثر لا زرّ لهما. أما ما عداهما فيُشغَّل **بطلب المستخدم**
+  /// دائمًا، مهما قيّدت السياسةُ التشغيلَ التلقائي: منعُ القراءة عليه بالموقع
+  /// ليس منعًا له أن يقرأ.
+  bool get canPlayManually => contentKind.belongsInDuaSection;
+
+  /// هل يُقرأ عليه تلقائيًّا لمجرد دخوله المنطقة؟
+  ///
+  /// أضيق من [canPlayManually] بقيدين: ألا تمنعه صفة استعماله (الزيادة
+  /// الجائزة)، وألا يعلن السجل أن الحدث الذي يقتضيه غير مدعوم بعد.
   bool get isAutoPlayable =>
-      contentKind.belongsInDuaSection &&
-      (usageQualifier?.isAutoPlayable ?? true);
+      canPlayManually &&
+      (usageQualifier?.isAutoPlayable ?? true) &&
+      !(recitationPolicy?.blocksAutoPlay ?? false);
 
   /// هل ينطبق هذا السجل على المنطقة المعطاة؟
   ///

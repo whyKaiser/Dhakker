@@ -4184,6 +4184,7 @@
       "recitationPolicy": {
         "frequency": "once_per_ritual",
         "trigger": "first_safa_approach",
+        "autoPlayCapability": "manual_only_until_trigger_supported",
         "autoRepeat": false
       }
     },
@@ -4243,6 +4244,7 @@
         "frequency": "repeat_count",
         "repeatCount": 3,
         "interleave": "personal_dua",
+        "autoPlayCapability": "manual_only_until_trigger_supported",
         "autoRepeat": false
       }
     },

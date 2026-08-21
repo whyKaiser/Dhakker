@@ -227,12 +227,28 @@ export const SUPPORTED_TRIGGERS = [
 ];
 export const SUPPORTED_INTERLEAVES = ["personal_dua"];
 
+// What automatic playback the app can honestly perform for this record
+// TODAY. `manual_only_until_trigger_supported` means: never auto-play.
+//
+// The case that forced it: `trigger: "first_safa_approach"` has no matching
+// event. The Sa'i zone `masaa` is ONE polygon covering the whole corridor,
+// so entering it does not establish that the pilgrim is at Safa, let alone
+// approaching it for the first time — they may be at Marwah or mid-corridor.
+// A once-per-ritual memory guard stops repetition; it cannot make the FIRST
+// firing correct. Fail closed: show the text, let the pilgrim start it.
+//
+// Written explicitly in the pack. Never inferred from a title or an id.
+export const SUPPORTED_AUTOPLAY_CAPABILITIES = [
+  "manual_only_until_trigger_supported",
+];
+
 const POLICY_KNOWN_KEYS = new Set([
   "frequency",
   "repeatCount",
   "trigger",
   "interleave",
   "autoRepeat",
+  "autoPlayCapability",
 ]);
 
 /** Validates one entry's recitationPolicy. Throws on the first fault. */
@@ -272,6 +288,24 @@ export function validateRecitationPolicy(policy, where) {
       !SUPPORTED_INTERLEAVES.includes(policy.interleave)) {
     throw new Error(
       `${where}: unknown recitationPolicy.interleave "${policy.interleave}".`,
+    );
+  }
+  if ("autoPlayCapability" in policy &&
+      !SUPPORTED_AUTOPLAY_CAPABILITIES.includes(policy.autoPlayCapability)) {
+    throw new Error(
+      `${where}: unknown recitationPolicy.autoPlayCapability ` +
+        `"${policy.autoPlayCapability}".`,
+    );
+  }
+  // A trigger the app cannot detect must say so. Declaring a trigger while
+  // leaving auto-play enabled is the exact gap this field exists to close:
+  // the app would fire on the nearest coarse event it has and call it the
+  // trigger the source named.
+  if (policy.trigger === "first_safa_approach" &&
+      policy.autoPlayCapability !== "manual_only_until_trigger_supported") {
+    throw new Error(
+      `${where}: trigger "first_safa_approach" has no supporting event; ` +
+        'set autoPlayCapability "manual_only_until_trigger_supported".',
     );
   }
   if ("autoRepeat" in policy && typeof policy.autoRepeat !== "boolean") {

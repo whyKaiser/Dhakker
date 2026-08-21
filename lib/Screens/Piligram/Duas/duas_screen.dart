@@ -151,9 +151,13 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
 
   Future<void> _playDua(SupplicationModel dua) async {
     // الحارس الأخير قبل النطق. الواجهة لا تعرض زر تشغيل لغير المتلوّ، لكن
-    // البحث الصوتي يشغّل النتيجة الوحيدة تلقائيًّا دون مرور بزر — فلولا
-    // هذا الفحص لنطق التطبيق أثرًا أو إرشادًا كأنه ذكر.
-    if (!dua.isAutoPlayable) return;
+    // البحث الصوتي يشغّل النتيجة الوحيدة دون مرور بزر — فلولا هذا الفحص
+    // لنطق التطبيق أثرًا أو إرشادًا كأنه ذكر.
+    //
+    // المعيار هنا [canPlayManually] لا [isAutoPlayable]: منعُ القراءة على
+    // الحاج بموقعه ليس منعًا له أن يقرأ. آية الصفا لا تُقرأ عليه لمجرد دخوله
+    // المسعى، ويظل زرّها يعمل متى طلبها.
+    if (!dua.canPlayManually) return;
 
     final langCode = Localizations.localeOf(context).languageCode;
 
