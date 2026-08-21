@@ -314,6 +314,12 @@ class SupplicationModel {
         'usageQualifier': usageQualifier?.raw,
         'ritualKey': ritualKey,
         'appliesToZoneKeys': appliesToZoneKeys,
+        // Persisted so a cached record can be re-checked on the way OUT of
+        // the cache. Without these, `fromJson` would rebuild every record as
+        // unverified and the offline path could not tell an approved text
+        // from one that was never approved — or from one revoked since.
+        'verificationStatus': isVerifiedSource ? 'verified' : 'unverified',
+        'revokedAt': null,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {

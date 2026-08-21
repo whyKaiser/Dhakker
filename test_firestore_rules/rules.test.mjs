@@ -114,9 +114,22 @@ async function seed(id, data) {
 
 // ── Reads ────────────────────────────────────────────────────────────────
 
-test("signed-in users can read supplications", async () => {
+test("a signed-in pilgrim reads only verified, active, unrevoked records", async () => {
+  // This test used to assert that any signed-in user could read ANY
+  // supplication. That was the gap: a legacy record carries no
+  // verificationStatus at all, and it was readable by document id no matter
+  // how carefully the app filtered its queries.
+  //
+  // The gate now lives on the document. A bare legacy record fails it —
+  // deliberately, and this is the fail-closed behaviour we want: content
+  // nobody has verified does not reach a pilgrim, even when that means
+  // showing nothing at all.
   await seed("d1", legacyRecord());
-  await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "d1")));
+  await assertFails(getDoc(doc(pilgrimDb(), "supplications", "d1")));
+
+  // The same record, once verified and explicitly unrevoked, is readable.
+  await seed("d2", { ...completeProvenance({ duaId: "d2" }), revokedAt: null });
+  await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "d2")));
 });
 
 test("unauthenticated users cannot read supplications", async () => {
@@ -469,7 +482,7 @@ test("the staging denial does not depend on the document existing", async () => 
 test("production supplications behaviour is unchanged by the staging rule", async () => {
   // Guards the other direction: adding the staging block must not have
   // altered the collection the app actually reads.
-  await seed("d1", legacyRecord());
+  await seed("d1", { ...completeProvenance({ duaId: "d1" }), revokedAt: null });
   await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "d1")));
   await assertFails(getDoc(doc(anonDb(), "supplications", "d1")));
 });
@@ -506,6 +519,7 @@ async function seedRitualFixtures() {
     // Verified + active: the only one a pilgrim may be shown.
     await setDoc(doc(db, "supplications/talbiyah"), {
       ...completeProvenance({ duaId: "talbiyah" }),
+      revokedAt: null,
       zoneKey: "",
       ritualKey: "ihram",
       appliesToZoneKeys: MIQATS,
@@ -513,6 +527,7 @@ async function seedRitualFixtures() {
     // Unverified: reviewed by nobody, must never surface.
     await setDoc(doc(db, "supplications/unreviewed"), {
       ...completeProvenance({ duaId: "unreviewed" }),
+      revokedAt: null,
       verificationStatus: "unverified",
       verifiedAt: null,
       verifiedBy: null,
@@ -522,6 +537,7 @@ async function seedRitualFixtures() {
     // Verified but withdrawn from display.
     await setDoc(doc(db, "supplications/retired"), {
       ...completeProvenance({ duaId: "retired" }),
+      revokedAt: null,
       isActive: false,
       zoneKey: "",
       appliesToZoneKeys: MIQATS,
@@ -529,6 +545,7 @@ async function seedRitualFixtures() {
     // Verified and active, but scoped to one miqat only.
     await setDoc(doc(db, "supplications/one-miqat-only"), {
       ...completeProvenance({ duaId: "one-miqat-only" }),
+      revokedAt: null,
       zoneKey: "",
       appliesToZoneKeys: ["miqat_yalamlam"],
     });
@@ -542,6 +559,7 @@ function ritualQuery(db, zoneKey) {
     where("appliesToZoneKeys", "array-contains", zoneKey),
     where("isActive", "==", true),
     where("verificationStatus", "==", "verified"),
+    where("revokedAt", "==", null),
   );
 }
 
@@ -592,6 +610,7 @@ test("a ritual text is returned once, even though two paths could match it", asy
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), "supplications/double-match"), {
       ...completeProvenance({ duaId: "double-match" }),
+      revokedAt: null,
       zoneKey: "miqat_yalamlam",
       appliesToZoneKeys: ["miqat_yalamlam"],
     });
@@ -603,6 +622,7 @@ test("a ritual text is returned once, even though two paths could match it", asy
       where("zoneKey", "==", "miqat_yalamlam"),
       where("isActive", "==", true),
       where("verificationStatus", "==", "verified"),
+      where("revokedAt", "==", null),
     ),
   );
   const byRitual = await getDocs(ritualQuery(db, "miqat_yalamlam"));
@@ -618,4 +638,140 @@ test("a ritual text is returned once, even though two paths could match it", asy
     1,
     "a record matching two retrieval paths must be merged, not duplicated",
   );
+});
+
+// ── The read gate ───────────────────────────────────────────────────────
+//
+// `allow read: if isSignedIn()` used to let any signed-in user fetch any
+// supplication BY DOCUMENT ID, however carefully the app filtered its
+// queries. Client-side filtering never closed that door — it only stopped
+// the app walking through it.
+//
+// The gate is now three conditions, applied to the document itself:
+// isActive, verificationStatus == 'verified', revokedAt == null.
+
+function readableDoc(overrides = {}) {
+  return { ...completeProvenance(), revokedAt: null, ...overrides };
+}
+
+async function seedReadGateFixtures() {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, "supplications/ok"), readableDoc({ duaId: "ok" }));
+    await setDoc(
+      doc(db, "supplications/unverified-doc"),
+      readableDoc({
+        duaId: "unverified-doc",
+        verificationStatus: "unverified",
+        verifiedAt: null,
+        verifiedBy: null,
+      }),
+    );
+    await setDoc(
+      doc(db, "supplications/inactive-doc"),
+      readableDoc({ duaId: "inactive-doc", isActive: false }),
+    );
+    await setDoc(
+      doc(db, "supplications/revoked-doc"),
+      readableDoc({ duaId: "revoked-doc", revokedAt: new Date() }),
+    );
+  });
+}
+
+for (const id of ["unverified-doc", "inactive-doc", "revoked-doc"]) {
+  test(`an ordinary pilgrim cannot get ${id} by document id`, async () => {
+    await seedReadGateFixtures();
+    await assertFails(getDoc(doc(pilgrimDb(), `supplications/${id}`)));
+  });
+
+  test(`an unauthenticated client cannot get ${id} either`, async () => {
+    await seedReadGateFixtures();
+    await assertFails(getDoc(doc(anonDb(), `supplications/${id}`)));
+  });
+
+  test(`an admin CAN get ${id}, because review requires reading it`, async () => {
+    await seedReadGateFixtures();
+    await assertSucceeds(getDoc(doc(adminDb(), `supplications/${id}`)));
+  });
+}
+
+test("a pilgrim can still get a verified, active, unrevoked record", async () => {
+  await seedReadGateFixtures();
+  // The gate must not be so tight that approved content stops working.
+  await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications/ok")));
+});
+
+test("an unfiltered list is refused outright, not silently narrowed", async () => {
+  await seedReadGateFixtures();
+  // Rules are not filters: this query matches unverified documents, so the
+  // WHOLE query fails. That is the behaviour the app's filters exist to
+  // avoid, and the reason all three constraints are mandatory.
+  await assertFails(getDocs(collection(pilgrimDb(), "supplications")));
+});
+
+test("a query missing the verificationStatus constraint fails", async () => {
+  await seedReadGateFixtures();
+  await assertFails(
+    getDocs(
+      query(
+        collection(pilgrimDb(), "supplications"),
+        where("isActive", "==", true),
+        where("revokedAt", "==", null),
+      ),
+    ),
+  );
+});
+
+test("a query missing the isActive constraint fails", async () => {
+  await seedReadGateFixtures();
+  await assertFails(
+    getDocs(
+      query(
+        collection(pilgrimDb(), "supplications"),
+        where("verificationStatus", "==", "verified"),
+        where("revokedAt", "==", null),
+      ),
+    ),
+  );
+});
+
+test("a query missing the revokedAt constraint fails", async () => {
+  await seedReadGateFixtures();
+  await assertFails(
+    getDocs(
+      query(
+        collection(pilgrimDb(), "supplications"),
+        where("isActive", "==", true),
+        where("verificationStatus", "==", "verified"),
+      ),
+    ),
+  );
+});
+
+test("the fully constrained query succeeds and returns only the good record", async () => {
+  await seedReadGateFixtures();
+  const snap = await assertSucceeds(
+    getDocs(
+      query(
+        collection(pilgrimDb(), "supplications"),
+        where("isActive", "==", true),
+        where("verificationStatus", "==", "verified"),
+        where("revokedAt", "==", null),
+      ),
+    ),
+  );
+  assert.deepEqual(snap.docs.map((d) => d.id), ["ok"]);
+});
+
+test("an admin may list records awaiting review", async () => {
+  await seedReadGateFixtures();
+  const snap = await assertSucceeds(
+    getDocs(
+      query(
+        collection(adminDb(), "supplications"),
+        where("verificationStatus", "==", "unverified"),
+      ),
+    ),
+  );
+  assert.ok(snap.docs.some((d) => d.id === "unverified-doc"));
 });
