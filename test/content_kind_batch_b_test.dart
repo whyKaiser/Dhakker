@@ -18,7 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dhakker/Screens/Piligram/Duas/widgets/content_kind_card.dart';
+import 'package:dhakker/Screens/Assistant/assistant_screen.dart';
 import 'package:dhakker/Screens/Piligram/Home/models/supplication_model.dart';
+import 'package:dhakker/services/assistant_service.dart';
 
 const _b1 = 'moia-1446-hajar-tasmiya';
 const _b2 = 'moia-1446-hajar-umar';
@@ -272,6 +274,182 @@ void main() {
       }
       expect(review(_b2)['contentKindConfirmed'], 'contextual_evidence');
       expect(review(_b3)['contentKindConfirmed'], 'procedural_guidance');
+    });
+  });
+
+  _consumerTests();
+}
+
+// ── Every consumer, by name ─────────────────────────────────────────────
+//
+// The classification is only worth what the screens do with it. These read
+// the actual pack records, build real models from them, and check each
+// surface a pilgrim can reach.
+
+SupplicationModel _fromPack(String id) =>
+    SupplicationModel.fromJson(_entry(id));
+
+void _consumerTests() {
+  group('the three real records across every surface', () {
+    final tasmiya = _fromPack(_b1);
+    final umar = _fromPack(_b2);
+    final crowding = _fromPack(_b3);
+
+    test('the models parse with their reviewed kinds', () {
+      expect(tasmiya.contentKind, SupplicationContentKind.specificText);
+      expect(umar.contentKind, SupplicationContentKind.contextualEvidence);
+      expect(crowding.contentKind, SupplicationContentKind.proceduralGuidance);
+    });
+
+    test('only hajar-tasmiya counts as a dua anywhere', () {
+      final p = SupplicationPartition.of([tasmiya, umar, crowding]);
+      expect(p.recitable.map((e) => e.duaId), [_b1]);
+      expect(p.evidence.map((e) => e.duaId), [_b2]);
+      expect(p.guidance.map((e) => e.duaId), [_b3]);
+    });
+
+    test('only hajar-tasmiya may be played, automatically or on demand', () {
+      expect(tasmiya.isAutoPlayable, isTrue);
+      expect(umar.isAutoPlayable, isFalse);
+      expect(crowding.isAutoPlayable, isFalse);
+    });
+
+    test('both non-recitable records keep their attribution', () {
+      // Online and offline alike: the attribution is built from fields the
+      // model carries, and toJson persists them.
+      for (final m in [umar, crowding]) {
+        expect(m.attribution, isNotEmpty,
+            reason: '${m.duaId} would render a card with no source line');
+        expect(m.attribution, contains('صفحة'));
+
+        final roundTripped =
+            SupplicationModel.fromJson(jsonDecode(jsonEncode(m.toJson())));
+        expect(roundTripped.attribution, m.attribution,
+            reason: 'the attribution must survive the offline cache');
+        expect(roundTripped.contentKind, m.contentKind,
+            reason: 'the kind must survive the offline cache');
+      }
+    });
+
+    testWidgets('hajar-umar renders as a narration with no playback',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ContextualEvidenceCard(
+            title: umar.titleByLanguage('ar'),
+            body: umar.textByLanguage('ar'),
+            attribution: umar.attribution,
+          ),
+        ),
+      ));
+      expect(find.text('أثر موثّق'), findsOneWidget);
+      expect(find.text('دعاء'), findsNothing);
+      expect(find.byType(IconButton), findsNothing);
+      expect(find.textContaining('صفحة 66'), findsOneWidget);
+    });
+
+    testWidgets('hajar-crowding renders as a prophetic directive, no playback',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: GuidanceCard(
+            title: crowding.titleByLanguage('ar'),
+            body: crowding.textByLanguage('ar'),
+            attribution: crowding.attribution,
+            isPropheticDirective: true,
+          ),
+        ),
+      ));
+      expect(find.text('توجيه نبوي'), findsOneWidget);
+      expect(find.text('دعاء'), findsNothing);
+      expect(find.byType(IconButton), findsNothing);
+      expect(find.textContaining('صفحة 67'), findsOneWidget);
+    });
+  });
+
+  group('the assistant labels an excerpt by what it is', () {
+    VerifiedExcerpt excerpt(String? kind) => VerifiedExcerpt(
+          documentId: 'd',
+          title: 't',
+          authority: 'a',
+          text: 'نص',
+          textLanguage: 'ar',
+          contentKind: kind,
+        );
+
+    test('evidence and guidance are not recitable; a dua is', () {
+      expect(excerpt('contextual_evidence').isRecitable, isFalse);
+      expect(excerpt('procedural_guidance').isRecitable, isFalse);
+      expect(excerpt('specific_text').isRecitable, isTrue);
+      // An older proxy sends no kind — the pre-existing behaviour stands.
+      expect(excerpt(null).isRecitable, isTrue);
+    });
+
+    testWidgets('a narration excerpt is not headed «نص موثّق»', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: VerifiedExcerptCard(
+            excerpt: excerpt('contextual_evidence'),
+            isRtl: true,
+          ),
+        ),
+      ));
+      expect(find.text('أثر موثّق — للفائدة لا للترديد'), findsOneWidget);
+      expect(find.text('نص موثّق — كما ورد في المصدر'), findsNothing);
+    });
+
+    testWidgets('a guidance excerpt says it is not recited', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: VerifiedExcerptCard(
+            excerpt: excerpt('procedural_guidance'),
+            isRtl: true,
+          ),
+        ),
+      ));
+      expect(find.text('توجيه — ليس نصًّا يُتلىٰ'), findsOneWidget);
+    });
+
+    testWidgets('a supplication excerpt keeps the original heading',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: VerifiedExcerptCard(
+            excerpt: excerpt('specific_text'),
+            isRtl: true,
+          ),
+        ),
+      ));
+      expect(find.text('نص موثّق — كما ورد في المصدر'), findsOneWidget);
+    });
+  });
+
+  group('the pack declares every kind it uses', () {
+    test('no record uses an undeclared contentKind', () {
+      // Checked against what the entries actually use, not against a fixed
+      // count — `mosque_entry` was used for months while undeclared, and a
+      // count would not have caught it.
+      final pack = jsonDecode(
+        File('source_packs/moia_mukhtasar_1446_umrah.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final declared =
+          (pack['contentKinds'] as Map<String, dynamic>).keys.toSet();
+      final used = (pack['entries'] as List)
+          .cast<Map<String, dynamic>>()
+          .map((e) => e['contentKind'] as String)
+          .toSet();
+      expect(used.difference(declared), isEmpty,
+          reason: 'these kinds are used but never described in the pack');
+    });
+
+    test('every declared kind is one the app can render', () {
+      final pack = jsonDecode(
+        File('source_packs/moia_mukhtasar_1446_umrah.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      for (final key in (pack['contentKinds'] as Map<String, dynamic>).keys) {
+        expect(SupplicationContentKind.fromRaw(key).raw, key,
+            reason: '$key is declared but the app maps it to something else');
+      }
     });
   });
 }

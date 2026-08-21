@@ -191,6 +191,20 @@ class SupplicationModel {
   /// المناطق التي ينطبق عليها نصٌّ مرتبط بنُسك. فارغة = لا قيد إضافي.
   final List<String> appliesToZoneKeys;
 
+  /// الجهة المُصدِرة، والموضع في المطبوع. يحملهما النموذج لأن بطاقة الأثر
+  /// الموثّق لا تقوم بدونهما: نصّ مرويّ بلا عزو يفقد سبب عرضه. ويُحفظان في
+  /// الكاش أيضًا، فلا يسقط العزو بمجرد انقطاع الشبكة.
+  final String authority;
+  final String sourceSection;
+
+  /// سطر العزو الظاهر: الموضع في المطبوع ثم الجهة. فارغ إن غابا معًا.
+  String get attribution {
+    final parts = [sourceSection.trim(), authority.trim()]
+        .where((e) => e.isNotEmpty)
+        .toList();
+    return parts.join(' — ');
+  }
+
   const SupplicationModel({
     required this.duaId,
     required this.zoneId,
@@ -208,6 +222,8 @@ class SupplicationModel {
     this.usageQualifier,
     this.ritualKey = '',
     this.appliesToZoneKeys = const [],
+    this.authority = '',
+    this.sourceSection = '',
   });
 
   /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
@@ -285,6 +301,8 @@ class SupplicationModel {
           data['usageQualifier']?.toString()),
       ritualKey: (data['ritualKey'] ?? '').toString().trim(),
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
+      authority: (data['authority'] ?? '').toString().trim(),
+      sourceSection: (data['sourceSection'] ?? '').toString().trim(),
     );
   }
 
@@ -340,6 +358,10 @@ class SupplicationModel {
         // from one that was never approved — or from one revoked since.
         'verificationStatus': isVerifiedSource ? 'verified' : 'unverified',
         'revokedAt': null,
+        // Persisted so an evidence card keeps its attribution offline. A
+        // narration shown without its chain has lost the reason it is there.
+        'authority': authority,
+        'sourceSection': sourceSection,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -389,6 +411,8 @@ class SupplicationModel {
           data['usageQualifier']?.toString()),
       ritualKey: (data['ritualKey'] ?? '').toString().trim(),
       appliesToZoneKeys: safeStringList(data['appliesToZoneKeys']),
+      authority: (data['authority'] ?? '').toString().trim(),
+      sourceSection: (data['sourceSection'] ?? '').toString().trim(),
     );
   }
 }

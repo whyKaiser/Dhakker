@@ -471,6 +471,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         // --- الإرشادات: قسم منفصل تمامًا عن الأدعية ---
                         // نصوص مثل «لا يصح الطواف من داخل الحِجْر» أحكام
                         // وتوجيهات، لا تُعرض تحت عنوان «دعاء» ولا تُشغَّل.
+                        // الآثار المرويّة: بطاقتها الخاصة بعزوها. بلا هذا
+                        // القسم كانت تختفي من الشاشة تمامًا — إذ يستبعدها
+                        // recitableDuas بحق، ولا يلتقطها قسم الإرشادات.
+                        if (_controller.evidenceItems.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              isAr
+                                  ? 'آثار موثّقة (للفائدة لا للترديد):'
+                                  : 'Recorded narrations (for benefit, not recitation):',
+                              style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          for (final item in _controller.evidenceItems)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: ContextualEvidenceCard(
+                                title: item.titleByLanguage(langCode),
+                                body: item.textByLanguage(langCode),
+                                attribution: item.attribution,
+                                cardColor: palette.card,
+                                textColor: palette.textPrimary,
+                              ),
+                            ),
+                        ],
                         if (_controller.guidanceItems.isNotEmpty) ...[
                           const SizedBox(height: 28),
                           Align(
@@ -487,6 +514,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               child: GuidanceCard(
                                 title: item.titleByLanguage(langCode),
                                 body: item.textByLanguage(langCode),
+                                attribution: item.attribution,
+                                isPropheticDirective: true,
                                 cardColor: palette.card,
                                 textColor: palette.textPrimary,
                               ),
