@@ -13,6 +13,14 @@ class SupplicationService {
 
   static String _prefKey(String cacheKey) => 'duas_cache_$cacheKey';
 
+  /// هل يجوز عرض هذا السجل للحاج؟ موثَّق، فعّال، غير ملغى.
+  ///
+  /// المرشِّح نفسه مطبَّق في ثلاثة مواضع مستقلة عمدًا: في `firestore.rules`
+  /// (فلا يُقرأ أصلًا)، وفي كل استعلام (فلا يصل إلى الجهاز)، وهنا (فما
+  /// حُفظ في الكاش أيام قاعدة أضعف لا يُعرض اليوم).
+  static bool isDisplayable(SupplicationModel item) =>
+      item.isActive && item.isVerifiedSource;
+
   /// يجلب نصوص المنطقة.
   ///
   /// [zoneKey] هو المعرّف الثابت (slug) للمنطقة، وهو الرابط المفضَّل: السجلات
@@ -35,6 +43,8 @@ class SupplicationService {
             .collection('supplications')
             .where('zoneKey', isEqualTo: zoneKey.trim())
             .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
             .get();
         for (final doc in keyQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
@@ -50,16 +60,17 @@ class SupplicationService {
       // بميقات واحد (فتختفي عن الاثنين الآخرين) بل الاستعلام بقائمة
       // المناطق التي ينطبق عليها النص.
       //
-      // القيود مطبَّقة على الخادم لا على العميل: `firestore.rules` تسمح
-      // بقراءة `supplications` لأي مسجَّل بلا قيد على المستند، فالقواعد
-      // ليست مرشِّحًا — ما لا يُقيَّد في الاستعلام يصل فعلًا إلى الجهاز.
-      // يحتاج هذا المزيج فهرسًا مركّبًا (انظر firestore.indexes.json).
+      // القيود الثلاثة إلزامية في الاستعلامات الثلاثة كلها: القواعد تُقيَّم
+      // على كل مستند يطابق الاستعلام، فاستعلام لا يحملها يطابق سجلًا غير
+      // موثّق ويفشل كاملًا بـ permission-denied. القواعد ليست مرشِّحًا.
+      // ويحتاج كل مزيج منها فهرسًا مركّبًا (انظر firestore.indexes.json).
       if (zoneKey.trim().isNotEmpty) {
         final ritualQuery = await firestore
             .collection('supplications')
             .where('appliesToZoneKeys', arrayContains: zoneKey.trim())
             .where('isActive', isEqualTo: true)
             .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
             .get();
         for (final doc in ritualQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
@@ -72,6 +83,8 @@ class SupplicationService {
             .collection('supplications')
             .where('zoneId', isEqualTo: zoneId)
             .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
+            .where('revokedAt', isNull: true)
             .get();
         for (final doc in idQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
@@ -101,7 +114,8 @@ class SupplicationService {
   Future<void> _persistToCache(String cacheKey, List<SupplicationModel> items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json = jsonEncode(items.map((e) => e.toJson()).toList());
+      final json =
+          jsonEncode(items.where(isDisplayable).map((e) => e.toJson()).toList());
       await prefs.setString(_prefKey(cacheKey), json);
     } catch (_) {}
   }
@@ -111,8 +125,12 @@ class SupplicationService {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_prefKey(cacheKey));
       if (raw == null) return null;
+      // يُرشَّح عند القراءة لا عند الكتابة فقط: كاش كُتب بنسخة أقدم قد
+      // يحوي سجلًا غير موثّق أو أُلغي بعد حفظه، وحذفه من الجهاز ليس بيدنا.
+      // فالفلترة هنا هي ما يحمي الحاج من نصّ سُحب بعد أن خُزِّن عنده.
       final list = (jsonDecode(raw) as List)
           .map((e) => SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where(isDisplayable)
           .toList();
       return list;
     } catch (_) {

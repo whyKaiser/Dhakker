@@ -57,25 +57,54 @@
     },
     {
       "//": [
-        "Ritual-scoped texts (e.g. the Talbiyah) at a given zone. The app",
-        "queries appliesToZoneKeys array-contains together with equality",
-        "filters on isActive and verificationStatus.",
+        "The three pilgrim-facing retrieval paths, all carrying the same",
+        "read gate: isActive == true, verificationStatus == 'verified',",
+        "revokedAt == null.",
         "",
-        "Both filters belong in the QUERY, not in the client: firestore.rules",
-        "allows any signed-in user to read `supplications` with no",
-        "per-document predicate. Rules are not filters — whatever the query",
-        "leaves unconstrained really does arrive on the device.",
+        "Those three filters are NOT optional. firestore.rules evaluates the",
+        "read condition against every document a query matches, and rejects",
+        "the whole query if any matched document fails. A query missing one",
+        "of them matches an unverified record and dies with",
+        "permission-denied — it does not quietly return less.",
         "",
-        "Without this index the query FAILS, and the catch in",
-        "getSupplicationsByZone turns that failure into an empty list: the",
-        "Talbiyah would silently not appear at any miqat, with no error",
-        "anywhere. Deploy before expecting it to show up."
+        "revokedAt is queried with an equality filter on null, which does",
+        "NOT match documents where the field is absent. Every writer must",
+        "therefore write it explicitly: the importer forces revokedAt: null,",
+        "and the admin console writes it too. A record created without it is",
+        "invisible to the app while looking correct in the console.",
+        "",
+        "Without these indexes the queries FAIL, and the catch in",
+        "getSupplicationsByZone turns that into an empty list — the duas",
+        "would silently not appear, with no error anywhere."
       ],
       "collectionGroup": "supplications",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "isActive", "order": "ASCENDING" },
         { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
+        { "fieldPath": "zoneKey", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Same read gate, legacy zoneId fallback path.",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
+        { "fieldPath": "zoneId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Same read gate, ritual-scoped path (the Talbiyah at each miqat).",
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "revokedAt", "order": "ASCENDING" },
         { "fieldPath": "appliesToZoneKeys", "arrayConfig": "CONTAINS" }
       ]
     },

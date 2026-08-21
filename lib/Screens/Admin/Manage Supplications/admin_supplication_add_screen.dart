@@ -237,6 +237,12 @@ class _AdminSupplicationAddScreenState
             ? _contentHash(
                 _textArController.text.trim(), _textEnController.text.trim())
             : null,
+        // Written explicitly, even though it is null, because the pilgrim
+        // queries filter on `revokedAt == null`. A Firestore equality filter
+        // does not match documents where the field is absent, so a record
+        // created without it would be invisible to the app while looking
+        // perfectly fine in the console.
+        'revokedAt': null,
         'languageCodes': ['ar', 'en'],
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),

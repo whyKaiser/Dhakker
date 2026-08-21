@@ -363,6 +363,62 @@ export function contentHashOf(record) {
 }
 
 /**
+ * Classifies every record for a PRODUCTION write. Fail-closed: a record is
+ * included only if the ledger positively says a human passed its text and
+ * nothing holds it back. Everything else lands in one of three excluded
+ * buckets, each reported separately because they need different actions.
+ *
+ * Absence from the ledger is `unreviewed`, not `fine`. That is the whole
+ * difference between this and the staging path: staging may write a record
+ * nobody has read yet (that is what a trial is for), production may not.
+ */
+export function classifyForProduction(records, ledger) {
+  const byId = new Map();
+  for (const r of ledger?.reviews ?? []) byId.set(r.recordId, r);
+
+  const reviewedIncluded = [];
+  const unreviewedExcluded = [];
+  const blockedExcluded = [];
+  const deploymentHeld = [];
+
+  for (const record of records) {
+    const review = byId.get(record.duaId);
+    if (!review) {
+      unreviewedExcluded.push(record.duaId);
+      continue;
+    }
+    if (review.reviewStatus === "blocked" || review.reviewStatus === "failed") {
+      blockedExcluded.push(record.duaId);
+      continue;
+    }
+    if (review.deploymentBlocked === true) {
+      deploymentHeld.push(record.duaId);
+      continue;
+    }
+    if (review.excludedFromImport === true) {
+      // Excluded without either specific flag — treat as blocked rather than
+      // guessing which bucket it belongs to.
+      blockedExcluded.push(record.duaId);
+      continue;
+    }
+    const passed =
+      review.reviewStatus === "passed" || review.textReviewStatus === "passed";
+    if (!passed) {
+      unreviewedExcluded.push(record.duaId);
+      continue;
+    }
+    reviewedIncluded.push(record);
+  }
+
+  return {
+    reviewedIncluded,
+    unreviewedExcluded,
+    blockedExcluded,
+    deploymentHeld,
+  };
+}
+
+/**
  * Splits built records into what may be written and what may not.
  * Pure: takes the ledger as data so tests need no filesystem.
  */
@@ -428,6 +484,18 @@ export function assertLedgerMatchesPack(ledger, records, { strict }) {
           `(reviewed ${review.reviewedTextHash.slice(0, 12)}…, ` +
           `pack now ${actual.slice(0, 12)}…)`,
       );
+    }
+    // Page provenance: a reviewer who read page 71 has not vouched for a
+    // record that now cites page 94. The citation and the review must
+    // describe the same page.
+    const reviewedPages = review.reviewedPages ?? [review.reviewedPage];
+    if (review.reviewedPage != null && record.printedPage != null) {
+      if (reviewedPages[0] !== record.printedPage) {
+        problems.push(
+          `${review.recordId}: reviewed page ${reviewedPages[0]} but the ` +
+            `record now cites page ${record.printedPage}`,
+        );
+      }
     }
   }
   if (problems.length) {
@@ -579,6 +647,46 @@ export function assertConfirmations(plan, recordCount) {
   }
 }
 
+function printProductionPlan(plan, c) {
+  console.log(`Pack:       ${plan.inputPath}`);
+  console.log(`Collection: ${plan.collection}`);
+  console.log("");
+  console.log(`reviewedIncluded:    ${c.reviewedIncluded.length}`);
+  for (const r of c.reviewedIncluded) console.log(`  + ${r.duaId}`);
+  console.log(`unreviewedExcluded:  ${c.unreviewedExcluded.length}`);
+  for (const id of c.unreviewedExcluded) console.log(`  - ${id}`);
+  console.log(`blockedExcluded:     ${c.blockedExcluded.length}`);
+  for (const id of c.blockedExcluded) console.log(`  - ${id}`);
+  console.log(`deploymentHeld:      ${c.deploymentHeld.length}`);
+  for (const id of c.deploymentHeld) console.log(`  - ${id}`);
+  console.log("");
+  console.log("verificationStatus: unverified for every record written.");
+  console.log("A reviewed record is imported unverified; an admin verifies it");
+  console.log("afterwards in the app. Import never confers verification.");
+}
+
+/**
+ * The last thing standing between a held-back record and production.
+ *
+ * Everything above is a filter, and a filter can be bypassed by a flag
+ * nobody thought about. This is an assertion on the final set: if any id in
+ * it is one the classifier excluded, the run dies rather than writes.
+ */
+export function assertProductionSetIsClean(records, classification) {
+  const forbidden = new Set([
+    ...classification.unreviewedExcluded,
+    ...classification.blockedExcluded,
+    ...classification.deploymentHeld,
+  ]);
+  const leaked = records.map((r) => r.duaId).filter((id) => forbidden.has(id));
+  if (leaked.length) {
+    throw new Error(
+      "Refusing to write: records the ledger holds back reached the " +
+        `production set: ${leaked.join(", ")}`,
+    );
+  }
+}
+
 function printPlan(plan, records, excluded = []) {
   console.log(`Pack:       ${plan.inputPath}`);
   console.log(`Included:   ${records.length}  (zone-tied: ` +
@@ -624,13 +732,33 @@ async function main() {
     console.error(`\n${err.message}`);
     process.exit(1);
   }
-  const { included, excluded } = applyLedger(all, ledger);
-  const records = plan.limit ? included.slice(0, plan.limit) : included;
+  const isProduction = plan.collection === PRODUCTION_COLLECTION;
 
-  if (!ledger) {
-    console.log(`(no ${LEDGER_PATH} found — nothing is held back)`);
+  let records;
+  let excluded;
+  if (isProduction) {
+    // Fail-closed. Anything the ledger does not positively clear stays out,
+    // including every record nobody has read yet.
+    const c = classifyForProduction(all, ledger);
+    records = c.reviewedIncluded;
+    excluded = [
+      ...c.blockedExcluded.map((id) => ({ duaId: id, reasons: ["blocked"] })),
+      ...c.deploymentHeld.map((id) => ({ duaId: id, reasons: ["deployment hold"] })),
+      ...c.unreviewedExcluded.map((id) => ({ duaId: id, reasons: ["unreviewed"] })),
+    ];
+    printProductionPlan(plan, c);
+    // Belt and braces: prove the set about to be written really is the
+    // cleared set, whatever any flag above may have done to `records`.
+    assertProductionSetIsClean(records, c);
+  } else {
+    const r = applyLedger(all, ledger);
+    excluded = r.excluded;
+    records = plan.limit ? r.included.slice(0, plan.limit) : r.included;
+    if (!ledger) {
+      console.log(`(no ${LEDGER_PATH} found — nothing is held back)`);
+    }
+    printPlan(plan, records, excluded);
   }
-  printPlan(plan, records, excluded);
 
   if (plan.mode === "dry-run") {
     console.log("\nDRY RUN — validated only. Nothing was sent anywhere.");
