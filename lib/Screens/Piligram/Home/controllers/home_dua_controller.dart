@@ -68,8 +68,24 @@ class HomeDuaController extends ChangeNotifier {
   /// أضيق من [recitableDuas]: الزيادة الجائزة تُعرض للحاج ويستطيع تشغيلها
   /// بنفسه، لكنها لا تُقرأ عليه دون أن يطلبها. تشغيلها تلقائيًّا بعد النص
   /// الأساسي يجعلها تُسمع امتدادًا له — وهو بالضبط ما يوهم بلزومها.
-  List<SupplicationModel> get autoPlayableDuas =>
-      currentDuasList.where((e) => e.isAutoPlayable).toList(growable: false);
+  List<SupplicationModel> get autoPlayableDuas => currentDuasList
+      .where((e) => e.isAutoPlayable)
+      .where((e) => !_alreadyPlayedOncePerRitual(e))
+      .toList(growable: false);
+
+  /// السجلات التي نصّ المصدر أنها «مرة واحدة» وقد شُغِّلت في هذه الجلسة.
+  ///
+  /// «مرة واحدة ولا تُعاد» تعني مرةً في النسك كله، لا مرةً في كل مرور. ودخول
+  /// منطقة المسعى يتكرر بطبيعة السعي: بلا هذا الحاجز يُعيد التطبيق آية الصفا
+  /// على الحاج مرارًا وهو يقرأ في نصّها أنها لا تُعاد.
+  final Set<String> _playedOncePerRitual = <String>{};
+
+  bool _alreadyPlayedOncePerRitual(SupplicationModel dua) =>
+      (dua.recitationPolicy?.isOncePerRitual ?? false) &&
+      _playedOncePerRitual.contains(dua.duaId);
+
+  /// يبدأ نسكًا جديدًا: يُنسى ما شُغِّل مرة واحدة.
+  void resetRitualPlaybackState() => _playedOncePerRitual.clear();
 
   /// الآثار المرويّة للفائدة — بطاقة «أثر موثّق» بعزوها، بلا تشغيل.
   /// بلا هذا الجامع تختفي من الشاشة الرئيسية بالكلية، لأن [recitableDuas]
@@ -311,6 +327,10 @@ class HomeDuaController extends ChangeNotifier {
       }
     }
 
+    if (selected.recitationPolicy?.isOncePerRitual ?? false) {
+      _playedOncePerRitual.add(selected.duaId);
+    }
+
     final isSameZone = previousZoneId == detectedZone.zoneId;
     final isSameHandledZone = _lastTriggeredZoneId == detectedZone.zoneId;
     final isSameHandledDua = _lastTriggeredDuaId == selected.duaId;
@@ -439,6 +459,13 @@ class HomeDuaController extends ChangeNotifier {
 
   /// تصنيف الدعاء المعروض في هذا الموضع من القائمة — تستعمله الواجهة لعرض
   /// الوسم الصريح («عام» / «وارد في هذا الموضع»).
+  /// سياسة الأداء للدعاء المعروض في هذا الموضع من القائمة.
+  RecitationPolicy? displayedDuaPolicy(int index) {
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return null;
+    return items[index].recitationPolicy;
+  }
+
   SupplicationContentKind? displayedDuaKind(int index) {
     final items = recitableDuas;
     if (index < 0 || index >= items.length) return null;

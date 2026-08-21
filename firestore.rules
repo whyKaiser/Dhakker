@@ -144,7 +144,6 @@ service cloud.firestore {
             && !touchesVerificationFields());
     }
 
-    // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.
     // ── supplications_staging ────────────────────────────────────────────
     //
     // Import trials write here (see .github/workflows/staging-import.yml).
@@ -172,6 +171,7 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.
     match /alerts/{alertId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();

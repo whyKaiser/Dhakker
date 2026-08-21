@@ -80,6 +80,49 @@ class ContentKindBadge extends StatelessWidget {
   }
 }
 
+/// تعليمة الأداء — «تُقرأ مرة واحدة…» أو «يُكرَّر ثلاث مرات…».
+///
+/// نصّها مقرَّر في [RecitationPolicy]، لا يولّده نموذج ولا يُترجَم. تُعرض مع
+/// النصوص المتلوّة، لأنها تصف كيف تُقال: بلا هذه السطر يقرأ الحاجّ آية الصفا
+/// كلما مرّ بها، والمصدر ينصّ أنها لا تُعاد.
+class RecitationPolicyNote extends StatelessWidget {
+  const RecitationPolicyNote({super.key, required this.policy, this.textColor});
+
+  final RecitationPolicy? policy;
+  final Color? textColor;
+
+  static const Color _accent = Color(0xFF8D6E00);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = policy;
+    if (p == null) return const SizedBox.shrink();
+    final text = p.instructionAr();
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.repeat_one_rounded, size: 14, color: _accent),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: _accent,
+                fontSize: 11.5,
+                height: 1.6,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// وسم صفة الاستعمال — يُعرض إلى جانب [ContentKindBadge]، لا بدلًا منه.
 ///
 /// يظهر **فقط** حين يصف المصدر الاستعمال. غيابه لا يعني وجوبًا ولا يُعرض

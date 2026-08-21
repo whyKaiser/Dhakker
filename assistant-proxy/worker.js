@@ -585,6 +585,42 @@ async function fetchWithTimeout(url, options, timeoutMs) {
  * touch it.
  */
 /**
+ * Firestore map → plain object, with the controlled vocabularies enforced
+ * here too. An unknown value reads as absent rather than being passed on:
+ * a policy the client cannot render would show as no instruction at all,
+ * which is indistinguishable from a text the source did not qualify.
+ */
+function mapRecitationPolicy(field) {
+  const f = field?.mapValue?.fields;
+  if (!f) return null;
+  const frequency = (f.frequency?.stringValue || "").trim();
+  if (frequency !== "once_per_ritual" && frequency !== "repeat_count") {
+    return null;
+  }
+  const count = Number(f.repeatCount?.integerValue ?? 0) || null;
+  if (frequency === "repeat_count" && (!count || count < 1 || count > 10)) {
+    return null;
+  }
+  const pick = (key, allowed) => {
+    const v = (f[key]?.stringValue || "").trim();
+    return allowed.includes(v) ? v : null;
+  };
+  const interleave = pick("interleave", ["personal_dua"]);
+  const out = { frequency };
+  if (frequency === "repeat_count") out.repeatCount = count;
+  const trigger = pick("trigger", [
+    "first_safa_approach",
+    "each_marwah_arrival",
+    "on_entry",
+  ]);
+  if (trigger) out.trigger = trigger;
+  if (interleave) out.interleave = interleave;
+  // Forced false whenever a human dua comes between repetitions.
+  out.autoRepeat = interleave === null && f.autoRepeat?.booleanValue === true;
+  return out;
+}
+
+/**
  * Firestore array-of-maps → plain objects. A malformed entry is dropped
  * rather than half-read: a citation missing its collection says nothing, and
  * a blank `reference` would read as "checked, none found".
@@ -638,6 +674,7 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       sourceReferences: Array.isArray(doc.sourceReferences)
         ? doc.sourceReferences
         : [],
+      recitationPolicy: doc.recitationPolicy ?? null,
       isVerbatim: true,
     });
   }
@@ -744,6 +781,12 @@ function buildSystemPrompt(language, context, retrieved, policy) {
         "these ARE texts the pilgrim may say, and may be presented as such.\n" +
         '- contentKind="unspecified": say only what the record says; do not assert ' +
         "that it is a text to recite.\n" +
+        "RECITATION POLICY: some records carry a recitationPolicy stating how the " +
+        "source says the text is performed (how many times, when, whether the pilgrim's " +
+        "own dua comes between repetitions). These are SERVER FACTS read from the stored " +
+        "record. State them if relevant, exactly as given. You must NOT invent a policy " +
+        "for a record that has none, must NOT change a count or a condition, and must NOT " +
+        "tell the pilgrim to repeat a text a number of times the record does not state.\n" +
         "If a record's kind forbids presenting it as something to say, that holds even " +
         "when the user explicitly asks for a dua for that place: answer with what the " +
         "record actually is, and say plainly that it is not a supplication.\n\n" +
@@ -1098,6 +1141,9 @@ function mapSupplicationRows(rows, language) {
       // What the MINISTRY cited as the text's source. Reported, never
       // vouched for, and never derived from anything but the stored record.
       sourceReferences: mapSourceReferences(fields.sourceReferences),
+      // HOW the source says the text is performed. Server fact, read from
+      // the stored record — the model never authors or edits it.
+      recitationPolicy: mapRecitationPolicy(fields.recitationPolicy),
       content,
     });
   }
@@ -1500,6 +1546,7 @@ export const __testing__ = {
   canonicalLocale,
   buildVerifiedExcerpts,
   mapSourceReferences,
+  mapRecitationPolicy,
   fallbackAnswer,
   SUPPORTED_LANGUAGES,
 };

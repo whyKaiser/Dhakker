@@ -997,6 +997,8 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     // What the ministry cited as the source. Empty when the row cites
     // nothing — which is not the same as "we did not look".
     sourceReferences: [],
+    // How the source says it is performed. null = it did not say.
+    recitationPolicy: null,
     content: "PLACEHOLDER BODY",
   });
 });
@@ -1954,4 +1956,112 @@ test("Arabic in a retrieved record does not count as prompt text", () => {
     !/[ء-يٱ-ۓ]/.test(withoutContent),
     "instructions outside the content blocks must stay English",
   );
+});
+
+// ── recitationPolicy through the proxy ──────────────────────────────────
+//
+// The policy is a SERVER FACT read from the stored record. The model may
+// state it; it may not author one, change a count, or attach a policy to a
+// record that has none.
+
+test("mapRecitationPolicy reads a known policy and rejects an invented one", () => {
+  const { mapRecitationPolicy } = __testing__;
+  const field = {
+    mapValue: {
+      fields: {
+        frequency: { stringValue: "repeat_count" },
+        repeatCount: { integerValue: "3" },
+        interleave: { stringValue: "personal_dua" },
+        autoRepeat: { booleanValue: true },
+      },
+    },
+  };
+  const p = mapRecitationPolicy(field);
+  assert.equal(p.frequency, "repeat_count");
+  assert.equal(p.repeatCount, 3);
+  assert.equal(p.interleave, "personal_dua");
+  // Forced false: a human dua comes between the repetitions.
+  assert.equal(p.autoRepeat, false);
+
+  for (const bad of ["mandatory", "always", ""]) {
+    assert.equal(
+      mapRecitationPolicy({ mapValue: { fields: { frequency: { stringValue: bad } } } }),
+      null,
+      bad,
+    );
+  }
+  assert.equal(mapRecitationPolicy(undefined), null);
+});
+
+test("an out-of-range repeat count voids the policy rather than clamping it", () => {
+  const { mapRecitationPolicy } = __testing__;
+  for (const n of ["0", "11", "-1"]) {
+    assert.equal(
+      mapRecitationPolicy({
+        mapValue: {
+          fields: {
+            frequency: { stringValue: "repeat_count" },
+            repeatCount: { integerValue: n },
+          },
+        },
+      }),
+      null,
+      n,
+    );
+  }
+});
+
+test("verified excerpts carry the policy alongside the verbatim text", () => {
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "dhikr" }],
+    [
+      {
+        documentId: "dhikr",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/x",
+        recitationPolicy: { frequency: "repeat_count", repeatCount: 3 },
+        content: "نص",
+      },
+    ],
+    { contentLanguage: "ar" },
+  );
+  assert.deepEqual(excerpts[0].recitationPolicy,
+    { frequency: "repeat_count", repeatCount: 3 });
+  assert.equal(excerpts[0].text, "نص");
+});
+
+test("the prompt tells the model the policy is a server fact it may not invent", () => {
+  const prompt = buildSystemPrompt(
+    "en",
+    null,
+    [
+      {
+        documentId: "a",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/x",
+        contentKind: "specific_text",
+        content: "BODY",
+      },
+    ],
+    { contentLanguage: "ar", responseLanguage: "en" },
+  );
+  assert.match(prompt, /RECITATION POLICY/);
+  assert.match(prompt, /SERVER FACTS/);
+  assert.match(prompt, /must NOT invent a policy/);
+  assert.match(prompt, /must NOT change a count/);
+  assert.match(prompt, /a number of times the record does not state/);
+});
+
+test("the policy rules do not introduce Arabic into the prompt", () => {
+  // The standing contract: instructions stay English; Arabic reaches the
+  // model only as retrieved CONTENT.
+  const prompt = buildSystemPrompt("en", null, [], {
+    contentLanguage: "ar",
+    responseLanguage: "ar",
+  });
+  assert.ok(!/[ء-يٱ-ۓ]/.test(prompt));
 });

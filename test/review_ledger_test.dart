@@ -81,7 +81,18 @@ void main() {
         // appear as a status, so no reader — and no future script — can
         // mistake a review for an approval.
         expect(r['reviewStatus'], isNot('verified'));
-        expect(r['reviewStatus'], anyOf('passed', 'failed', 'blocked'));
+        // `pending` = a record held back BEFORE anyone read its page. It is
+        // not a verdict on the text: a record can be deployment-held while
+        // its wording is still unexamined, and calling that "blocked" would
+        // blame the source for a review that has not happened yet.
+        expect(
+            r['reviewStatus'], anyOf('passed', 'failed', 'blocked', 'pending'));
+        if (r['reviewStatus'] == 'pending') {
+          expect(r['textReviewStatus'], 'pending');
+          expect((r['pendingReason'] as String).trim(), isNotEmpty);
+          expect(r['excludedFromImport'], isTrue,
+              reason: '${r['recordId']} is unreviewed but importable');
+        }
       }
     });
 
@@ -347,17 +358,22 @@ void main() {
             reason: '${r['recordId']} is held back with no reason given');
         expect((r['deploymentBlockReason'] as String).trim(), isNotEmpty);
         expect(r['excludedFromImport'], isTrue);
-        // The text itself passed — that is the whole point of the
-        // distinction, and it must be stated on the record.
-        expect(r['textReviewStatus'], 'passed',
-            reason: '${r['recordId']}: a deployment hold applies only to a '
-                'record whose text passed review');
+        // A deployment hold never blames the text. Two states may carry one:
+        //   textReviewStatus 'passed'  — the wording was read and is fine;
+        //   textReviewStatus 'pending' — nobody has read the page yet.
+        // Neither is a defect in the source, and `blocked` — which IS such a
+        // verdict — must never appear alongside a deployment hold.
+        expect(r['textReviewStatus'], anyOf('passed', 'pending'),
+            reason: '${r['recordId']}: a deployment hold applies to a record '
+                'whose text passed review or has not been reviewed yet');
         expect(r['reviewStatus'], isNot('blocked'),
             reason: '${r['recordId']}: a product limitation must not be '
                 'recorded as a defect in the religious text');
-        expect(r['blockReason'], isNull,
-            reason: '${r['recordId']} mixes a text block with a '
-                'deployment block');
+        if (r['textReviewStatus'] == 'passed') {
+          expect(r['blockReason'], isNull,
+              reason: '${r['recordId']} mixes a text block with a '
+                  'deployment block');
+        }
       }
     });
 
@@ -383,6 +399,8 @@ void main() {
 
     test('the counts match the reviews they summarise', () {
       expect(summary['totalReviews'], reviews.length);
+      expect(summary['pending'],
+          countWhere((r) => r['reviewStatus'] == 'pending'));
       expect(
           summary['passed'], countWhere((r) => r['reviewStatus'] == 'passed'));
       expect(summary['blocked'],
@@ -392,6 +410,7 @@ void main() {
       expect(
           summary['totalReviews'],
           (summary['passed'] as int) +
+              (summary['pending'] as int) +
               (summary['blocked'] as int) +
               (summary['failed'] as int),
           reason: 'the statuses do not account for every review');
@@ -441,6 +460,12 @@ void main() {
           (summary['blockedRecordIds'] as List).cast<String>().toSet(),
           reviews
               .where((r) => r['reviewStatus'] == 'blocked')
+              .map((r) => r['recordId'] as String)
+              .toSet());
+      expect(
+          (summary['pendingRecordIds'] as List).cast<String>().toSet(),
+          reviews
+              .where((r) => r['reviewStatus'] == 'pending')
               .map((r) => r['recordId'] as String)
               .toSet());
       expect(

@@ -71,6 +71,7 @@ class VerifiedExcerpt {
     this.usageQualifier,
     this.contentKind,
     this.sourceReferences = const [],
+    this.recitationPolicy,
   });
 
   /// What kind of text this is, as classified in the source pack. `null`
@@ -80,6 +81,10 @@ class VerifiedExcerpt {
   /// What the ministry cited as this text's source. Display-only: it never
   /// makes a text recitable, playable, or verified.
   final List<Map<String, dynamic>> sourceReferences;
+
+  /// How the source says the text is performed, as a server fact. Never
+  /// authored by the model, and never a reason to treat a text as recitable.
+  final Map<String, dynamic>? recitationPolicy;
 
   /// True when the source called this an optional addition.
   bool get isOptionalAddition => usageQualifier == 'optional_addition';
@@ -128,6 +133,15 @@ class VerifiedExcerpt {
               .where((e) =>
                   (e['collection'] as String?)?.trim().isNotEmpty ?? false)
               .toList(growable: false);
+        }(),
+        recitationPolicy: () {
+          final raw = map['recitationPolicy'];
+          if (raw is! Map) return null;
+          final m = Map<String, dynamic>.from(raw);
+          final f = (m['frequency'] as String?)?.trim() ?? '';
+          // An unknown policy reads as absent — never as an invented one.
+          if (f != 'once_per_ritual' && f != 'repeat_count') return null;
+          return m;
         }(),
       ));
     }
