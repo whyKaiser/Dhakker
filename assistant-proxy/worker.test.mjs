@@ -994,6 +994,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     // What KIND of text it is. Null when the row does not say; the client
     // then treats it as recitable, which is the pre-existing behaviour.
     contentKind: null,
+    // What the ministry cited as the source. Empty when the row cites
+    // nothing — which is not the same as "we did not look".
+    sourceReferences: [],
     content: "PLACEHOLDER BODY",
   });
 });

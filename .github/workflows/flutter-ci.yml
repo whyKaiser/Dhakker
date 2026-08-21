@@ -14,6 +14,7 @@ on:
       - "claude/human-review-ledger"
       - "claude/usage-qualifier-optional-addition"
       - "claude/content-kind-contextual-evidence"
+      - "claude/batch-c-review"
   pull_request:
     branches:
       - main
@@ -66,6 +67,8 @@ jobs:
             "test/usage_qualifier_test.dart"
             "test/supplication_writers_test.dart"
             "test/content_kind_batch_b_test.dart"
+            "test/quran_authority_coverage_test.dart"
+            "test/source_references_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

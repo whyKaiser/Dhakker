@@ -70,11 +70,16 @@ class VerifiedExcerpt {
     required this.textLanguage,
     this.usageQualifier,
     this.contentKind,
+    this.sourceReferences = const [],
   });
 
   /// What kind of text this is, as classified in the source pack. `null`
   /// when an older proxy did not send it.
   final String? contentKind;
+
+  /// What the ministry cited as this text's source. Display-only: it never
+  /// makes a text recitable, playable, or verified.
+  final List<Map<String, dynamic>> sourceReferences;
 
   /// True when the source called this an optional addition.
   bool get isOptionalAddition => usageQualifier == 'optional_addition';
@@ -113,6 +118,16 @@ class VerifiedExcerpt {
         contentKind: () {
           final k = (map['contentKind'] as String?)?.trim() ?? '';
           return k.isEmpty ? null : k;
+        }(),
+        sourceReferences: () {
+          final raw = map['sourceReferences'];
+          if (raw is! List) return const <Map<String, dynamic>>[];
+          return raw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .where((e) =>
+                  (e['collection'] as String?)?.trim().isNotEmpty ?? false)
+              .toList(growable: false);
         }(),
       ));
     }
