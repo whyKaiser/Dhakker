@@ -31,6 +31,22 @@ Map<String, dynamic> _readJson(String path) {
 String _contentHash(String ar, String en) =>
     sha256.convert(utf8.encode('$ar\u0000$en')).toString();
 
+/// The page numbers a record's own `sourceSection` claims.
+///
+/// Only the tail after the last «صفح» is read, so the ayah numbers earlier
+/// in the same string ("[النمل: 19] — صفحتا 96-97") can never be mistaken
+/// for page numbers.
+List<int> _pagesFromSection(String section) {
+  final i = section.lastIndexOf('صفح');
+  if (i < 0) return const [];
+  final nums = RegExp(r'\d+')
+      .allMatches(section.substring(i))
+      .map((m) => int.parse(m.group(0)!))
+      .toList();
+  if (nums.length == 2 && nums[1] == nums[0] + 1) return nums;
+  return (nums.toSet().toList())..sort();
+}
+
 void main() {
   final ledger = _readJson('review/human_review_ledger.json');
   final pack = _readJson('source_packs/moia_mukhtasar_1446_umrah.json');
@@ -124,6 +140,46 @@ void main() {
         final entry = entryFor(r['recordId'] as String)!;
         expect(r['reviewedPage'], entry['printedPage'],
             reason: 'the reviewer read a different page than the record cites');
+      }
+    });
+
+    test('the reviewed page range covers exactly what sourceSection names', () {
+      // Some excerpts run across a page break. Recording only the first page
+      // would understate the review — it would read as though the second
+      // page had never been looked at. So the pages reviewed must equal the
+      // pages the record itself claims, in both directions: a spanning
+      // record cannot be logged as single-page, and a single-page record
+      // cannot claim a range it does not have.
+      for (final r in reviews) {
+        final entry = entryFor(r['recordId'] as String)!;
+        final claimed = _pagesFromSection(entry['sourceSection'] as String);
+        expect(claimed, isNotEmpty,
+            reason: '${r['recordId']} names no page in sourceSection');
+
+        final reviewed = r['reviewedPages'] == null
+            ? [r['reviewedPage'] as int]
+            : (r['reviewedPages'] as List).cast<int>();
+
+        expect(reviewed, claimed,
+            reason: '${r['recordId']} was reviewed on $reviewed but its '
+                'sourceSection names $claimed');
+        expect(reviewed.first, r['reviewedPage'],
+            reason: '${r['recordId']}: reviewedPage must be the first page '
+                'of the range');
+      }
+    });
+
+    test('reviewedPages is only spelled out when a record really spans pages',
+        () {
+      for (final r in reviews) {
+        if (r['reviewedPages'] == null) continue;
+        final pages = (r['reviewedPages'] as List).cast<int>();
+        expect(pages.length, greaterThan(1),
+            reason: '${r['recordId']} lists reviewedPages for a single page');
+        for (var i = 1; i < pages.length; i++) {
+          expect(pages[i], greaterThan(pages[i - 1]),
+              reason: '${r['recordId']} has an unordered page range');
+        }
       }
     });
 
