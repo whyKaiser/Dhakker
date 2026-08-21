@@ -1,0 +1,32 @@
+{
+  "//": "Human review ledger — a record of what a person checked against the PRINTED page, and nothing more. This file confers NO authority on any record. It does not verify anything, it is not read by the app, the Worker, or the importer, and no code path grants a record trust because it appears here. Verification in Firestore is a separate, deliberate act performed by an admin in the app, and it has not happened for any record listed below. The ledger exists so that act is traceable afterwards: who looked, at which printed page, at which edition, and at exactly which bytes of text.",
+  "ledgerVersion": 1,
+  "conferredAuthority": "none",
+  "firestoreVerificationPerformed": false,
+  "notes": [
+    "reviewedTextHash is sha256(text.ar + U+0000 + text.en) over the source-pack record AS IT STANDS. It is the same construction the admin screen uses for contentHash, so a reviewed record whose text is later edited can be detected: the ledger hash stops matching the pack.",
+    "A ledger entry pinned to a hash means: 'a human reviewed THESE bytes'. It says nothing about any other bytes.",
+    "reviewStatus 'passed' means ready-for-verification, NOT verified."
+  ],
+  "reviews": [
+    {
+      "recordId": "moia-1446-maqam-ayah",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 71,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "7e13e217685b084cec2d072fee4b7f3875e539f009fd5d3ac74983a9225fa129",
+      "reviewedAt": "2026-08-21T01:28:31Z",
+      "uncertaintyResolved": "U12",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "الصفحة 71 والسياق صحيحان",
+        "المقطع يبدأ بـ«وَٱتَّخِذُواْ» وينتهي بـ«مُصَلّٗى»",
+        "النص مقطع من الآية وليس الآية كاملة",
+        "تعليمات الركعتين والتنبيهات التالية سجلات منفصلة، وليست جزءًا من سجل الآية"
+      ]
+    }
+  ]
+}
