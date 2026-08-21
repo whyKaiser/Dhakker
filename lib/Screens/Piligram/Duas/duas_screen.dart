@@ -9,8 +9,8 @@ import '../Home/models/supplication_model.dart';
 import '../Home/models/zone_model.dart';
 import '../Home/services/dua_playback_service.dart';
 import 'services/dua_search_service.dart';
-import 'services/voice_search_service.dart';
 import 'widgets/content_kind_card.dart';
+import 'services/voice_search_service.dart';
 import 'widgets/voice_command_dialog.dart';
 import 'manasik_guide.dart';
 import 'hajj_schedule.dart';
@@ -150,6 +150,11 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _playDua(SupplicationModel dua) async {
+    // الحارس الأخير قبل النطق. الواجهة لا تعرض زر تشغيل لغير المتلوّ، لكن
+    // البحث الصوتي يشغّل النتيجة الوحيدة تلقائيًّا دون مرور بزر — فلولا
+    // هذا الفحص لنطق التطبيق أثرًا أو إرشادًا كأنه ذكر.
+    if (!dua.isAutoPlayable) return;
+
     final langCode = Localizations.localeOf(context).languageCode;
 
     try {
@@ -376,15 +381,33 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                               padding: const EdgeInsets.only(bottom: 14),
                               // الإرشاد ليس دعاءً: يُعرض في بطاقة إرشادية
                               // منفصلة بلا زر تشغيل وبلا عنوان «دعاء».
+                              // ثلاثة مسارات لا اثنان: الإرشاد بطاقته،
+                              // والأثر المرويّ بطاقته بعزوه، وما عداهما
+                              // نصّ يُتلىٰ بزر تشغيل. كان الأثر يسقط في
+                              // المسار الأخير فيظهر بزر تشغيل.
                               child: item.dua.contentKind ==
                                       SupplicationContentKind.proceduralGuidance
                                   ? GuidanceCard(
                                       title: item.dua.titleByLanguage(langCode),
                                       body: item.dua.textByLanguage(langCode),
+                                      attribution: item.dua.attribution,
+                                      isPropheticDirective: true,
                                       cardColor: palette.card,
                                       textColor: palette.text,
                                     )
-                                  : _DuaResultCard(
+                                  : item.dua.contentKind ==
+                                          SupplicationContentKind
+                                              .contextualEvidence
+                                      ? ContextualEvidenceCard(
+                                          title: item.dua
+                                              .titleByLanguage(langCode),
+                                          body: item.dua
+                                              .textByLanguage(langCode),
+                                          attribution: item.dua.attribution,
+                                          cardColor: palette.card,
+                                          textColor: palette.text,
+                                        )
+                                      : _DuaResultCard(
                                 palette: palette,
                                 title: item.dua.titleByLanguage(langCode),
                                 text: item.dua.textByLanguage(langCode),

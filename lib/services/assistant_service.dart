@@ -69,10 +69,21 @@ class VerifiedExcerpt {
     required this.text,
     required this.textLanguage,
     this.usageQualifier,
+    this.contentKind,
   });
+
+  /// What kind of text this is, as classified in the source pack. `null`
+  /// when an older proxy did not send it.
+  final String? contentKind;
 
   /// True when the source called this an optional addition.
   bool get isOptionalAddition => usageQualifier == 'optional_addition';
+
+  /// Cited for evidence or instruction — NOT something to be recited.
+  bool get isRecitable =>
+      contentKind == null ||
+      (contentKind != 'contextual_evidence' &&
+          contentKind != 'procedural_guidance');
 
   static List<VerifiedExcerpt> listFrom(dynamic raw) {
     // An older proxy simply does not send this field. That is not an error:
@@ -98,6 +109,10 @@ class VerifiedExcerpt {
         usageQualifier: () {
           final q = (map['usageQualifier'] as String?)?.trim() ?? '';
           return q.isEmpty ? null : q;
+        }(),
+        contentKind: () {
+          final k = (map['contentKind'] as String?)?.trim() ?? '';
+          return k.isEmpty ? null : k;
         }(),
       ));
     }

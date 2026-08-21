@@ -71,6 +71,13 @@ class HomeDuaController extends ChangeNotifier {
   List<SupplicationModel> get autoPlayableDuas =>
       currentDuasList.where((e) => e.isAutoPlayable).toList(growable: false);
 
+  /// الآثار المرويّة للفائدة — بطاقة «أثر موثّق» بعزوها، بلا تشغيل.
+  /// بلا هذا الجامع تختفي من الشاشة الرئيسية بالكلية، لأن [recitableDuas]
+  /// يستبعدها بحق و[guidanceItems] ليست مكانها.
+  List<SupplicationModel> get evidenceItems => currentDuasList
+      .where((e) => e.contentKind == SupplicationContentKind.contextualEvidence)
+      .toList(growable: false);
+
   /// الإرشادات والأحكام — تُعرض في بطاقة منفصلة، ولا تُشغَّل صوتيًّا أبدًا.
   List<SupplicationModel> get guidanceItems => currentDuasList
       .where((e) => e.contentKind == SupplicationContentKind.proceduralGuidance)

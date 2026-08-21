@@ -991,6 +991,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     // How the source described the text's USE. A row that carries no such
     // description maps to null — NOT to any value implying obligation.
     usageQualifier: null,
+    // What KIND of text it is. Null when the row does not say; the client
+    // then treats it as recitable, which is the pre-existing behaviour.
+    contentKind: null,
     content: "PLACEHOLDER BODY",
   });
 });
@@ -1770,4 +1773,182 @@ test("the model cannot invent or override a usage qualifier", () => {
     retrieved,
   );
   assert.equal(out[0].usageQualifier, null);
+});
+
+// ── contentKind through the proxy ───────────────────────────────────────
+//
+// A narration cited for evidence and a ruling cited for instruction may both
+// legitimately ground an answer, but neither is a text the pilgrim recites.
+// The client can only label them if the kind survives the trip.
+
+test("mapSupplicationRows carries contentKind out of Firestore", () => {
+  const row = supplicationRow({
+    duaId: "umar",
+    titleEn: "T",
+    textEn: "B",
+    authority: "Example Approving Authority",
+    verificationStatus: VERIFICATION_STATUS_VERIFIED,
+    sourceUrl: "https://example.org/ref/3",
+    sourceVersion: "2026-01",
+    section: "s",
+  });
+  row.document.fields.contentKind = { stringValue: "contextual_evidence" };
+  assert.equal(mapSupplicationRows([row], "en")[0].contentKind,
+    "contextual_evidence");
+});
+
+test("a row with no contentKind maps to null, not to a supplication kind", () => {
+  const docs = mapSupplicationRows(
+    [
+      supplicationRow({
+        duaId: "plain",
+        titleEn: "T",
+        textEn: "B",
+        authority: "Example Approving Authority",
+        verificationStatus: VERIFICATION_STATUS_VERIFIED,
+        sourceUrl: "https://example.org/ref/4",
+        sourceVersion: "2026-01",
+        section: "s",
+      }),
+    ],
+    "en",
+  );
+  assert.equal(docs[0].contentKind, null);
+});
+
+test("verified excerpts carry contentKind alongside the verbatim text", () => {
+  const excerpts = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "umar" }, { documentId: "dua" }],
+    [
+      {
+        documentId: "umar",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/x",
+        contentKind: "contextual_evidence",
+        content: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ",
+      },
+      {
+        documentId: "dua",
+        title: "T",
+        authority: "A",
+        section: "s",
+        url: "https://example.org/y",
+        contentKind: "specific_text",
+        content: "بسم الله والله أكبر",
+      },
+    ],
+    { contentLanguage: "ar" },
+  );
+  assert.equal(excerpts[0].contentKind, "contextual_evidence");
+  assert.equal(excerpts[1].contentKind, "specific_text");
+  // The text is still untouched — the kind is metadata beside it.
+  assert.equal(excerpts[0].text, "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ");
+  assert.equal(excerpts[0].isVerbatim, true);
+});
+
+// ── The model is told how it may present each kind ──────────────────────
+//
+// Carrying contentKind to the client is not enough: the model writes the
+// prose the pilgrim reads first. If it introduces Umar's words with "say
+// this at the Black Stone", a correctly-labelled excerpt card underneath
+// does not undo it.
+
+const kindDoc = (id, kind) => ({
+  documentId: id,
+  title: "T",
+  authority: "A",
+  section: "s",
+  url: "https://example.org/x",
+  contentKind: kind,
+  content: "BODY",
+});
+
+test("each retrieved record's contentKind reaches the prompt", () => {
+  const prompt = buildSystemPrompt(
+    "en",
+    null,
+    [
+      kindDoc("umar", "contextual_evidence"),
+      kindDoc("crowding", "procedural_guidance"),
+      kindDoc("tasmiya", "specific_text"),
+    ],
+    { contentLanguage: "ar", responseLanguage: "en" },
+  );
+  assert.match(prompt, /contentKind="contextual_evidence"/);
+  assert.match(prompt, /contentKind="procedural_guidance"/);
+  assert.match(prompt, /contentKind="specific_text"/);
+});
+
+test("a record with no kind is labelled unspecified, not guessed at", () => {
+  const doc = kindDoc("x", undefined);
+  delete doc.contentKind;
+  const prompt = buildSystemPrompt("en", null, [doc], {
+    contentLanguage: "ar",
+    responseLanguage: "en",
+  });
+  assert.match(prompt, /contentKind="unspecified"/);
+  // And the rules must tell the model not to assume it is recitable.
+  assert.match(prompt, /do not assert[\s\S]{0,60}text to recite/);
+});
+
+test("the prompt forbids presenting evidence or guidance as something to say", () => {
+  const prompt = buildSystemPrompt("en", null, [kindDoc("a", "contextual_evidence")], {
+    contentLanguage: "ar",
+    responseLanguage: "en",
+  });
+  assert.match(prompt, /CONTENT KIND RULES/);
+  // Evidence: reported, attributed, never called a supplication.
+  assert.match(prompt, /NEVER present it as words the pilgrim should say/);
+  assert.match(prompt, /never call it a supplication, dua, dhikr, or invocation/);
+  // Guidance: followed, not recited.
+  assert.match(prompt, /NEVER present it as a text to recite/);
+  // And the rule survives a user who insists on being given a dua.
+  assert.match(prompt, /even when the user explicitly asks for a dua/);
+});
+
+test("the recitable kinds are still explicitly allowed", () => {
+  // A rule that forbade everything would be safe and useless.
+  const prompt = buildSystemPrompt("en", null, [kindDoc("a", "specific_text")], {
+    contentLanguage: "ar",
+    responseLanguage: "en",
+  });
+  assert.match(prompt, /these ARE texts the pilgrim may say/);
+});
+
+test("the internal prompt stays free of Arabic letters", () => {
+  // The standing contract: internal prompts are English. Arabic reaches the
+  // model only as retrieved CONTENT, never as instructions — a rule written
+  // in the same script as the scripture is a rule that can be mistaken for
+  // it, and the reply language is pinned server-side regardless.
+  const arabicLetters = /[ء-يٱ-ۓ]/;
+  for (const lang of ["en", "ar", "ur", "fr"]) {
+    const prompt = buildSystemPrompt("en", null, [], {
+      contentLanguage: lang,
+      responseLanguage: lang,
+    });
+    assert.ok(
+      !arabicLetters.test(prompt),
+      `the ${lang} prompt contains Arabic letters`,
+    );
+  }
+});
+
+test("Arabic in a retrieved record does not count as prompt text", () => {
+  // The exemption is precise: the record's CONTENT may be Arabic, because
+  // that is data. Everything the prompt itself says stays English.
+  const doc = kindDoc("ar-doc", "specific_text");
+  doc.content = "بسم الله والله أكبر";
+  const prompt = buildSystemPrompt("en", null, [doc], {
+    contentLanguage: "ar",
+    responseLanguage: "en",
+  });
+  assert.ok(prompt.includes("بسم الله والله أكبر"), "content must reach the model");
+
+  const withoutContent = prompt.replace(/content: [\s\S]*/g, "");
+  assert.ok(
+    !/[ء-يٱ-ۓ]/.test(withoutContent),
+    "instructions outside the content blocks must stay English",
+  );
 });

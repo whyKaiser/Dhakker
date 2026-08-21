@@ -7,6 +7,10 @@
 ///      يُتلىٰ. يُعرض في [GuidanceCard] المنفصلة.
 ///   2. كل ما ليس [SupplicationContentKind.specificText] يحمل وسمًا ظاهرًا
 ///      يقول إنه عام وغير مخصوص بالموضع.
+///   3. [SupplicationContentKind.contextualEvidence] أثر مرويّ يُساق
+///      للفائدة لا للترديد. يُعرض في [ContextualEvidenceCard] بنسبته
+///      ومصدره، بلا زر تشغيل — لا كدعاء (فيردّده الحاج) ولا كإرشاد (فيبدو
+///      صياغةً إدارية لا نصًّا مرويًّا).
 library;
 
 import 'package:flutter/material.dart';
@@ -25,6 +29,8 @@ class ContentKindBadge extends StatelessWidget {
         return const Color(0xFF2E7D32);
       case SupplicationContentKind.proceduralGuidance:
         return const Color(0xFF1565C0);
+      case SupplicationContentKind.contextualEvidence:
+        return const Color(0xFF5D4037);
       case SupplicationContentKind.mosqueEntry:
         return const Color(0xFF6A1B9A);
       case SupplicationContentKind.generalDua:
@@ -39,6 +45,8 @@ class ContentKindBadge extends StatelessWidget {
         return Icons.place_rounded;
       case SupplicationContentKind.proceduralGuidance:
         return Icons.info_outline_rounded;
+      case SupplicationContentKind.contextualEvidence:
+        return Icons.menu_book_rounded;
       case SupplicationContentKind.mosqueEntry:
         return Icons.mosque_rounded;
       case SupplicationContentKind.generalDua:
@@ -125,12 +133,23 @@ class GuidanceCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.body,
+    this.attribution,
+    this.isPropheticDirective = false,
     this.cardColor,
     this.textColor,
   });
 
   final String title;
   final String body;
+
+  /// من قاله وأين خُرِّج. يُعرض تحت النص حين يكون الإرشاد منقولًا لا مصوغًا،
+  /// فلا يظهر توجيه النبي ﷺ كأنه صياغة إدارية.
+  final String? attribution;
+
+  /// هل هذا الإرشاد حديث نبوي بلفظه؟ يغيّر العنوان الظاهر وحده — لا يمنحه
+  /// زر تشغيل ولا يجعله ذكرًا يُتلىٰ.
+  final bool isPropheticDirective;
+
   final Color? cardColor;
   final Color? textColor;
 
@@ -148,11 +167,88 @@ class GuidanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, size: 16, color: accent),
+              const SizedBox(width: 6),
+              Text(isPropheticDirective ? 'توجيه نبوي' : 'إرشاد',
+                  style: const TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (title.trim().isNotEmpty) ...[
+            Text(title,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w800,
+                    height: 1.6)),
+            const SizedBox(height: 6),
+          ],
+          Text(body, style: TextStyle(color: textColor, height: 1.9)),
+          if ((attribution ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(attribution!.trim(),
+                style: TextStyle(
+                    color: textColor?.withOpacity(0.75),
+                    fontSize: 11.5,
+                    height: 1.7,
+                    fontStyle: FontStyle.italic)),
+          ],
+          const SizedBox(height: 10),
+          const ContentKindBadge(
+              kind: SupplicationContentKind.proceduralGuidance),
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة الأثر الموثّق — نص مرويّ يُساق للفائدة، لا للترديد.
+///
+/// لا تحمل زر تشغيل، ولا تُسمّىٰ «دعاء». وتعرض النسبة والتخريج دائمًا،
+/// لأن قيمة هذا النص في كونه مرويًّا بإسناد: بطاقةٌ تخفي «قاله عمر رضي الله
+/// عنه، أخرجه البخاري ومسلم» تكون قد أسقطت سبب وجوده.
+class ContextualEvidenceCard extends StatelessWidget {
+  const ContextualEvidenceCard({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.attribution,
+    this.cardColor,
+    this.textColor,
+  });
+
+  final String title;
+  final String body;
+
+  /// من قاله وأين خُرِّج — إلزامي في هذه البطاقة، بخلاف [GuidanceCard].
+  final String attribution;
+
+  final Color? cardColor;
+  final Color? textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF5D4037);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardColor ?? Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Row(
             children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: accent),
+              Icon(Icons.menu_book_rounded, size: 16, color: accent),
               SizedBox(width: 6),
-              Text('إرشاد',
+              Text('أثر موثّق',
                   style: TextStyle(
                       color: accent,
                       fontWeight: FontWeight.w900,
@@ -169,24 +265,37 @@ class GuidanceCard extends StatelessWidget {
             const SizedBox(height: 6),
           ],
           Text(body, style: TextStyle(color: textColor, height: 1.9)),
+          const SizedBox(height: 8),
+          Text(attribution.trim(),
+              style: TextStyle(
+                  color: textColor?.withOpacity(0.75),
+                  fontSize: 11.5,
+                  height: 1.7,
+                  fontStyle: FontStyle.italic)),
           const SizedBox(height: 10),
           const ContentKindBadge(
-              kind: SupplicationContentKind.proceduralGuidance),
+              kind: SupplicationContentKind.contextualEvidence),
         ],
       ),
     );
   }
 }
 
-/// يقسم قائمة سجلات إلى (أدعية/أذكار) و(إرشادات)، حفاظًا على الفصل في كل
+/// يقسم قائمة سجلات إلى (أدعية/أذكار) و(إرشادات) و(آثار موثّقة)، حفاظًا على الفصل في كل
 /// شاشة تعرضها. أي شاشة تعرض القائمة الخام دون هذا التقسيم تكون قد خالفت
 /// القاعدة.
 class SupplicationPartition {
-  const SupplicationPartition(
-      {required this.recitable, required this.guidance});
+  const SupplicationPartition({
+    required this.recitable,
+    required this.guidance,
+    required this.evidence,
+  });
 
   final List<SupplicationModel> recitable;
   final List<SupplicationModel> guidance;
+
+  /// الآثار المرويّة للفائدة — بطاقتها الخاصة، ولا تُحسب دعاءً.
+  final List<SupplicationModel> evidence;
 
   factory SupplicationPartition.of(List<SupplicationModel> items) {
     return SupplicationPartition(
@@ -194,6 +303,10 @@ class SupplicationPartition {
       guidance: items
           .where((e) =>
               e.contentKind == SupplicationContentKind.proceduralGuidance)
+          .toList(),
+      evidence: items
+          .where((e) =>
+              e.contentKind == SupplicationContentKind.contextualEvidence)
           .toList(),
     );
   }
