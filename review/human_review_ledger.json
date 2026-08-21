@@ -6,7 +6,8 @@
   "notes": [
     "reviewedTextHash is sha256(text.ar + U+0000 + text.en) over the source-pack record AS IT STANDS. It is the same construction the admin screen uses for contentHash, so a reviewed record whose text is later edited can be detected: the ledger hash stops matching the pack.",
     "A ledger entry pinned to a hash means: 'a human reviewed THESE bytes'. It says nothing about any other bytes.",
-    "reviewStatus 'passed' means ready-for-verification, NOT verified."
+    "reviewStatus 'passed' means ready-for-verification, NOT verified.",
+    "reviewedPages is present only when a record spans more than one printed page, and must list exactly the pages its own sourceSection names. A record that spans pages 96-97 may not be recorded as though only page 96 was read."
   ],
   "reviews": [
     {
@@ -326,6 +327,112 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "«لَّآ» بالشدّة على اللام موجودة في المطبوع كما في الرسم الرسمي",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-016",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 96,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "f13b879dc5cf4edd02b432753ef3d67cb5a9db0080ab01dc7a5541f6975780a1",
+      "reviewedAt": "2026-08-21T03:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة وأرقام الآيات مطابقة للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-017",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 96,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "f1d8b0c645845acafd14b59b958f2562ebbccafce0dbc412d7f4e991e033f98f",
+      "reviewedAt": "2026-08-21T03:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة وأرقام الآيات مطابقة للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "«رَّبِّ» الأولى بالشدّة و«رَبِّ» الثانية بدونها",
+        "الآية 98 كاملة",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-018",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 96,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "d38c0f35c6d42071c1711eb21312358288a2f0881c4c7c1683dcb7ffaefbe24a",
+      "reviewedAt": "2026-08-21T03:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة وأرقام الآيات مطابقة للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "الآية 66 كاملة",
+        "علامة الوقف ۖ بعد «جهنم» موجودة",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-019",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 96,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "8bdec84efb863301630f08dc018b27998ec1f43bbbf839e8dedb8e3a30a0b2c7",
+      "reviewedAt": "2026-08-21T03:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة وأرقام الآيات مطابقة للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "الرسم في «أَعۡيُنٖ» مطابق",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-020",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 96,
+      "reviewedPages": [
+        96,
+        97
+      ],
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "9071b12d6d2fec215c2e0b8014ff7ffa60360fa962420d918dec5726db6fd2a2",
+      "reviewedAt": "2026-08-21T03:40:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة وأرقام الآيات مطابقة للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "يبدأ أسفل الصفحة 96 عند «رَبِّ أَوۡزِعۡنِيٓ…» ويكتمل أعلى الصفحة 97 حتى «ٱلصَّٰلِحِينَ»",
+        "الصفحتان 96 و97 كلتاهما روجعتا بصريًا",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
       ]
     }
