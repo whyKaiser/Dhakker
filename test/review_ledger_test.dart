@@ -209,6 +209,29 @@ void main() {
       }
     });
 
+    test('a blocked record can never read as ready for import', () {
+      // The two ways a rejection could quietly evaporate: the status flips
+      // to passed while the exclusion stays, or the exclusion is dropped
+      // while the status stays blocked. Neither may pass silently.
+      final blocked = reviews
+          .where((r) => r['reviewStatus'] == 'blocked')
+          .map((r) => r['recordId'])
+          .toSet();
+      final excluded = reviews
+          .where((r) => r['excludedFromImport'] == true)
+          .map((r) => r['recordId'])
+          .toSet();
+      expect(excluded, blocked,
+          reason: 'the excluded set and the blocked set must be identical');
+
+      final passed = reviews
+          .where((r) => r['reviewStatus'] == 'passed')
+          .map((r) => r['recordId'])
+          .toSet();
+      expect(passed.intersection(blocked), isEmpty,
+          reason: 'a record cannot be both passed and blocked');
+    });
+
     test('no record is reviewed twice under conflicting outcomes', () {
       final seen = <String, String>{};
       for (final r in reviews) {
@@ -220,6 +243,83 @@ void main() {
         }
         seen[id] = status;
       }
+    });
+  });
+
+  group('the summary is recomputed, never asserted', () {
+    final summary = ledger['summary'] as Map<String, dynamic>;
+
+    int countWhere(bool Function(Map<String, dynamic>) p) =>
+        reviews.where(p).length;
+
+    test('the counts match the reviews they summarise', () {
+      expect(summary['totalReviews'], reviews.length);
+      expect(
+          summary['passed'], countWhere((r) => r['reviewStatus'] == 'passed'));
+      expect(summary['blocked'],
+          countWhere((r) => r['reviewStatus'] == 'blocked'));
+      expect(
+          summary['failed'], countWhere((r) => r['reviewStatus'] == 'failed'));
+      expect(
+          summary['totalReviews'],
+          (summary['passed'] as int) +
+              (summary['blocked'] as int) +
+              (summary['failed'] as int),
+          reason: 'the statuses do not account for every review');
+    });
+
+    test('the per-uncertainty tally matches', () {
+      final tally = <String, int>{};
+      for (final r in reviews) {
+        final u = r['uncertaintyResolved'] as String?;
+        if (u == null) continue;
+        tally[u] = (tally[u] ?? 0) + 1;
+      }
+      expect(summary['byUncertainty'], tally);
+    });
+
+    test('U5 is complete: all 22 records reviewed, 21 of them passed', () {
+      final u5 = reviews.where((r) => r['uncertaintyResolved'] == 'U5');
+      expect(u5.length, 22, reason: 'U5 has 22 records');
+      expect(u5.where((r) => r['reviewStatus'] == 'passed').length, 21);
+      expect(u5.where((r) => r['reviewStatus'] != 'passed').length, 1);
+
+      // Every U5 record in the authority file must actually appear — a
+      // tally of 22 proves nothing if it counted one record twice.
+      final authority =
+          _readJson('source_packs/quran_authority_hafs_uthmani.json');
+      final expected = (authority['ayat'] as List)
+          .cast<Map<String, dynamic>>()
+          .where((a) => a['uncertainty'] == 'U5')
+          .map((a) => a['duaId'] as String)
+          .toSet();
+      expect(u5.map((r) => r['recordId']).toSet(), expected);
+    });
+
+    test('the named blocked and excluded ids are the real ones', () {
+      expect(
+          (summary['blockedRecordIds'] as List).cast<String>().toSet(),
+          reviews
+              .where((r) => r['reviewStatus'] == 'blocked')
+              .map((r) => r['recordId'] as String)
+              .toSet());
+      expect(
+          (summary['excludedFromImportRecordIds'] as List)
+              .cast<String>()
+              .toSet(),
+          reviews
+              .where((r) => r['excludedFromImport'] == true)
+              .map((r) => r['recordId'] as String)
+              .toSet());
+    });
+
+    test('the summary cannot claim a verification that did not happen', () {
+      expect(summary['firestoreVerificationPerformed'], isFalse);
+      expect(summary['verifiedRecords'], 0);
+      // And the pack must agree — a zero here has to be true of the data,
+      // not merely written down.
+      expect(entries.where((e) => e['verificationStatus'] != 'unverified'),
+          isEmpty);
     });
   });
 }

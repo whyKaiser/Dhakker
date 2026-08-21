@@ -435,6 +435,69 @@
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
       ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-021",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 97,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "0d43340cc880bc36090f880b13cffabfd8959fc76607f62fb6b7a4b70a29782d",
+      "reviewedAt": "2026-08-21T04:05:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "التتمة هي تتمة الأحقاف «وَأَصۡلِحۡ لِي فِي ذُرِّيَّتِيٓ…»، وليست تتمة النمل",
+        "علامة الوقف ۖ بعد «ذريتي» موجودة",
+        "السجل كامل على الصفحة 97 وحدها ولا يمتد إلى الصفحة 98",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية الآية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-022",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "reviewedPage": 97,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextEdition": "KFGQPC Hafs Uthmanic Data v2.0 (2022-09-07)",
+      "reviewedTextHash": "6097e0eec82c65e3bafa948c36d619d6dd832611e90c0e5ce623d0a88326de6d",
+      "reviewedAt": "2026-08-21T04:05:00Z",
+      "uncertaintyResolved": "U5",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'، والاعتماد إجراء منفصل يقوم به الأدمن داخل التطبيق.",
+      "reviewerConfirmed": [
+        "السورة ورقم الآية مطابقان للمطبوع",
+        "بداية المقطع ونهايته مطابقتان للمطبوع",
+        "ينتهي عند «رَّحِيمٌ»، والشدّة والتنوينات مطابقة",
+        "لا توجد علامة وقف في المطبوع",
+        "السجل كامل على الصفحة 97 وحدها ولا يمتد إلى الصفحة 98",
+        "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية الآية",
+        "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
+      ]
     }
-  ]
+  ],
+  "summary": {
+    "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات. لا يُكتب يدويًا ولا يُعدَّل بمعزل عن المراجعات.",
+    "totalReviews": 23,
+    "passed": 22,
+    "blocked": 1,
+    "failed": 0,
+    "byUncertainty": {
+      "U12": 1,
+      "U5": 22
+    },
+    "blockedRecordIds": [
+      "moia-mukhtasar-1446-general-009"
+    ],
+    "excludedFromImportRecordIds": [
+      "moia-mukhtasar-1446-general-009"
+    ],
+    "firestoreVerificationPerformed": false,
+    "verifiedRecords": 0
+  }
 }
