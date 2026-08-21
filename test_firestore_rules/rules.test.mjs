@@ -22,7 +22,10 @@ import {
   assertFails,
   assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import {
+  doc, getDoc, setDoc, updateDoc, deleteDoc,
+  collection, query, where, getDocs,
+} from "firebase/firestore";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rules = fs.readFileSync(path.join(here, "..", "firestore.rules"), "utf8");
@@ -469,4 +472,150 @@ test("production supplications behaviour is unchanged by the staging rule", asyn
   await seed("d1", legacyRecord());
   await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "d1")));
   await assertFails(getDoc(doc(anonDb(), "supplications", "d1")));
+});
+
+// ── Ritual-scoped retrieval at the mawaqit ──────────────────────────────
+//
+// The Talbiyah carries `zoneKey: ""` because the source ties it to the rite,
+// not to a place. It reaches a miqat through `appliesToZoneKeys`, and the
+// app queries that together with `isActive` and `verificationStatus`.
+//
+// Why those two filters live in the QUERY and not in the client: this
+// ruleset allows `allow read: if isSignedIn()` on `supplications`, with no
+// per-document predicate. Rules are not filters. Anything the query does not
+// constrain genuinely arrives on the device, so dropping unverified records
+// after the fetch would ship them to the handset first.
+//
+// What this test does and does not prove: it exercises the real ruleset
+// against the emulator, so it proves the query is permitted and that the
+// filters select the right documents. It does NOT prove the composite index
+// exists — the emulator serves any query without one. That index is declared
+// in firestore.indexes.json and must be deployed; without it the production
+// query fails and `getSupplicationsByZone` swallows the error into an empty
+// list, so the Talbiyah would silently vanish from every miqat.
+
+const MIQATS = [
+  "miqat_dhul_hulayfah",
+  "miqat_yalamlam",
+  "miqat_qarn_manazil",
+];
+
+async function seedRitualFixtures() {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    // Verified + active: the only one a pilgrim may be shown.
+    await setDoc(doc(db, "supplications/talbiyah"), {
+      ...completeProvenance({ duaId: "talbiyah" }),
+      zoneKey: "",
+      ritualKey: "ihram",
+      appliesToZoneKeys: MIQATS,
+    });
+    // Unverified: reviewed by nobody, must never surface.
+    await setDoc(doc(db, "supplications/unreviewed"), {
+      ...completeProvenance({ duaId: "unreviewed" }),
+      verificationStatus: "unverified",
+      verifiedAt: null,
+      verifiedBy: null,
+      zoneKey: "",
+      appliesToZoneKeys: MIQATS,
+    });
+    // Verified but withdrawn from display.
+    await setDoc(doc(db, "supplications/retired"), {
+      ...completeProvenance({ duaId: "retired" }),
+      isActive: false,
+      zoneKey: "",
+      appliesToZoneKeys: MIQATS,
+    });
+    // Verified and active, but scoped to one miqat only.
+    await setDoc(doc(db, "supplications/one-miqat-only"), {
+      ...completeProvenance({ duaId: "one-miqat-only" }),
+      zoneKey: "",
+      appliesToZoneKeys: ["miqat_yalamlam"],
+    });
+  });
+}
+
+/** Exactly the query the app issues. */
+function ritualQuery(db, zoneKey) {
+  return query(
+    collection(db, "supplications"),
+    where("appliesToZoneKeys", "array-contains", zoneKey),
+    where("isActive", "==", true),
+    where("verificationStatus", "==", "verified"),
+  );
+}
+
+for (const miqat of MIQATS) {
+  test(`a verified, active ritual text is retrievable at ${miqat}`, async () => {
+    await seedRitualFixtures();
+    const snap = await assertSucceeds(getDocs(ritualQuery(pilgrimDb(), miqat)));
+    const ids = snap.docs.map((d) => d.id).sort();
+
+    assert.ok(
+      ids.includes("talbiyah"),
+      `the Talbiyah must be reachable at ${miqat}`,
+    );
+    // Neither the unverified nor the retired record may come back, and the
+    // query — not the client — is what excluded them.
+    assert.ok(!ids.includes("unreviewed"));
+    assert.ok(!ids.includes("retired"));
+  });
+}
+
+test("a text scoped to one miqat does not appear at the others", async () => {
+  await seedRitualFixtures();
+  const at = async (m) =>
+    (await getDocs(ritualQuery(pilgrimDb(), m))).docs.map((d) => d.id);
+
+  assert.ok((await at("miqat_yalamlam")).includes("one-miqat-only"));
+  assert.ok(!(await at("miqat_dhul_hulayfah")).includes("one-miqat-only"));
+  assert.ok(!(await at("miqat_qarn_manazil")).includes("one-miqat-only"));
+});
+
+test("the ritual query is not permission-denied for an ordinary pilgrim", async () => {
+  await seedRitualFixtures();
+  // The whole point: an ordinary signed-in user runs this on every zone
+  // change. If the ruleset ever narrows, this fails loudly here rather than
+  // silently emptying the dua list on a pilgrim's phone mid-Umrah.
+  await assertSucceeds(getDocs(ritualQuery(pilgrimDb(), MIQATS[0])));
+});
+
+test("an unauthenticated client cannot run the ritual query at all", async () => {
+  await seedRitualFixtures();
+  await assertFails(getDocs(ritualQuery(anonDb(), MIQATS[0])));
+});
+
+test("a ritual text is returned once, even though two paths could match it", async () => {
+  // A record carrying BOTH a zoneKey and an appliesToZoneKeys entry matches
+  // the zoneKey query and the ritual query. The service merges by duaId, so
+  // the pilgrim must not see it twice.
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "supplications/double-match"), {
+      ...completeProvenance({ duaId: "double-match" }),
+      zoneKey: "miqat_yalamlam",
+      appliesToZoneKeys: ["miqat_yalamlam"],
+    });
+  });
+  const db = pilgrimDb();
+  const byZoneKey = await getDocs(
+    query(
+      collection(db, "supplications"),
+      where("zoneKey", "==", "miqat_yalamlam"),
+      where("isActive", "==", true),
+      where("verificationStatus", "==", "verified"),
+    ),
+  );
+  const byRitual = await getDocs(ritualQuery(db, "miqat_yalamlam"));
+
+  const merged = new Map();
+  for (const snap of [byZoneKey, byRitual]) {
+    for (const d of snap.docs) {
+      if (!merged.has(d.id)) merged.set(d.id, d);
+    }
+  }
+  assert.equal(
+    [...merged.keys()].filter((k) => k === "double-match").length,
+    1,
+    "a record matching two retrieval paths must be merged, not duplicated",
+  );
 });

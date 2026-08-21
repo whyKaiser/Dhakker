@@ -56,6 +56,30 @@
       ]
     },
     {
+      "//": [
+        "Ritual-scoped texts (e.g. the Talbiyah) at a given zone. The app",
+        "queries appliesToZoneKeys array-contains together with equality",
+        "filters on isActive and verificationStatus.",
+        "",
+        "Both filters belong in the QUERY, not in the client: firestore.rules",
+        "allows any signed-in user to read `supplications` with no",
+        "per-document predicate. Rules are not filters — whatever the query",
+        "leaves unconstrained really does arrive on the device.",
+        "",
+        "Without this index the query FAILS, and the catch in",
+        "getSupplicationsByZone turns that failure into an empty list: the",
+        "Talbiyah would silently not appear at any miqat, with no error",
+        "anywhere. Deploy before expecting it to show up."
+      ],
+      "collectionGroup": "supplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
+        { "fieldPath": "appliesToZoneKeys", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
       "//": "Future knowledge_chunks registry (empty today; see KNOWLEDGE_COLLECTION).",
       "collectionGroup": "knowledge_chunks",
       "queryScope": "COLLECTION",

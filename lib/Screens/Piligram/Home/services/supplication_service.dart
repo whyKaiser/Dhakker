@@ -49,11 +49,17 @@ class SupplicationService {
       // بـzoneId يجدها — كانت تختفي عن **كل** ميقات. الحل ليس تثبيتها
       // بميقات واحد (فتختفي عن الاثنين الآخرين) بل الاستعلام بقائمة
       // المناطق التي ينطبق عليها النص.
+      //
+      // القيود مطبَّقة على الخادم لا على العميل: `firestore.rules` تسمح
+      // بقراءة `supplications` لأي مسجَّل بلا قيد على المستند، فالقواعد
+      // ليست مرشِّحًا — ما لا يُقيَّد في الاستعلام يصل فعلًا إلى الجهاز.
+      // يحتاج هذا المزيج فهرسًا مركّبًا (انظر firestore.indexes.json).
       if (zoneKey.trim().isNotEmpty) {
         final ritualQuery = await firestore
             .collection('supplications')
             .where('appliesToZoneKeys', arrayContains: zoneKey.trim())
             .where('isActive', isEqualTo: true)
+            .where('verificationStatus', isEqualTo: 'verified')
             .get();
         for (final doc in ritualQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
