@@ -848,3 +848,126 @@ test("the two reclassified Batch C records are held out of production", () => {
     c.reviewedIncluded.some((r) => r.duaId === "moia-mukhtasar-1446-tawaf-takbir-hajar"),
   );
 });
+
+// ── recitationPolicy validation ─────────────────────────────────────────
+
+import {
+  SUPPORTED_FREQUENCIES,
+  SUPPORTED_TRIGGERS,
+  SUPPORTED_INTERLEAVES,
+  validateRecitationPolicy,
+} from "./import_source_pack.mjs";
+
+const once = () => ({
+  frequency: "once_per_ritual",
+  trigger: "first_safa_approach",
+  autoRepeat: false,
+});
+const thrice = () => ({
+  frequency: "repeat_count",
+  repeatCount: 3,
+  interleave: "personal_dua",
+  autoRepeat: false,
+});
+
+test("the two real policies validate", () => {
+  assert.doesNotThrow(() => validateRecitationPolicy(once(), "e"));
+  assert.doesNotThrow(() => validateRecitationPolicy(thrice(), "e"));
+  assert.doesNotThrow(() => validateRecitationPolicy(null, "e"));
+  assert.doesNotThrow(() => validateRecitationPolicy(undefined, "e"));
+});
+
+test("there is no mandatory frequency", () => {
+  assert.deepEqual(SUPPORTED_FREQUENCIES, ["once_per_ritual", "repeat_count"]);
+  for (const bad of ["mandatory", "required", "always", ""]) {
+    assert.throws(
+      () => validateRecitationPolicy({ frequency: bad }, "e"),
+      /frequency must be one of/,
+    );
+  }
+});
+
+test("repeatCount belongs only to repeat_count, and only 1-10", () => {
+  assert.throws(
+    () => validateRecitationPolicy({ ...once(), repeatCount: 3 }, "e"),
+    /belongs only with/,
+  );
+  for (const n of [0, 11, -1, 2.5, "3", null, undefined]) {
+    assert.throws(
+      () => validateRecitationPolicy(
+        { frequency: "repeat_count", repeatCount: n }, "e"),
+      /repeatCount must be an integer 1-10/,
+      `repeatCount ${n}`,
+    );
+  }
+});
+
+test("trigger and interleave accept only declared values", () => {
+  assert.throws(
+    () => validateRecitationPolicy({ ...once(), trigger: "whenever" }, "e"),
+    /unknown recitationPolicy.trigger/,
+  );
+  assert.throws(
+    () => validateRecitationPolicy({ ...thrice(), interleave: "a_song" }, "e"),
+    /unknown recitationPolicy.interleave/,
+  );
+  assert.ok(SUPPORTED_TRIGGERS.includes("first_safa_approach"));
+  assert.deepEqual(SUPPORTED_INTERLEAVES, ["personal_dua"]);
+});
+
+test("autoRepeat must stay false when an interleave is present", () => {
+  // A repetition the pilgrim fills with their own dua cannot be performed
+  // for them by a player.
+  assert.throws(
+    () => validateRecitationPolicy({ ...thrice(), autoRepeat: true }, "e"),
+    /autoRepeat must stay false/,
+  );
+  // Without an interleave it is merely a boolean.
+  assert.doesNotThrow(() => validateRecitationPolicy(
+    { frequency: "repeat_count", repeatCount: 3, autoRepeat: true }, "e"));
+});
+
+test("unknown policy fields are refused, never ignored", () => {
+  assert.throws(
+    () => validateRecitationPolicy({ ...once(), mandatory: true }, "e"),
+    /unknown field "mandatory"/,
+  );
+  assert.throws(
+    () => validateRecitationPolicy([], "e"),
+    /must be an object or null/,
+  );
+});
+
+test("the pack's policies import intact", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  assert.deepEqual(built.get("moia-1446-safa-ayah").recitationPolicy, {
+    frequency: "once_per_ritual",
+    trigger: "first_safa_approach",
+    autoRepeat: false,
+  });
+  assert.deepEqual(built.get("moia-1446-safa-dhikr").recitationPolicy, {
+    frequency: "repeat_count",
+    repeatCount: 3,
+    interleave: "personal_dua",
+    autoRepeat: false,
+  });
+  // A record the source did not qualify keeps an explicit null.
+  assert.equal(built.get("moia-1446-return-hajar").recitationPolicy, null);
+});
+
+test("Batch D records stay out of production", () => {
+  const c = classifyForProduction(buildRecords(realPack), loadLedger());
+  for (const id of [
+    "moia-1446-return-hajar",
+    "moia-1446-safa-ayah",
+    "moia-1446-safa-dhikr",
+  ]) {
+    assert.ok(c.deploymentHeld.includes(id), `${id} must be held`);
+  }
+});
+
+test("a policy does not make a record importable", () => {
+  // Provenance and performance are different axes; neither is clearance.
+  const c = classifyForProduction(buildRecords(realPack), loadLedger());
+  assert.ok(!c.reviewedIncluded.some((r) => r.duaId === "moia-1446-safa-dhikr"));
+});

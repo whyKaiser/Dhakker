@@ -415,6 +415,7 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                                 title: item.dua.titleByLanguage(langCode),
                                 text: item.dua.textByLanguage(langCode),
                                 kind: item.dua.contentKind,
+                                policy: item.dua.recitationPolicy,
                                 zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
                                 buttonText: s.duasPlayButton,
                                 onPlay: () async => await _playDua(item.dua),
@@ -686,11 +687,15 @@ class _DuaResultCard extends StatefulWidget {
   /// عام على أنه مخصوص بهذا المكان.
   final SupplicationContentKind kind;
 
+  /// كيفية الأداء إن نصّ عليها المصدر — «مرة واحدة»، «ثلاث مرات».
+  final RecitationPolicy? policy;
+
   const _DuaResultCard({
     required this.palette,
     required this.title,
     required this.text,
     required this.kind,
+    this.policy,
     required this.zoneName,
     required this.buttonText,
     required this.onPlay,
@@ -754,6 +759,10 @@ class _DuaResultCardState extends State<_DuaResultCard> {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: ContentKindBadge(kind: widget.kind),
+          ),
+          RecitationPolicyNote(
+            policy: widget.policy,
+            textColor: widget.palette.text,
           ),
           const SizedBox(height: 14),
           Text(

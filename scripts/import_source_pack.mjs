@@ -209,6 +209,84 @@ export function validateSourceReferences(refs, where) {
   });
 }
 
+// ── Recitation policy ───────────────────────────────────────────────────
+//
+// HOW a text is performed: how many times, when, and whether anything comes
+// between repetitions. Deliberately NOT folded into `usageQualifier`, which
+// describes what a text IS (an optional addition). "Permissible" and "three
+// times" are not competing values of one field; they are separate facts that
+// can both be true of one text.
+//
+// This object never makes a record recitable — `contentKind` decides that
+// and stays authoritative — and it never touches verification.
+export const SUPPORTED_FREQUENCIES = ["once_per_ritual", "repeat_count"];
+export const SUPPORTED_TRIGGERS = [
+  "first_safa_approach",
+  "each_marwah_arrival",
+  "on_entry",
+];
+export const SUPPORTED_INTERLEAVES = ["personal_dua"];
+
+const POLICY_KNOWN_KEYS = new Set([
+  "frequency",
+  "repeatCount",
+  "trigger",
+  "interleave",
+  "autoRepeat",
+]);
+
+/** Validates one entry's recitationPolicy. Throws on the first fault. */
+export function validateRecitationPolicy(policy, where) {
+  if (policy === undefined || policy === null) return;
+  if (typeof policy !== "object" || Array.isArray(policy)) {
+    throw new Error(`${where}: recitationPolicy must be an object or null.`);
+  }
+  for (const key of Object.keys(policy)) {
+    if (!POLICY_KNOWN_KEYS.has(key)) {
+      throw new Error(`${where}: recitationPolicy has unknown field "${key}".`);
+    }
+  }
+  if (!SUPPORTED_FREQUENCIES.includes(policy.frequency)) {
+    throw new Error(
+      `${where}: recitationPolicy.frequency must be one of ` +
+        `${SUPPORTED_FREQUENCIES.join(", ")}.`,
+    );
+  }
+  if (policy.frequency === "repeat_count") {
+    if (!Number.isInteger(policy.repeatCount) ||
+        policy.repeatCount < 1 || policy.repeatCount > 10) {
+      throw new Error(
+        `${where}: recitationPolicy.repeatCount must be an integer 1-10.`,
+      );
+    }
+  } else if ("repeatCount" in policy) {
+    throw new Error(
+      `${where}: recitationPolicy.repeatCount belongs only with ` +
+        'frequency "repeat_count".',
+    );
+  }
+  if ("trigger" in policy && !SUPPORTED_TRIGGERS.includes(policy.trigger)) {
+    throw new Error(`${where}: unknown recitationPolicy.trigger "${policy.trigger}".`);
+  }
+  if ("interleave" in policy &&
+      !SUPPORTED_INTERLEAVES.includes(policy.interleave)) {
+    throw new Error(
+      `${where}: unknown recitationPolicy.interleave "${policy.interleave}".`,
+    );
+  }
+  if ("autoRepeat" in policy && typeof policy.autoRepeat !== "boolean") {
+    throw new Error(`${where}: recitationPolicy.autoRepeat must be a boolean.`);
+  }
+  // A repetition the pilgrim fills with their own dua cannot be performed by
+  // a player on their behalf.
+  if (policy.autoRepeat === true && "interleave" in policy) {
+    throw new Error(
+      `${where}: recitationPolicy.autoRepeat must stay false when ` +
+        "interleave is present.",
+    );
+  }
+}
+
 // ── The document schema ─────────────────────────────────────────────────
 //
 // Every field written to Firestore is listed here explicitly. This replaces
@@ -284,6 +362,9 @@ const OPTIONAL_FIELDS = {
   // Where the ministry says the text comes from. Empty array = the page
   // cited nothing, which is different from "we have not looked".
   sourceReferences: [],
+
+  // How the source says the text is performed. null = it did not say.
+  recitationPolicy: null,
 
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
@@ -390,6 +471,7 @@ export function buildRecords(pack) {
     }
 
     validateSourceReferences(entry.sourceReferences, where);
+    validateRecitationPolicy(entry.recitationPolicy, where);
 
     const textAr = String(entry?.text?.ar || "").trim();
     if (!textAr) throw new Error(`${where}: empty Arabic text.`);

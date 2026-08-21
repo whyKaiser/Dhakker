@@ -219,6 +219,92 @@ class SourceReference {
       };
 }
 
+/// كيف يُؤدَّى النص: كم مرة، ومتى، وهل يتخلّله شيء.
+///
+/// منفصل عن [SupplicationUsageQualifier] عمدًا. ذاك يصف **صفة** النص
+/// (زيادة جائزة)، وهذا يصف **كيفية أدائه** (مرة واحدة، ثلاث مرات بينها
+/// دعاء). خلطهما في حقل واحد يجعل «جائز» و«ثلاث مرات» قيمتين متنافيتين
+/// في خانة واحدة، وهما وصفان مستقلان قد يجتمعان.
+///
+/// **لا يجعل هذا الكائن نصًّا غيرَ متلوٍّ متلوًّا.** [SupplicationContentKind]
+/// وحده يقرّر ذلك، ويبقى هو الحَكَم.
+class RecitationPolicy {
+  const RecitationPolicy({
+    required this.frequency,
+    this.repeatCount,
+    this.trigger,
+    this.interleave,
+    this.autoRepeat = false,
+  });
+
+  /// `once_per_ritual` أو `repeat_count`.
+  final String frequency;
+
+  /// عدد المرات — مع `repeat_count` فقط.
+  final int? repeatCount;
+
+  /// متى يُقال (قيم محصورة).
+  final String? trigger;
+
+  /// ما يتخلّل التكرار (قيم محصورة).
+  final String? interleave;
+
+  /// هل يُعاد تلقائيًّا؟ الافتراض `false`، ويلزم بقاؤه false مع [interleave]:
+  /// تكرارٌ يتخلّله دعاء المرء لا يمكن أن يؤدّيه المشغّل عنه.
+  final bool autoRepeat;
+
+  bool get isOncePerRitual => frequency == 'once_per_ritual';
+
+  /// التعليمة الظاهرة للحاج. نصّها مقرَّر هنا، لا يولّده نموذج.
+  String instructionAr() {
+    if (isOncePerRitual) {
+      return 'تُقرأ مرة واحدة عند بداية السعي، ولا تُعاد';
+    }
+    if (frequency == 'repeat_count' && repeatCount != null) {
+      if (interleave == 'personal_dua') {
+        return 'يُكرَّر $repeatCount مرات، ويدعو بين المرات';
+      }
+      return 'يُكرَّر $repeatCount مرات';
+    }
+    return '';
+  }
+
+  static RecitationPolicy? fromJson(dynamic raw) {
+    if (raw is! Map) return null;
+    final m = Map<String, dynamic>.from(raw);
+    final freq = (m['frequency'] ?? '').toString().trim();
+    // قيمة غير معروفة تُقرأ null — لا نخترع سياسة لا نفهمها.
+    if (freq != 'once_per_ritual' && freq != 'repeat_count') return null;
+    final count = (m['repeatCount'] as num?)?.toInt();
+    if (freq == 'repeat_count' && (count == null || count < 1 || count > 10)) {
+      return null;
+    }
+    String? controlled(String key, List<String> allowed) {
+      final v = (m[key] ?? '').toString().trim();
+      return allowed.contains(v) ? v : null;
+    }
+
+    final interleave = controlled('interleave', const ['personal_dua']);
+    return RecitationPolicy(
+      frequency: freq,
+      repeatCount: freq == 'repeat_count' ? count : null,
+      trigger: controlled('trigger',
+          const ['first_safa_approach', 'each_marwah_arrival', 'on_entry']),
+      interleave: interleave,
+      // يُفرض false عند وجود interleave مهما قال المصدر.
+      autoRepeat: interleave == null && m['autoRepeat'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'frequency': frequency,
+        if (repeatCount != null) 'repeatCount': repeatCount,
+        if (trigger != null) 'trigger': trigger,
+        if (interleave != null) 'interleave': interleave,
+        'autoRepeat': autoRepeat,
+      };
+}
+
 class SupplicationModel {
   final String duaId;
   final String zoneId;
@@ -261,6 +347,9 @@ class SupplicationModel {
   /// ولا في توثيقه — هو بيان مصدر لا صفة محتوى.
   final List<SourceReference> sourceReferences;
 
+  /// كيفية الأداء إن نصّ عليها المصدر. `null` = لم ينصّ، وليس «بلا قيد».
+  final RecitationPolicy? recitationPolicy;
+
   /// سطر العزو الظاهر: الموضع في المطبوع ثم الجهة. فارغ إن غابا معًا.
   String get attribution {
     final parts = [sourceSection.trim(), authority.trim()]
@@ -289,6 +378,7 @@ class SupplicationModel {
     this.authority = '',
     this.sourceSection = '',
     this.sourceReferences = const [],
+    this.recitationPolicy,
   });
 
   /// هل يُشغَّل تلقائيًّا عند دخول المنطقة؟ يجمع الشرطين: أن يكون نصًّا
@@ -369,6 +459,7 @@ class SupplicationModel {
       authority: (data['authority'] ?? '').toString().trim(),
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
       sourceReferences: SourceReference.listFrom(data['sourceReferences']),
+      recitationPolicy: RecitationPolicy.fromJson(data['recitationPolicy']),
     );
   }
 
@@ -431,6 +522,8 @@ class SupplicationModel {
         // Persisted so an evidence card keeps its citations offline too.
         'sourceReferences':
             sourceReferences.map((e) => e.toJson()).toList(growable: false),
+        // Persisted so the once-only / repeat instruction survives offline.
+        'recitationPolicy': recitationPolicy?.toJson(),
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -483,6 +576,7 @@ class SupplicationModel {
       authority: (data['authority'] ?? '').toString().trim(),
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
       sourceReferences: SourceReference.listFrom(data['sourceReferences']),
+      recitationPolicy: RecitationPolicy.fromJson(data['recitationPolicy']),
     );
   }
 }
