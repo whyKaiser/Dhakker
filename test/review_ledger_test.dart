@@ -255,6 +255,58 @@ void main() {
           reason: 'a record cannot be both passed and blocked');
     });
 
+    test('merging the code does not, on its own, lift a deployment hold', () {
+      // The failure this guards against: someone merges the PR, sees the
+      // field exist in the repository, and clears the hold. But the field
+      // existing in `main` is not the field existing on the handset a
+      // pilgrim is holding. An import makes the record visible to EVERY
+      // released client, including older ones that know nothing about
+      // `usageQualifier` — those would show the addition with no badge and
+      // play it automatically, which is the exact harm the field prevents.
+      //
+      // So all three conditions must hold, and the hold stays until they do.
+      for (final r in reviews) {
+        if (r['deploymentBlocked'] != true) continue;
+        final lift =
+            r['deploymentBlockLiftConditions'] as Map<String, dynamic>?;
+        expect(lift, isNotNull,
+            reason: '${r['recordId']} is held back without stating what '
+                'would lift the hold');
+
+        for (final condition in const [
+          'codeMerged',
+          'appAndWorkerReleased',
+          'badgeAndNoAutoPlayVerifiedOnDevice',
+        ]) {
+          expect(lift!.containsKey(condition), isTrue,
+              reason: '${r['recordId']} omits the "$condition" condition');
+        }
+
+        final allMet = [
+          'codeMerged',
+          'appAndWorkerReleased',
+          'badgeAndNoAutoPlayVerifiedOnDevice'
+        ].every((k) => lift![k] == true);
+
+        if (!allMet) {
+          // Unmet conditions and a lifted hold cannot coexist.
+          expect(lift!['liftedAt'], isNull,
+              reason: '${r['recordId']} records a lift date while its '
+                  'conditions are unmet');
+          expect(r['deploymentBlocked'], isTrue);
+          expect(r['excludedFromImport'], isTrue,
+              reason: '${r['recordId']} still has unmet conditions but is no '
+                  'longer excluded from import');
+        } else {
+          // Even with every condition met, lifting is a recorded human act.
+          expect(lift!['liftedAt'], isNotNull,
+              reason: '${r['recordId']} met its conditions but no one '
+                  'recorded lifting the hold');
+          expect(lift['liftedBy'], isNotNull);
+        }
+      }
+    });
+
     test('a deployment hold names its reason and never blames the text', () {
       for (final r in reviews) {
         if (r['deploymentBlocked'] != true) continue;

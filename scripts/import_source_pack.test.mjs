@@ -389,3 +389,130 @@ test("the Talbiyah keeps its ritual scope and its empty zoneKey", () => {
     ]);
   }
 });
+
+// ── The ledger as an operational gate ───────────────────────────────────
+//
+// Until this existed the ledger was documentation: it recorded that a record
+// must not ship, and nothing stopped an import from shipping it. These tests
+// pin the enforcement, because a hold nobody enforces expires the first time
+// someone runs an import in a hurry.
+
+import {
+  applyLedger,
+  assertLedgerMatchesPack,
+  contentHashOf,
+  loadLedger,
+  LEDGER_PATH,
+} from "./import_source_pack.mjs";
+
+const G009 = "moia-mukhtasar-1446-general-009";
+
+test("the real ledger currently blocks general-009 and the ziyadah", () => {
+  const { included, excluded } = applyLedger(buildRecords(realPack), loadLedger());
+  const excludedIds = excluded.map((e) => e.duaId).sort();
+
+  assert.deepEqual(excludedIds, [G009, ZIYADAH].sort());
+  for (const id of [G009, ZIYADAH]) {
+    assert.ok(
+      !included.some((r) => r.duaId === id),
+      `${id} must not be writable while the ledger holds it back`,
+    );
+  }
+  // Every exclusion states why — an unexplained hold outlives its cause.
+  for (const e of excluded) assert.ok(e.reasons.length > 0);
+});
+
+test("each of the three grounds excludes on its own", () => {
+  const records = buildRecords(realPack);
+  const one = records[0];
+  for (const review of [
+    { recordId: one.duaId, reviewStatus: "blocked", blockReason: "x" },
+    { recordId: one.duaId, deploymentBlocked: true, deploymentBlockReason: "y" },
+    { recordId: one.duaId, excludedFromImport: true },
+  ]) {
+    const { included, excluded } = applyLedger([one], { reviews: [review] });
+    assert.equal(included.length, 0);
+    assert.equal(excluded.length, 1);
+  }
+});
+
+test("a passed record with no hold is still included", () => {
+  const one = buildRecords(realPack)[0];
+  const { included } = applyLedger([one], {
+    reviews: [{ recordId: one.duaId, reviewStatus: "passed" }],
+  });
+  assert.equal(included.length, 1);
+});
+
+test("an unreviewed record is not blocked by the ledger's silence", () => {
+  // The ledger says which records must NOT ship. Absence from it is not a
+  // hold — otherwise every import would be empty until all 85 are reviewed.
+  const one = buildRecords(realPack)[0];
+  const { included } = applyLedger([one], { reviews: [] });
+  assert.equal(included.length, 1);
+});
+
+test("staging --limit 1 still selects the base Talbiyah, not the addition", () => {
+  // Exclusion must run BEFORE the slice. If --limit were applied first, the
+  // single staging slot could be handed to a record the ledger holds back.
+  const { included } = applyLedger(buildRecords(realPack), loadLedger());
+  assert.equal(included.slice(0, 1)[0].duaId, "moia-mukhtasar-1446-umrah-talbiyah");
+});
+
+test("production refuses to run without a ledger", () => {
+  assert.throws(
+    () => assertLedgerMatchesPack(null, buildRecords(realPack), { strict: true }),
+    new RegExp(LEDGER_PATH.replace(/\//g, "\\/")),
+  );
+});
+
+test("a dry run tolerates a missing ledger, since it writes nothing", () => {
+  assert.doesNotThrow(() =>
+    assertLedgerMatchesPack(null, buildRecords(realPack), { strict: false }),
+  );
+});
+
+test("production refuses a ledger whose hashes no longer match the pack", () => {
+  const records = buildRecords(realPack);
+  assert.throws(
+    () =>
+      assertLedgerMatchesPack(
+        { reviews: [{ recordId: records[0].duaId, reviewedTextHash: "b".repeat(64) }] },
+        records,
+        { strict: true },
+      ),
+    /text changed since review/,
+  );
+});
+
+test("production refuses a ledger naming a record the pack does not have", () => {
+  assert.throws(
+    () =>
+      assertLedgerMatchesPack(
+        { reviews: [{ recordId: "ghost-record", reviewedTextHash: "a".repeat(64) }] },
+        buildRecords(realPack),
+        { strict: true },
+      ),
+    /absent from the pack/,
+  );
+});
+
+test("the real ledger matches the real pack today", () => {
+  assert.doesNotThrow(() =>
+    assertLedgerMatchesPack(loadLedger(), buildRecords(realPack), { strict: true }),
+  );
+});
+
+test("contentHashOf agrees with the hashes recorded in the ledger", () => {
+  // The same sha256(ar + NUL + en) the admin screen and the Dart suite use.
+  // If these three ever diverge, the production gate would reject a pack
+  // that is in fact unchanged.
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  for (const review of loadLedger().reviews) {
+    assert.equal(
+      contentHashOf(built.get(review.recordId)),
+      review.reviewedTextHash,
+      `${review.recordId} hash mismatch`,
+    );
+  }
+});
