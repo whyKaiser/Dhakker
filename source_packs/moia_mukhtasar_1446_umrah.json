@@ -177,7 +177,8 @@
         "miqat_yalamlam",
         "miqat_qarn_manazil"
       ],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
@@ -229,7 +230,8 @@
         "miqat_yalamlam",
         "miqat_qarn_manazil"
       ],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-entering-masjid",
@@ -276,7 +278,8 @@
       "visuallyUncertain": [
         "الفقرة مطبوعة في سياق الشرح بدون تشكيل كامل، بخلاف نص الحديث المشكول بعدها"
       ],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
@@ -323,7 +326,8 @@
       "visuallyUncertain": [
         "«افتَحْ» — رُسمت في الصورة بفتحة على التاء دون سكون ظاهر على الفاء؛ يُرجى تأكيدها على الورق المطبوع"
       ],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-tawaf-touching",
@@ -368,7 +372,8 @@
       "revokedAt": null,
       "reviewNotes": "حديث عبدالله بن عمر رضي الله عنهما، صفحة 69. المصدر يعزوه للبخاري (1609) ومسلم (1267). سجل إرشادي: لا يُستلم من البيت سوى الحجر الأسود والركن اليماني. رمز ﷺ في الأصل مرسوم كعلامة زخرفية وقد كُتب هنا نصًّا.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-tawaf-between-corners",
@@ -428,7 +433,8 @@
       "textEditionDate": "2022-09-07",
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-tawaf-takbir-hajar",
@@ -471,7 +477,8 @@
       "revokedAt": null,
       "reviewNotes": "صفحة 69: يقول (الله أكبر) مرة واحدة كلما مرَّ بالحجر الأسود. ينص المصدر أن تكرار التكبير والوقوف عند الحجر لم يرد عن النبي ﷺ ويسبب الازدحام والأذية للطائفين. سجل واحد للطواف كله — غير مرتبط برقم شوط.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-001",
@@ -529,7 +536,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-002",
@@ -588,7 +596,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-003",
@@ -647,7 +656,8 @@
       "isPortionOfAyah": false,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-004",
@@ -706,7 +716,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-005",
@@ -765,7 +776,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-006",
@@ -824,7 +836,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-007",
@@ -884,7 +897,8 @@
       "isPortionOfAyah": false,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-008",
@@ -943,7 +957,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-009",
@@ -1002,7 +1017,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-010",
@@ -1061,7 +1077,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-011",
@@ -1122,7 +1139,8 @@
       "isPortionOfAyah": false,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-012",
@@ -1181,7 +1199,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-013",
@@ -1241,7 +1260,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-014",
@@ -1300,7 +1320,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-015",
@@ -1359,7 +1380,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-016",
@@ -1418,7 +1440,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-017",
@@ -1478,7 +1501,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-018",
@@ -1538,7 +1562,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-019",
@@ -1598,7 +1623,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-020",
@@ -1658,7 +1684,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-021",
@@ -1718,7 +1745,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-022",
@@ -1778,7 +1806,8 @@
       "isPortionOfAyah": true,
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-023",
@@ -1822,7 +1851,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-024",
@@ -1867,7 +1897,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-025",
@@ -1911,7 +1942,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-026",
@@ -1956,7 +1988,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-027",
@@ -2000,7 +2033,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-028",
@@ -2044,7 +2078,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-029",
@@ -2088,7 +2123,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-030",
@@ -2132,7 +2168,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-031",
@@ -2176,7 +2213,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-032",
@@ -2220,7 +2258,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-033",
@@ -2265,7 +2304,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-034",
@@ -2310,7 +2350,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-035",
@@ -2354,7 +2395,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-036",
@@ -2399,7 +2441,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-037",
@@ -2443,7 +2486,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-038",
@@ -2487,7 +2531,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-039",
@@ -2532,7 +2577,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-040",
@@ -2576,7 +2622,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-041",
@@ -2620,7 +2667,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-042",
@@ -2665,7 +2713,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-043",
@@ -2709,7 +2758,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-044",
@@ -2754,7 +2804,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-045",
@@ -2799,7 +2850,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-046",
@@ -2844,7 +2896,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-047",
@@ -2889,7 +2942,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر. يمتد بين صفحة 101 وأعلى صفحة 102.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-048",
@@ -2934,7 +2988,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-049",
@@ -2979,7 +3034,8 @@
       "revokedAt": null,
       "reviewNotes": "دعاء عام من فصل «من جوامع الأذكار والأدعية» — غير مخصّص لمكان معيّن في المصدر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-halq-shamil",
@@ -3023,7 +3079,8 @@
       "revokedAt": null,
       "reviewNotes": "نقطة مستقلة كما طُبعت في صفحة 74 (حُلَّت الملاحظة U8: فُصل السجل المركّب السابق إلى أربع نقاط منفصلة كما في الأصل).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-taqsir-shamil",
@@ -3067,7 +3124,8 @@
       "revokedAt": null,
       "reviewNotes": "نقطة مستقلة كما طُبعت في صفحة 74 (حُلَّت الملاحظة U8: فُصل السجل المركّب السابق إلى أربع نقاط منفصلة كما في الأصل).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-taqsir-mara",
@@ -3111,7 +3169,8 @@
       "revokedAt": null,
       "reviewNotes": "نقطة مستقلة كما طُبعت في صفحة 74 (حُلَّت الملاحظة U8: فُصل السجل المركّب السابق إلى أربع نقاط منفصلة كما في الأصل).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-umrah-tamam-umrah",
@@ -3155,7 +3214,8 @@
       "revokedAt": null,
       "reviewNotes": "نقطة مستقلة كما طُبعت في صفحة 74 (حُلَّت الملاحظة U8: فُصل السجل المركّب السابق إلى أربع نقاط منفصلة كما في الأصل).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-mukhtasar-1446-general-050",
@@ -3200,7 +3260,8 @@
       "visuallyUncertain": [],
       "isGeneralSupplication": true,
       "quranRef": null,
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-no-verbal-niyyah",
@@ -3242,7 +3303,8 @@
       "revokedAt": null,
       "reviewNotes": "المصدر ينفي التلفظ بالنية. سجل إرشادي لا نص يُتلىٰ.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-idtiba",
@@ -3284,7 +3346,8 @@
       "revokedAt": null,
       "reviewNotes": "سنة للرجل في طواف القدوم/العمرة.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-raml",
@@ -3326,7 +3389,8 @@
       "revokedAt": null,
       "reviewNotes": "يرمل في الأشواط الثلاثة الأولىٰ ويمشي في الأربعة الباقية (ص65).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-hajar-tasmiya",
@@ -3368,7 +3432,8 @@
       "revokedAt": null,
       "reviewNotes": "يقال في الحالات الأربع كلها (ص65-67). المصدر ينص أن ذلك تعظيمًا لله واقتداءً بالنبي ﷺ، لا اعتقادًا أن الحجر ينفع أو يضر.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-hajar-umar",
@@ -3427,7 +3492,8 @@
           "citedBy": "moia_1446",
           "citedOnPage": 66
         }
-      ]
+      ],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-hajar-crowding",
@@ -3500,7 +3566,8 @@
           "citedBy": "moia_1446",
           "citedOnPage": 67
         }
-      ]
+      ],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-adab",
@@ -3544,7 +3611,8 @@
       "revokedAt": null,
       "reviewNotes": "قاعدة مهمة: ترك الإيذاء واجب والاستلام سنة.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-women-crowding",
@@ -3587,7 +3655,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-direction",
@@ -3629,7 +3698,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-free-dhikr",
@@ -3671,7 +3741,8 @@
       "revokedAt": null,
       "reviewNotes": "أساس نصّي صريح لقاعدة: لا دعاء مخصّص لكل شوط.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-no-per-circuit",
@@ -3715,7 +3786,8 @@
       "revokedAt": null,
       "reviewNotes": "نص صريح من المصدر يُحرّم تخصيص دعاء لكل شوط — يؤكد القاعدة البنيوية المطبَّقة في الحزمة.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-tawaf-seven",
@@ -3757,7 +3829,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-hijr-not-valid",
@@ -3800,7 +3873,8 @@
       "revokedAt": null,
       "reviewNotes": "النص الوحيد الخاص بحجر إسماعيل في هذه الصفحات.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-maqam-ayah",
@@ -3859,7 +3933,8 @@
       },
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-maqam-rakatayn",
@@ -3919,7 +3994,8 @@
           "citedBy": "moia_1446",
           "citedOnPage": 71
         }
-      ]
+      ],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-maqam-crowding",
@@ -3961,7 +4037,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-maqam-no-tamassuh",
@@ -4003,14 +4080,15 @@
       "revokedAt": null,
       "reviewNotes": "يمتد النص بين أسفل صفحة 71 وأعلى صفحة 72.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-return-hajar",
       "zoneNameAr": "الحجر الأسود",
       "zoneKey": "hajar_aswad",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "procedural_guidance",
       "title": {
         "ar": "الرجوع إلى الحجر الأسود بعد الركعتين",
         "en": "Returning to the Black Stone"
@@ -4043,7 +4121,8 @@
       "revokedAt": null,
       "reviewNotes": "لاحظ: هنا لا يشير إليه إن لم يتيسر (بخلاف حال الطواف).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-safa-ayah",
@@ -4101,7 +4180,13 @@
       "textEditionDate": "2022-09-07",
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": {
+        "frequency": "once_per_ritual",
+        "trigger": "first_safa_approach",
+        "autoPlayCapability": "manual_only_until_trigger_supported",
+        "autoRepeat": false
+      }
     },
     {
       "duaId": "moia-1446-safa-dhikr",
@@ -4145,7 +4230,23 @@
       "revokedAt": null,
       "reviewNotes": "يرقىٰ الصفا حتىٰ يرىٰ الكعبة فيستقبلها ويرفع يديه، يُكرِّر الذكر ثلاثَ مراتٍ ويدعو بينها. يعزوه المصدر لمسلم (1218). ويقول مثله على المروة (ص73).",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1218",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 72
+        }
+      ],
+      "recitationPolicy": {
+        "frequency": "repeat_count",
+        "repeatCount": 3,
+        "interleave": "personal_dua",
+        "autoPlayCapability": "manual_only_until_trigger_supported",
+        "autoRepeat": false
+      }
     },
     {
       "duaId": "moia-1446-marwah-same",
@@ -4187,7 +4288,8 @@
       "revokedAt": null,
       "reviewNotes": "المصدر يحيل على ذكر الصفا نفسه — لم يذكر نصًّا مستقلًّا للمروة.",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-sai-no-per-circuit",
@@ -4231,7 +4333,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-sai-sunan",
@@ -4273,7 +4376,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     },
     {
       "duaId": "moia-1446-sai-seven",
@@ -4316,7 +4420,8 @@
       "revokedAt": null,
       "reviewNotes": "",
       "visuallyUncertain": [],
-      "sourceReferences": []
+      "sourceReferences": [],
+      "recitationPolicy": null
     }
   ]
 }
