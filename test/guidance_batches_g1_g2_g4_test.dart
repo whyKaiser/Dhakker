@@ -305,19 +305,30 @@ void main() {
     });
   });
 
-  group('G7 was NOT reviewed', () {
-    test('page 74 records have no review entry', () {
-      // The page is not available in this session. A review nobody performed
-      // must never appear in the ledger.
+  group('G7 is reviewed only as far as page 74 actually settles', () {
+    // This group once asserted all three were unreviewed, because page 74 was
+    // believed missing from the uploads. It was there after all — printed 74
+    // is PDF page 4 of the selected-pages file — so two of the three have now
+    // been compared against it. The rule the group protects is unchanged: no
+    // review appears without a page, and none appears while marks are open.
+    test('the two settled records are reviewed against page 74', () {
       final reviews = _reviews();
       for (final id in [
         'moia-mukhtasar-1446-umrah-taqsir-shamil',
         'moia-mukhtasar-1446-umrah-taqsir-mara',
-        'moia-mukhtasar-1446-umrah-tamam-umrah',
       ]) {
-        expect(reviews.containsKey(id), isFalse,
-            reason: '$id has no page to have been reviewed against');
+        expect(reviews.containsKey(id), isTrue, reason: id);
+        expect(reviews[id]!['reviewedPage'], 74, reason: id);
       }
+    });
+
+    test('tamam-umrah stays unreviewed while its marks are open', () {
+      // «جميعَ» is printed with a fatha the record lacks, and whether «حِلاً»
+      // carries a shadda could not be settled: no word in the available pages
+      // combines a shadda with tanwin fath to calibrate against.
+      expect(_reviews().containsKey('moia-mukhtasar-1446-umrah-tamam-umrah'),
+          isFalse,
+          reason: 'an unresolved mark must not be recorded as reviewed');
     });
   });
 

@@ -83,6 +83,7 @@ jobs:
             "test/guidance_batches_g1_g2_g4_test.dart"
             "test/page_97_general_duas_test.dart"
             "test/halq_shamil_citation_test.dart"
+            "test/page_98_and_g7_batch_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
