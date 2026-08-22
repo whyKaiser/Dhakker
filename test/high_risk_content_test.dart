@@ -219,6 +219,101 @@ void main() {
           reason: 'the Uthmani sukun must not be substituted in');
     });
 
+    test('NFC and NFD leave the two excerpts unequal', () {
+      // The retired status claimed Unicode canonical equivalence. It does
+      // not hold, and the real picture has TWO layers worth stating exactly:
+      //
+      //   1. Mark ORDER. The ministry writes kasra-then-shadda where KFGQPC
+      //      writes shadda-then-kasra. Those differ by canonical combining
+      //      class, so NFC and NFD DO merge them — that part really is
+      //      canonical equivalence.
+      //   2. The SUKUN. Ordinary U+0652 vs Quranic U+06E1 are distinct
+      //      characters. No normalisation form merges them, and this is the
+      //      single residual difference after normalising.
+      //
+      // So "canonically equivalent" was wrong about the pair as a whole:
+      // normalisation gets the two strings close but never equal. The
+      // accurate description is the same lexical text under two rasm
+      // conventions.
+      const plain = '\u0652'; // ARABIC SUKUN
+      const uthmani = '\u06E1'; // ARABIC SMALL HIGH DOTLESS HEAD OF KHAH
+
+      final guid = _entry(kHalq)['text']['ar'] as String;
+      final embedded = RegExp('﴿(.*?)﴾').firstMatch(guid)!.group(1)!;
+      final official = _ayah(48, 27);
+
+      expect(embedded.contains(plain), isTrue);
+      expect(embedded.contains(uthmani), isFalse);
+      expect(official.contains(uthmani), isTrue);
+
+      // The characters themselves are not equal, and Dart's own comparison
+      // is code-point equality — the property normalisation would have to
+      // change, and does not.
+      expect(plain == uthmani, isFalse);
+      expect(plain.runes.single, isNot(uthmani.runes.single));
+
+      // The quotation is not a code-point excerpt of the ayah...
+      expect(official.contains(embedded), isFalse);
+      // ...and swapping ONLY the sukun is still not enough on the raw
+      // strings, because the mark ordering also differs.
+      expect(official.contains(embedded.replaceAll(plain, uthmani)), isFalse);
+    });
+
+    test('the ONE residual difference after normalising is the sukun', () {
+      // Pins the finding above: once mark order is normalised away, the
+      // quotation differs from the mushaf by exactly one character class.
+      const plain = '\u0652';
+      const uthmani = '\u06E1';
+      final guid = _entry(kHalq)['text']['ar'] as String;
+      final embedded = RegExp('﴿(.*?)﴾').firstMatch(guid)!.group(1)!;
+      final official = _ayah(48, 27);
+
+      // Dart has no NFC in the core library, so the mark-order difference is
+      // neutralised directly: sort each combining run by code point. That is
+      // weaker than NFC in general but sufficient here, and it isolates the
+      // sukun as the only remaining difference.
+      String orderMarks(String s) {
+        bool mark(int c) =>
+            (c >= 0x064B && c <= 0x065F) || c == 0x0670 || c == 0x0653;
+        final out = <int>[];
+        final run = <int>[];
+        void flush() {
+          run.sort();
+          out.addAll(run);
+          run.clear();
+        }
+
+        for (final c in s.runes) {
+          if (mark(c)) {
+            run.add(c);
+          } else {
+            flush();
+            out.add(c);
+          }
+        }
+        flush();
+        return String.fromCharCodes(out);
+      }
+
+      // Still unequal with the sukun left alone...
+      expect(orderMarks(official).contains(orderMarks(embedded)), isFalse);
+      // ...and equal the moment the rasm convention is reconciled.
+      expect(
+          orderMarks(official)
+              .contains(orderMarks(embedded).replaceAll(plain, uthmani)),
+          isTrue,
+          reason: 'same words, same order — one rasm code point apart');
+    });
+
+    test('the recorded status uses the precise term', () {
+      final r = _reviews()[kHalq]!;
+      expect(r['embeddedQuranEquivalence'], 'same_lexical_text_different_rasm');
+      // The retired value claimed a Unicode property that does not hold.
+      expect(r['embeddedQuranEquivalence'],
+          isNot('canonically_equivalent_not_byte_identical'));
+      expect(r['embeddedQuranEquivalenceNote'], isNotNull);
+    });
+
     test('the page-74 review is recorded, with its evidence stated', () {
       final r = _reviews()[kHalq]!;
       expect(r['reviewStatus'], 'passed');
@@ -226,8 +321,7 @@ void main() {
       expect(r['reviewedPage'], 74);
       expect(r['transcriptionCorrected'], isFalse);
       expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
-      expect(r['embeddedQuranEquivalence'],
-          'canonically_equivalent_not_byte_identical');
+      expect(r['embeddedQuranEquivalence'], 'same_lexical_text_different_rasm');
       // The agent could not render page 74 — the uploaded page files stop at
       // 73 — so the ledger records who actually looked, rather than implying
       // a machine comparison that never happened.
@@ -239,9 +333,15 @@ void main() {
     test('the embedded quotation shares 48:27 word-for-word', () {
       // Reported precisely rather than asserted as identical: the ministry
       // sets the quotation in plain orthography (U+0652) where KFGQPC uses
-      // the Uthmani sukun (U+06E1). Same words, different rasm convention —
-      // canonically equivalent, NOT byte-identical. The ministry sentence is
-      // preserved as printed; nothing is "corrected" toward the mushaf.
+      // the Uthmani sukun (U+06E1).
+      //
+      // The accurate description is SAME LEXICAL TEXT, DIFFERENT RASM: the
+      // same words in the same order, written under two script conventions.
+      // It is NOT Unicode canonical equivalence — that would mean the two
+      // strings normalise to one code-point sequence, and these are distinct
+      // characters that no normalisation form merges (see the NFC/NFD test
+      // below). The ministry sentence is preserved as printed; nothing is
+      // "corrected" toward the mushaf.
       final guid = _entry(kHalq)['text']['ar'] as String;
       final embedded = RegExp('﴿(.*?)﴾').firstMatch(guid)?.group(1) ?? '';
       expect(embedded, isNotEmpty);

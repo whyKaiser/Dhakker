@@ -848,8 +848,9 @@
       "contentKindConfirmed": "procedural_guidance",
       "transcriptionCorrected": false,
       "transcriptionNote": "لا تصحيح: لم تثبت مراجعةُ الصفحة أيَّ خطأ نقل. والاقتباس القرآني المطبوع يستعمل السكون العادي (U+0652) حيث يستعمل مصحف المجمع السكون العثماني (U+06E1)؛ نصُّ الوزارة محفوظٌ كما طُبع ولا يُقوَّم على المصحف.",
-      "embeddedQuranEquivalence": "canonically_equivalent_not_byte_identical",
-      "sourceReferencesReviewStatus": "reviewed_present"
+      "embeddedQuranEquivalence": "same_lexical_text_different_rasm",
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "embeddedQuranEquivalenceNote": "نفس الكلمات ونفس ترتيبها، ويختلف حرفُ الضبط: المطبوع يستعمل السكون العادي (U+0652) والمصحف يستعمل السكون العثماني (U+06E1). ليسا متطابقين بالنقاط البرمجية، ولا يتكافآن تكافؤًا قانونيًّا في يونيكود: التطبيع NFC/NFD لا يحوّل أحدهما إلى الآخر."
     }
   ],
   "summary": {

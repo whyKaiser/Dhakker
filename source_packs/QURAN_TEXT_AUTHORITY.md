@@ -108,3 +108,54 @@ the printed page before any of it becomes citable.
 - No record may claim `مجمع الملك فهد` authority unless its āyah was
   actually taken from the official data.
 - Every record is still `unverified`.
+
+## Quran quoted inside ministry prose
+
+Some records are ministry guidance that *quotes* the Qur'an inline rather than
+being Qur'an. `moia-mukhtasar-1446-umrah-halq-shamil` (printed page 74) is the
+worked example: it argues that the whole head is shaved and cites
+﴿مُحَلِّقِينَ رُءُوسَكُمْ وَمُقَصِّرِينَ﴾ [الفتح: 27].
+
+Rules for that shape:
+
+- The record keeps `contentKind: procedural_guidance`. **Embedding Qur'an
+  never makes prose recitable** — it stays unplayable on every path.
+- **No** `textAuthority`, `quranRef`, `textRiwayah` or `textRasm` on the
+  record. Those fields say "this record's text is the mushaf's text", and the
+  sentence is the ministry writing. Marking the whole record Quranic would
+  claim the ministry's own words are revelation.
+- The citation is recorded as a structured `sourceReference`
+  (`type: quran`, `referenceKind: surah_ayah`, `citedBy: moia_1446`), i.e. as
+  *what the ministry cited*, which is a different fact from *which corpus the
+  letters came from*.
+- **The ministry's printing is preserved exactly.** Its quotation is never
+  rewritten toward the mushaf.
+
+### Describing the difference precisely
+
+The printed quotation is not a code-point excerpt of KFGQPC 48:27. The ledger
+records this as:
+
+```
+"embeddedQuranEquivalence": "same_lexical_text_different_rasm"
+```
+
+**Not** "canonically equivalent". Unicode canonical equivalence means two
+strings normalise to the same code-point sequence under NFC/NFD — and that is
+precisely what does not happen here. The differences are two:
+
+| # | difference | canonical equivalence? |
+|---|---|---|
+| 1 | mark **order** — ministry writes kasra-then-shadda, KFGQPC shadda-then-kasra | **yes** — different combining classes, NFC/NFD merge them |
+| 2 | the **sukun** — ordinary `U+0652` vs Quranic `U+06E1` | **no** — distinct characters, no normalisation form merges them |
+
+So normalisation removes (1) and leaves (2) standing. After neutralising mark
+order, the quotation differs from the mushaf by exactly one character class,
+and reconciling that single rasm convention makes it an exact excerpt.
+
+The factual statement to keep: **same words, same order, one rasm code point
+apart, not byte-identical.**
+
+A test in `test/high_risk_content_test.dart` proves NFC/NFD leave the two
+unequal, and `test/review_ledger_test.dart` pins the allowed values so the
+imprecise term cannot come back.
