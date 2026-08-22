@@ -15,6 +15,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dhakker/Screens/Piligram/Duas/widgets/content_kind_card.dart';
@@ -128,23 +130,53 @@ void main() {
       expect(back.canPlayManually, isFalse);
     });
 
-    test('the salutation is stored as words — no U+FDFA in any stored text',
-        () {
-      // The audit reported a `ﷺ` form in storage. It is not there: the
-      // ligature appears only in administrative reviewNotes that DESCRIBE
-      // the printed glyph. No religious text in the pack contains it, so
-      // there was nothing to correct.
-      for (final e in _entries()) {
-        for (final field in ['text', 'title']) {
-          for (final v in (e[field] as Map).values) {
-            expect((v as String).contains('ﷺ'), isFalse,
-                reason: '${e['duaId']}.$field carries the ligature');
-          }
-        }
-      }
+    test('its salutation is stored spelled out, with no ligature', () {
+      // Scoped to THIS record, which is the one the audit questioned. The
+      // finding was about what page 69 prints and what this record stores —
+      // it is not a house style, and a pack-wide ban would refuse a future
+      // record whose own printed source really does set the ligature.
       final stored = _entry(kTouching)['text']['ar'] as String;
       expect(stored.contains('صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ'), isTrue,
-          reason: 'spelled out, fully vocalised, as page 69 prints it');
+          reason: 'spelled out and fully vocalised, as page 69 prints it');
+      expect(stored.contains('\uFDFA'), isFalse,
+          reason: 'no ARABIC LIGATURE SALLALLAHOU ALAYHE WASALLAM here');
+      expect((_entry(kTouching)['title']['ar'] as String).contains('\uFDFA'),
+          isFalse);
+    });
+
+    test('its reviewed text hash matches the text on disk', () {
+      // Ties the ledger entry to these exact bytes: if the narration is ever
+      // edited, the recorded review stops describing what is stored.
+      final e = _entry(kTouching);
+      final bytes = utf8.encode('${e['text']['ar']}\u0000${e['text']['en']}');
+      expect(sha256.convert(bytes).toString(),
+          _reviews()[kTouching]!['reviewedTextHash']);
+    });
+
+    test('a ligature elsewhere is allowed only on reviewed printed evidence',
+        () {
+      // Not a ban — a gate. A record MAY carry U+FDFA in its text or title,
+      // but only where a completed human page review says the printed source
+      // set it that way. Unreviewed records cannot introduce it, because
+      // nobody has looked at the page it would be claiming to follow.
+      //
+      // Administrative reviewNotes are exempt: they DESCRIBE the glyph, and
+      // that description is what the audit misread as storage.
+      final reviews = _reviews();
+      for (final e in _entries()) {
+        final id = e['duaId'] as String;
+        final carries = ['text', 'title'].any((f) =>
+            (e[f] as Map).values.any((v) => (v as String).contains('\uFDFA')));
+        if (!carries) continue;
+        final r = reviews[id];
+        expect(r, isNotNull,
+            reason: '$id carries the ligature with no human review at all');
+        expect(r!['reviewStatus'], 'passed', reason: id);
+        expect(r['reviewedPage'], isNotNull, reason: id);
+        expect(r['printedUsesSalutationLigature'], isTrue,
+            reason: '$id carries the ligature without a review confirming '
+                'the printed page sets it that way');
+      }
     });
 
     test('it is held until the evidence card ships', () {
