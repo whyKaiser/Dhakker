@@ -174,10 +174,18 @@ void main() {
       expect((e['textRasm'] ?? '').toString(), isEmpty);
     });
 
-    test('all three page-74 citations are recorded as structured refs', () {
+    test('the page-74 citations that are this record\'s are structured refs',
+        () {
+      // Was three. Page 74 was later re-rendered from the source file's own
+      // pixels, and footnote (1) — «صحيح البخاري» — turned out to be anchored
+      // on the paragraph before this one, ending at «قَلَّدَهَا». It was
+      // removed rather than renumbered; see halq_shamil_citation_test.dart.
       final refs = (_entry(kHalq)['sourceReferences'] as List)
           .cast<Map<String, dynamic>>();
-      expect(refs, hasLength(3));
+      expect(refs, hasLength(2));
+      expect(refs.any((r) => (r['collection'] as String).contains('البخاري')),
+          isFalse,
+          reason: 'footnote (1) belongs to a paragraph this record lacks');
       for (final r in refs) {
         expect(r['citedBy'], 'moia_1446',
             reason: 'these are what the MINISTRY cited, not our own research');
@@ -189,9 +197,7 @@ void main() {
       };
       expect(byCollection['القرآن الكريم']!['type'], 'quran');
       expect(byCollection['القرآن الكريم']!['referenceKind'], 'surah_ayah');
-      expect(byCollection['صحيح البخاري']!['type'], 'hadith');
-      expect(byCollection['صحيح البخاري']!['reference'], '1540');
-      expect(byCollection['صحيح البخاري']!['referenceKind'], 'hadith_number');
+      expect(byCollection.containsKey('صحيح البخاري'), isFalse);
       expect(byCollection['صحيح مسلم']!['type'], 'hadith');
       expect(byCollection['صحيح مسلم']!['reference'], '1305');
       expect(byCollection['صحيح مسلم']!['referenceKind'], 'hadith_number');
@@ -322,10 +328,13 @@ void main() {
       expect(r['transcriptionCorrected'], isFalse);
       expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
       expect(r['embeddedQuranEquivalence'], 'same_lexical_text_different_rasm');
-      // The agent could not render page 74 — the uploaded page files stop at
-      // 73 — so the ledger records who actually looked, rather than implying
-      // a machine comparison that never happened.
-      expect(r['agentRenderedPage'], isFalse);
+      // The human reviewer looked first, from the full 136-page source, at a
+      // time when the uploaded page files were thought to stop at 73. Page 74
+      // turned out to be in the selected-pages upload after all, so the agent
+      // did later render it — and that second look is what caught the
+      // misattributed Bukhari footnote. The ledger records both, so neither
+      // pass is mistaken for the other.
+      expect(r['agentRenderedPage'], isTrue);
       expect(r['reviewedFromFullSourcePdf'], isTrue);
       expect(_entry(kHalq)['verificationStatus'], 'unverified');
     });
