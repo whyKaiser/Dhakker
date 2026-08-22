@@ -72,7 +72,31 @@ class VerifiedExcerpt {
     this.contentKind,
     this.sourceReferences = const [],
     this.recitationPolicy,
+    this.isVerbatimFromStoredRecord = false,
   });
+
+  /// Did the proxy PROVE this string is the stored record's text?
+  ///
+  /// The server computes it by code-point equality between what it shipped
+  /// and what Firestore returned, so any transform — a trim, a normalisation,
+  /// a translation, a truncation — turns it false on its own.
+  ///
+  /// It says nothing about the Quran, a hadith collection, or a printed page.
+  /// One hop only: store to wire. Scriptural authority is a different claim
+  /// carried by the record's own authority fields.
+  ///
+  /// Defaults to **false**, not true: an older proxy sent an unconditional
+  /// `isVerbatim: true` that nothing computed, and a flag nobody checked is
+  /// not evidence. Absent means unproven.
+  final bool isVerbatimFromStoredRecord;
+
+  /// May the UI show a «نصّ كما هو مخزَّن» label?
+  ///
+  /// Two conditions, both required. The proof must exist, AND the content
+  /// must be the kind of thing that label makes sense for: stamping it on a
+  /// narration or a ruling invites the reader to recite it, which is what
+  /// the classification exists to prevent.
+  bool get mayShowVerbatimLabel => isVerbatimFromStoredRecord && isRecitable;
 
   /// What kind of text this is, as classified in the source pack. `null`
   /// when an older proxy did not send it.
@@ -134,6 +158,11 @@ class VerifiedExcerpt {
                   (e['collection'] as String?)?.trim().isNotEmpty ?? false)
               .toList(growable: false);
         }(),
+        // Read the NEW field only. The legacy `isVerbatim` was hardcoded
+        // true by every proxy that sent it, so honouring it would import a
+        // guarantee nobody ever checked. An old response therefore yields
+        // false — the excerpt still renders, just without the label.
+        isVerbatimFromStoredRecord: map['isVerbatimFromStoredRecord'] == true,
         recitationPolicy: () {
           final raw = map['recitationPolicy'];
           if (raw is! Map) return null;

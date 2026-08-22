@@ -188,9 +188,17 @@ void main() {
         } else {
           expect(r['textReviewStatus'], isNot('passed'), reason: id);
         }
-        // Neither a pinned-file derivation nor a page reading confers
-        // verification, and neither lifts the deployment hold.
-        expect(r['excludedFromImport'], isTrue, reason: id);
+        // Import exclusion may be lifted ONLY by a human page review — never
+        // by the pinned-file derivation on its own. That is the whole point
+        // of this guard, so it is stated as an implication rather than a
+        // blanket "always excluded": no recorded page, no import.
+        if (r['excludedFromImport'] != true) {
+          expect(r['reviewStatus'], 'passed', reason: id);
+          expect(r['reviewedPage'], isNotNull,
+              reason: '$id was let into the import with no page reviewed');
+          expect(r['deploymentBlocked'], isFalse, reason: id);
+        }
+        // Neither route confers verification.
         expect(
             entries.firstWhere((e) => e['duaId'] == id)['verificationStatus'],
             'unverified',

@@ -87,6 +87,23 @@ void main() {
         // blame the source for a review that has not happened yet.
         expect(
             r['reviewStatus'], anyOf('passed', 'failed', 'blocked', 'pending'));
+        // Controlled vocabularies. A free-text status is a status nobody can
+        // check, and the first version of `embeddedQuranEquivalence` shipped
+        // a value that asserted a Unicode property which does not hold.
+        if (r.containsKey('sourceReferencesReviewStatus')) {
+          expect(r['sourceReferencesReviewStatus'],
+              anyOf('not_reviewed', 'reviewed_none', 'reviewed_present'),
+              reason: r['recordId'] as String);
+        }
+        if (r.containsKey('embeddedQuranEquivalence')) {
+          expect(
+              r['embeddedQuranEquivalence'],
+              anyOf('same_lexical_text_different_rasm',
+                  'codepoint_identical_excerpt'),
+              reason: '${r['recordId']}: "canonically equivalent" is a claim '
+                  'about NFC/NFD collapsing two strings, which is false for '
+                  'U+0652 vs U+06E1');
+        }
         if (r['reviewStatus'] == 'pending') {
           expect(r['textReviewStatus'], 'pending');
           expect((r['pendingReason'] as String).trim(), isNotEmpty);

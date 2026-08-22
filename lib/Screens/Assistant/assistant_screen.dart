@@ -868,9 +868,16 @@ class VerifiedExcerptCard extends StatelessWidget {
             ? (isRtl
                 ? 'توجيه — ليس نصًّا يُتلىٰ'
                 : 'Guidance — not a text to recite')
-            : (isRtl
-                ? 'نص موثّق — كما ورد في المصدر'
-                : 'Verified text — as recorded in the source');
+            // «كما ورد في المصدر» is a verbatim CLAIM, so it appears only
+            // when the proxy proved it by comparing what it shipped against
+            // what the store returned. An older proxy sent an unconditional
+            // flag nobody computed; that yields false here, and the card
+            // still shows the text — just without asserting fidelity.
+            : (excerpt.mayShowVerbatimLabel
+                ? (isRtl
+                    ? 'نص موثّق — كما ورد في المصدر'
+                    : 'Verified text — as recorded in the source')
+                : (isRtl ? 'نص من المصدر' : 'Text from the source'));
     final icon = isEvidence
         ? Icons.menu_book_rounded
         : isGuidance

@@ -433,7 +433,16 @@
       "textEditionDate": "2022-09-07",
       "contextAuthority": "وزارة الشؤون الإسلامية والدعوة والإرشاد — المختصر في صفة الحج والعمرة والزيارة، الطبعة الأولى 1446هـ/2025م",
       "contextSourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
-      "sourceReferences": [],
+      "sourceReferences": [
+        {
+          "type": "quran",
+          "collection": "القرآن الكريم",
+          "reference": "البقرة: 201",
+          "referenceKind": "surah_ayah",
+          "citedBy": "moia_1446",
+          "citedOnPage": 69
+        }
+      ],
       "recitationPolicy": null
     },
     {
@@ -3079,7 +3088,32 @@
       "revokedAt": null,
       "reviewNotes": "نقطة مستقلة كما طُبعت في صفحة 74 (حُلَّت الملاحظة U8: فُصل السجل المركّب السابق إلى أربع نقاط منفصلة كما في الأصل).",
       "visuallyUncertain": [],
-      "sourceReferences": [],
+      "sourceReferences": [
+        {
+          "type": "quran",
+          "collection": "القرآن الكريم",
+          "reference": "الفتح: 27",
+          "referenceKind": "surah_ayah",
+          "citedBy": "moia_1446",
+          "citedOnPage": 74
+        },
+        {
+          "type": "hadith",
+          "collection": "صحيح البخاري",
+          "reference": "1540",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 74
+        },
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1305",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 74
+        }
+      ],
       "recitationPolicy": null
     },
     {
