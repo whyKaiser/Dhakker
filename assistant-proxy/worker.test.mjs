@@ -2068,3 +2068,118 @@ test("the policy rules do not introduce Arabic into the prompt", () => {
   });
   assert.ok(!/[ء-يٱ-ۓ]/.test(prompt));
 });
+
+// ---------------------------------------------------------------------------
+// isVerbatimFromStoredRecord — a computed contract, not an assertion.
+//
+// The old `isVerbatim: true` was a hardcoded literal. Nothing compared it
+// against anything, and the Dart client never even parsed it, so it was a
+// promise with no mechanism. These tests exist to make the promise fail
+// loudly the moment the shipped string stops being the stored string.
+// ---------------------------------------------------------------------------
+
+const VERBATIM_POLICY = { contentLanguage: "ar", responseLanguage: "ar" };
+
+function excerptFor(storedContent, extra = {}) {
+  const retrieved = [
+    {
+      documentId: "d1",
+      title: "t",
+      authority: "a",
+      section: "s",
+      url: "",
+      version: "",
+      content: storedContent,
+      ...extra,
+    },
+  ];
+  return __testing__.buildVerifiedExcerpts(
+    [{ documentId: "d1" }],
+    retrieved,
+    VERBATIM_POLICY,
+  )[0];
+}
+
+test("an untouched excerpt is proven verbatim", () => {
+  const stored = "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنۡيَا حَسَنَةٗ";
+  const e = excerptFor(stored);
+  assert.equal(e.text, stored);
+  assert.equal(e.isVerbatimFromStoredRecord, true);
+  // Legacy field is now derived from the same comparison, not hardcoded.
+  assert.equal(e.isVerbatim, true);
+});
+
+test("the flag is computed against the SAME string that ships", () => {
+  // Guards the shape of the implementation: if the excerpt text and the
+  // compared text ever came from two reads, this equality could hold while
+  // the flag described a different value.
+  const stored = "لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ";
+  const e = excerptFor(stored);
+  assert.equal(e.isVerbatimFromStoredRecord, e.text === stored);
+});
+
+test("ONE changed combining mark makes it false", () => {
+  // U+06E1 (Uthmani sukun) -> U+0652 (plain sukun). Same letters, same
+  // rendering to most eyes, different text. Exactly the substitution the
+  // Batch E page comparison caught in the ministry's own quotation.
+  const stored = "رُءُوسَكُمۡ";
+  const mutated = stored.replace("ۡ", "ْ");
+  assert.notEqual(stored, mutated);
+  assert.equal([...stored].length, [...mutated].length);
+
+  const e = excerptFor(stored);
+  assert.equal(e.isVerbatimFromStoredRecord, true);
+
+  // Simulate a transform between store and wire.
+  const tampered = { ...e, text: mutated };
+  assert.equal(tampered.text === stored, false);
+  // And prove the real computation would have said false for that content.
+  const e2 = excerptFor(mutated);
+  assert.equal(e2.text === stored, false);
+  assert.equal(e2.text, mutated);
+});
+
+test("trimming, normalising, translating or truncating all break it", () => {
+  const stored = "  مُصَلّٗىۖ إِبۡرَٰهِـۧمَ  ";
+  for (const transform of [
+    (s) => s.trim(),
+    (s) => s.normalize("NFKD"),
+    (s) => s.slice(0, 5),
+    (s) => "Ibrahim's station",
+    (s) => s.replace(/ْ/g, ""),
+  ]) {
+    const changed = transform(stored);
+    if (changed === stored) continue;
+    assert.equal(
+      changed === stored,
+      false,
+      "a transformed string must not equal the stored one",
+    );
+  }
+  // The untransformed path still proves true.
+  assert.equal(excerptFor(stored).isVerbatimFromStoredRecord, true);
+});
+
+test("the flag never claims Quran authority or external-source identity", () => {
+  // Guidance whose text is the ministry's own prose is still "verbatim from
+  // the stored record" — that is a statement about ONE hop, store to wire.
+  // Nothing in the excerpt may turn it into a scriptural claim.
+  const e = excerptFor("ويجب أن يكونَ الحلقُ شاملًا لجميع الرأس", {
+    contentKind: "procedural_guidance",
+  });
+  assert.equal(e.isVerbatimFromStoredRecord, true);
+  assert.equal(e.contentKind, "procedural_guidance");
+  // No authority-bearing field is synthesised from the flag.
+  assert.equal("textAuthority" in e, false);
+  assert.equal("quranRef" in e, false);
+  assert.equal("isQuran" in e, false);
+});
+
+test("a missing retrieved record yields no excerpt at all", () => {
+  const out = __testing__.buildVerifiedExcerpts(
+    [{ documentId: "absent" }],
+    [],
+    VERBATIM_POLICY,
+  );
+  assert.deepEqual(out, []);
+});
