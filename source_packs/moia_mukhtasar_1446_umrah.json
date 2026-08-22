@@ -334,7 +334,7 @@
       "zoneNameAr": "المطاف (منطقة الطواف)",
       "zoneKey": "mataf",
       "zoneId": "",
-      "contentKind": "procedural_guidance",
+      "contentKind": "contextual_evidence",
       "title": {
         "ar": "ما يُستلم في الطواف",
         "en": "What is touched during Tawaf"
@@ -372,7 +372,24 @@
       "revokedAt": null,
       "reviewNotes": "حديث عبدالله بن عمر رضي الله عنهما، صفحة 69. المصدر يعزوه للبخاري (1609) ومسلم (1267). سجل إرشادي: لا يُستلم من البيت سوى الحجر الأسود والركن اليماني. رمز ﷺ في الأصل مرسوم كعلامة زخرفية وقد كُتب هنا نصًّا.",
       "visuallyUncertain": [],
-      "sourceReferences": [],
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "صحيح البخاري",
+          "reference": "1609",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 69
+        },
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1267",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 69
+        }
+      ],
       "recitationPolicy": null
     },
     {

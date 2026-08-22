@@ -450,12 +450,20 @@ void main() {
     });
 
     test('an absent status is never proof that a page cites nothing', () {
-      // The 50 unreviewed records all have empty sourceReferences. That
-      // emptiness must not be readable as "reviewed and none found".
+      // Every unreviewed record has an empty sourceReferences list. That
+      // emptiness must never be readable as "reviewed and none found".
+      //
+      // Derived, not hardcoded: the count moves with every batch, and a
+      // literal here has gone stale three times. The invariant being
+      // guarded is that unreviewed records carry no citation status at
+      // all — not that there are N of them.
       final reviewed = _reviews().keys.toSet();
       final unreviewed =
           _entries().where((e) => !reviewed.contains(e['duaId'])).toList();
-      expect(unreviewed, hasLength(48));
+      expect(unreviewed, isNotEmpty,
+          reason: 'if this ever empties, the batch flow is finished and this '
+              'test should be retired deliberately rather than passing '
+              'vacuously');
       for (final e in unreviewed) {
         expect(_reviews()[e['duaId']]?['sourceReferencesReviewStatus'], isNull);
       }
