@@ -384,6 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           title: duaTitle ?? s.homeRecommendedNow,
                           dua: duaText ?? s.homeNoDuaMessage,
                           kind: _controller.displayedDuaKind(0),
+                          policy: _controller.displayedDuaPolicy(0),
                           buttonText: primaryButtonText(),
                           canPlay: _controller.hasDua,
                           isPlaying: _controller.isPlaying,
@@ -660,7 +661,11 @@ class _DuaCard extends StatelessWidget {
   /// مخصوص بهذا الموضع. null عندما لا يوجد دعاء معروض أصلاً.
   final SupplicationContentKind? kind;
 
+  /// كيفية الأداء إن نصّ عليها المصدر.
+  final RecitationPolicy? policy;
+
   const _DuaCard({
+    this.policy,
     required this.palette,
     required this.title,
     required this.dua,
@@ -720,6 +725,12 @@ class _DuaCard extends StatelessWidget {
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: ContentKindBadge(kind: kind!),
+            ),
+          if (policy != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: RecitationPolicyNote(
+                  policy: policy, textColor: palette.textPrimary),
             ),
           ],
           const SizedBox(height: 16),

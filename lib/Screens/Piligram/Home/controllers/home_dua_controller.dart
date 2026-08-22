@@ -68,8 +68,39 @@ class HomeDuaController extends ChangeNotifier {
   /// أضيق من [recitableDuas]: الزيادة الجائزة تُعرض للحاج ويستطيع تشغيلها
   /// بنفسه، لكنها لا تُقرأ عليه دون أن يطلبها. تشغيلها تلقائيًّا بعد النص
   /// الأساسي يجعلها تُسمع امتدادًا له — وهو بالضبط ما يوهم بلزومها.
-  List<SupplicationModel> get autoPlayableDuas =>
-      currentDuasList.where((e) => e.isAutoPlayable).toList(growable: false);
+  List<SupplicationModel> get autoPlayableDuas => currentDuasList
+      .where((e) => e.isAutoPlayable)
+      .where((e) => !_alreadyPlayedOncePerRitual(e))
+      .toList(growable: false);
+
+  /// السجلات «مرة واحدة» التي شُغِّلت تلقائيًّا في **عُمر هذا الكائن**.
+  ///
+  /// ⚠️ حدّ معروف ومقصود التوثيق: هذه ذاكرةٌ في الذاكرة فقط.
+  ///
+  /// لا يوجد في التطبيق مُعرِّف جلسة نُسك (session id للعمرة). و`currentRitual`
+  /// ليس كذلك — هو مصنِّف منطقة يعيد 'tawaf' أو 'sai'، لا هويةَ عمرةٍ بعينها.
+  /// فينتج عن ذلك أمران يجب ألا يُدَّعىٰ خلافهما:
+  ///
+  ///   • إعادة تشغيل التطبيق أثناء العمرة نفسها تمسح هذه المجموعة.
+  ///   • بقاء الكائن حيًّا عبر عمرتين يُبقيها، فتُكتم في الثانية.
+  ///
+  /// لذلك `once_per_ritual` **ليست مفروضة فرضًا كاملًا**. هي اليوم:
+  /// (١) تعليمة ظاهرة للحاج، و(٢) كبحٌ للتشغيل التلقائي داخل الجلسة.
+  /// والسجلات المعنيّة تعلن `autoPlayCapability:
+  /// manual_only_until_trigger_supported` فلا تُشغَّل تلقائيًّا أصلًا — وهو ما
+  /// يجعل هذا الحدّ غيرَ ضارٍّ اليوم، لا ما يجعله غيرَ موجود.
+  final Set<String> _playedOncePerRitual = <String>{};
+
+  bool _alreadyPlayedOncePerRitual(SupplicationModel dua) =>
+      (dua.recitationPolicy?.isOncePerRitual ?? false) &&
+      _playedOncePerRitual.contains(dua.duaId);
+
+  /// يبدأ نسكًا جديدًا: يُنسى ما شُغِّل مرة واحدة.
+  ///
+  /// لا يستدعيها شيء اليوم لأن التطبيق لا يعرف متى تبدأ عمرة جديدة. تُترك
+  /// نقطةَ ربطٍ صريحة لمن يضيف مُعرِّف جلسة النسك لاحقًا، ولا يُدَّعىٰ أنها
+  /// تعمل من تلقاء نفسها.
+  void resetRitualPlaybackState() => _playedOncePerRitual.clear();
 
   /// الآثار المرويّة للفائدة — بطاقة «أثر موثّق» بعزوها، بلا تشغيل.
   /// بلا هذا الجامع تختفي من الشاشة الرئيسية بالكلية، لأن [recitableDuas]
@@ -311,6 +342,10 @@ class HomeDuaController extends ChangeNotifier {
       }
     }
 
+    if (selected.recitationPolicy?.isOncePerRitual ?? false) {
+      _playedOncePerRitual.add(selected.duaId);
+    }
+
     final isSameZone = previousZoneId == detectedZone.zoneId;
     final isSameHandledZone = _lastTriggeredZoneId == detectedZone.zoneId;
     final isSameHandledDua = _lastTriggeredDuaId == selected.duaId;
@@ -439,6 +474,13 @@ class HomeDuaController extends ChangeNotifier {
 
   /// تصنيف الدعاء المعروض في هذا الموضع من القائمة — تستعمله الواجهة لعرض
   /// الوسم الصريح («عام» / «وارد في هذا الموضع»).
+  /// سياسة الأداء للدعاء المعروض في هذا الموضع من القائمة.
+  RecitationPolicy? displayedDuaPolicy(int index) {
+    final items = recitableDuas;
+    if (index < 0 || index >= items.length) return null;
+    return items[index].recitationPolicy;
+  }
+
   SupplicationContentKind? displayedDuaKind(int index) {
     final items = recitableDuas;
     if (index < 0 || index >= items.length) return null;

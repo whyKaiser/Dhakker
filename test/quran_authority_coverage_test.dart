@@ -164,17 +164,25 @@ void main() {
       final ledger = jsonDecode(
         File('review/human_review_ledger.json').readAsStringSync(),
       ) as Map<String, dynamic>;
-      final reviewed = (ledger['reviews'] as List)
-          .cast<Map<String, dynamic>>()
-          .map((r) => r['recordId'])
-          .toSet();
+      final byId = {
+        for (final r
+            in (ledger['reviews'] as List).cast<Map<String, dynamic>>())
+          r['recordId'] as String: r
+      };
       for (final id in [
         'moia-mukhtasar-1446-tawaf-between-corners',
         'moia-1446-safa-ayah',
       ]) {
-        expect(reviewed.contains(id), isFalse,
-            reason: '$id must not be recorded as reviewed — deriving its text '
-                'from the pinned file is not a human reading the page');
+        // Presence alone is no longer the test: a record may appear in the
+        // ledger as `pending`, which is the ledger saying nobody has read
+        // its page. What must never appear is a PASS — deriving text from a
+        // pinned file is not a human reading a printed page.
+        final r = byId[id];
+        if (r == null) continue;
+        expect(r['reviewStatus'], isNot('passed'),
+            reason: '$id must not be recorded as reviewed');
+        expect(r['textReviewStatus'], isNot('passed'), reason: id);
+        expect(r['excludedFromImport'], isTrue, reason: id);
       }
     });
   });

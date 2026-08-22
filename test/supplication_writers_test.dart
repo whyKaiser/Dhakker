@@ -300,4 +300,46 @@ void main() {
       }
     });
   });
+
+  _rulesCommentTests();
+}
+
+// ── firestore.rules comment placement ───────────────────────────────────
+//
+// A doc comment that drifts away from the block it describes is how a rules
+// file starts lying to its next reader. This one drifted when the staging
+// block was inserted above `match /alerts`, and the fix was deferred to
+// "the next rules change" — then missed on the next rules change, because a
+// promise in a chat message is not a check.
+
+void _rulesCommentTests() {
+  group('every rules comment sits above the block it describes', () {
+    final lines = File('firestore.rules').readAsLinesSync();
+
+    int lineOf(String needle) => lines.indexWhere((l) => l.contains(needle));
+
+    test('the alerts comment is immediately above match /alerts', () {
+      final match = lineOf('match /alerts/{alertId}');
+      expect(match, greaterThan(0), reason: 'the alerts block must exist');
+      expect(lines[match - 1].trim(), startsWith('// alerts:'),
+          reason: 'the alerts comment must sit directly above its own block, '
+              'not above whatever was inserted before it');
+    });
+
+    test(
+        'the staging comment is immediately above match /supplications_staging',
+        () {
+      final match = lineOf('match /supplications_staging');
+      expect(match, greaterThan(0));
+      // Walk back over the comment block and check it is the staging one.
+      var i = match - 1;
+      while (i > 0 && lines[i].trim().startsWith('//')) {
+        i--;
+      }
+      final header = lines.sublist(i + 1, match).join('\n');
+      expect(header, contains('supplications_staging'));
+      expect(header.contains('// alerts:'), isFalse,
+          reason: 'the alerts comment must not be inside the staging block');
+    });
+  });
 }
