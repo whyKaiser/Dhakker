@@ -1256,3 +1256,157 @@ test("the link never changes the target's own policy", () => {
   assert.equal(built.get("moia-1446-marwah-same").contentKind, "procedural_guidance");
   assert.equal(built.get("moia-1446-marwah-same").recitationPolicy, null);
 });
+
+// ---------------------------------------------------------------------------
+// sourceAssessment / attributionLevel / sourceReferencesCompleteness.
+//
+// These carry what the MINISTRY printed about a citation — never a grading we
+// author. Three rules matter more than the rest: unknown values are refused,
+// they may not attach to Qur'anic references, and absence is silence rather
+// than a claim of authenticity.
+// ---------------------------------------------------------------------------
+
+function packWithRefs(refs, extra = {}) {
+  const entries = realPack.entries.map((e) =>
+    e.duaId === "moia-1446-tawaf-free-dhikr"
+      ? { ...e, sourceReferences: refs, ...extra }
+      : e,
+  );
+  return { ...realPack, entries };
+}
+
+const HADITH_REF = {
+  type: "hadith",
+  collection: "سنن أبي داود",
+  reference: "1888",
+  referenceKind: "hadith_number",
+  citedBy: "moia_1446",
+  citedOnPage: 70,
+};
+
+test("the real pack carries page 70's four citations with its qualifiers", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const refs = built.get("moia-1446-tawaf-free-dhikr").sourceReferences;
+  assert.equal(refs.length, 4);
+
+  const weak = refs.filter((r) => r.sourceAssessment === "weak_isnad");
+  assert.equal(weak.length, 3);
+  assert.deepEqual(
+    weak.map((r) => r.reference).sort(),
+    ["1888", "24351", "902"],
+  );
+  for (const r of weak) {
+    assert.equal(r.type, "hadith");
+    assert.equal(r.referenceKind, "hadith_number");
+    assert.equal(r.attributionLevel, undefined, "weakness is not a stopping point");
+  }
+
+  const athar = refs.find((r) => r.type === "athar");
+  assert.equal(athar.collection, "مصنف عبدالرزاق");
+  assert.equal(athar.reference, "5/49");
+  assert.equal(athar.referenceKind, "volume_page");
+  assert.equal(athar.attributionLevel, "mawquf");
+  assert.equal(athar.attributedTo, "عائشة رضي الله عنها");
+  assert.equal(
+    athar.sourceAssessment,
+    undefined,
+    "mawquf says where a chain stops, NOT how sound it is",
+  );
+
+  for (const r of refs) {
+    assert.equal(r.citedBy, "moia_1446");
+    assert.equal(r.citedOnPage, 70);
+  }
+  assert.equal(
+    built.get("moia-1446-tawaf-free-dhikr").sourceReferencesCompleteness,
+    "named_references_plus_unnamed_others",
+  );
+});
+
+test("an unknown sourceAssessment is refused", () => {
+  assert.throws(
+    () => buildRecords(packWithRefs([{ ...HADITH_REF, sourceAssessment: "sahih" }])),
+    /unknown sourceAssessment "sahih"/,
+  );
+});
+
+test("an unknown attributionLevel is refused", () => {
+  assert.throws(
+    () => buildRecords(packWithRefs([{ ...HADITH_REF, attributionLevel: "marfu" }])),
+    /unknown attributionLevel "marfu"/,
+  );
+});
+
+test("an unknown sourceReferencesCompleteness is refused", () => {
+  assert.throws(
+    () =>
+      buildRecords(
+        packWithRefs([HADITH_REF], { sourceReferencesCompleteness: "all_of_them" }),
+      ),
+    /unknown sourceReferencesCompleteness "all_of_them"/,
+  );
+});
+
+test("neither qualifier may attach to a Qur'anic reference", () => {
+  const quran = {
+    type: "quran",
+    collection: "القرآن الكريم",
+    reference: "البقرة: 201",
+    referenceKind: "surah_ayah",
+    citedBy: "moia_1446",
+    citedOnPage: 70,
+  };
+  assert.throws(
+    () => buildRecords(packWithRefs([{ ...quran, sourceAssessment: "weak_isnad" }])),
+    /sourceAssessment is not valid on a quran reference/,
+  );
+  assert.throws(
+    () => buildRecords(packWithRefs([{ ...quran, attributionLevel: "mawquf" }])),
+    /attributionLevel is not valid on a quran reference/,
+  );
+});
+
+test("attributedTo without an attributionLevel is refused", () => {
+  assert.throws(
+    () => buildRecords(packWithRefs([{ ...HADITH_REF, attributedTo: "عائشة" }])),
+    /attributedTo requires an attributionLevel/,
+  );
+  assert.throws(
+    () =>
+      buildRecords(
+        packWithRefs([{ ...HADITH_REF, attributionLevel: "mawquf", attributedTo: "  " }]),
+      ),
+    /attributedTo must be a non-empty string/,
+  );
+});
+
+test("declaring completeness with no references at all is refused", () => {
+  assert.throws(
+    () =>
+      buildRecords(
+        packWithRefs([], {
+          sourceReferencesCompleteness: "named_references_plus_unnamed_others",
+        }),
+      ),
+    /needs at least one reference/,
+  );
+});
+
+test("the new qualifiers change no import decision", () => {
+  // The record is included or excluded by the review ledger and its
+  // contentKind. A weak-isnad citation must not alter either.
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const r = built.get("moia-1446-tawaf-free-dhikr");
+  assert.equal(r.contentKind, "procedural_guidance");
+  assert.equal(r.verificationStatus, "unverified");
+  assert.equal(r.verifiedAt, null);
+  // And the same record with the qualifiers stripped builds identically
+  // apart from those fields.
+  const stripped = buildRecords(
+    packWithRefs(
+      r.sourceReferences.map(({ sourceAssessment, attributionLevel, attributedTo, ...rest }) => rest),
+    ),
+  ).find((x) => x.duaId === "moia-1446-tawaf-free-dhikr");
+  assert.equal(stripped.contentKind, r.contentKind);
+  assert.equal(stripped.verificationStatus, r.verificationStatus);
+});

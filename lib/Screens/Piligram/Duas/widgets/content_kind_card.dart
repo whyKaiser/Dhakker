@@ -178,11 +178,18 @@ class SourceReferenceList extends StatelessWidget {
     required this.references,
     required this.accent,
     this.textColor,
+    this.hasUnnamedFurtherReferences = false,
   });
 
   final List<SourceReference> references;
   final Color accent;
   final Color? textColor;
+
+  /// هل ينتهي تخريج المصدر بـ«وغيرهم»؟
+  ///
+  /// يُعرض سطرًا مستقلًّا بعد المُسمَّين، فلا تُقرأ القائمة حصرًا لم يقله
+  /// المصدر. ولا يُعرض إلا حين يصرّح السجل بذلك.
+  final bool hasUnnamedFurtherReferences;
 
   @override
   Widget build(BuildContext context) {
@@ -201,11 +208,30 @@ class SourceReferenceList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
-              '• ${r.display}',
+              // الوصف يُلحق بالمرجع لا بالسجل: «بإسنادٍ فيه ضعف» تخصّ هذا
+              // التخريج وحده، و«موقوف» بيانُ منتهىٰ سنده. ويُعرض بلا شارة
+              // ولا لون تصحيح — فهذه نقولٌ عن المصدر لا توثيقٌ منّا.
+              [
+                '• ${r.display}',
+                if ((r.qualifierAr() ?? '').isNotEmpty) '— ${r.qualifierAr()}',
+              ].join(' '),
               style: TextStyle(
                 color: textColor?.withOpacity(0.8),
                 fontSize: 11.5,
                 height: 1.6,
+              ),
+            ),
+          ),
+        if (hasUnnamedFurtherReferences)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '• وغيرهم',
+              style: TextStyle(
+                color: textColor?.withOpacity(0.65),
+                fontSize: 11.5,
+                height: 1.6,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ),
@@ -225,6 +251,7 @@ class GuidanceCard extends StatelessWidget {
     required this.body,
     this.attribution,
     this.references = const [],
+    this.hasUnnamedFurtherReferences = false,
     this.isPropheticDirective = false,
     this.usageNoteAr = '',
     this.relatedRecordTitle,
@@ -242,6 +269,9 @@ class GuidanceCard extends StatelessWidget {
 
   /// ما عزا إليه المصدر. عرض فقط: لا يجعل الإرشاد نصًّا يُتلىٰ.
   final List<SourceReference> references;
+
+  /// هل يُذيَّل التخريج بـ«وغيرهم»؟ يمرّره السجل، ولا تخترعه البطاقة.
+  final bool hasUnnamedFurtherReferences;
 
   /// هل هذا الإرشاد حديث نبوي بلفظه؟ يغيّر العنوان الظاهر وحده — لا يمنحه
   /// زر تشغيل ولا يجعله ذكرًا يُتلىٰ.
@@ -337,7 +367,11 @@ class GuidanceCard extends StatelessWidget {
             ),
           ],
           SourceReferenceList(
-              references: references, accent: accent, textColor: textColor),
+            references: references,
+            accent: accent,
+            textColor: textColor,
+            hasUnnamedFurtherReferences: hasUnnamedFurtherReferences,
+          ),
           const SizedBox(height: 10),
           const ContentKindBadge(
               kind: SupplicationContentKind.proceduralGuidance),
@@ -359,6 +393,7 @@ class ContextualEvidenceCard extends StatelessWidget {
     required this.body,
     required this.attribution,
     this.references = const [],
+    this.hasUnnamedFurtherReferences = false,
     this.cardColor,
     this.textColor,
   });
@@ -371,6 +406,9 @@ class ContextualEvidenceCard extends StatelessWidget {
 
   /// ما عزا إليه المصدر من كتب الحديث والآثار.
   final List<SourceReference> references;
+
+  /// هل يُذيَّل التخريج بـ«وغيرهم»؟ يمرّره السجل، ولا تخترعه البطاقة.
+  final bool hasUnnamedFurtherReferences;
 
   final Color? cardColor;
   final Color? textColor;
@@ -418,7 +456,11 @@ class ContextualEvidenceCard extends StatelessWidget {
                   height: 1.7,
                   fontStyle: FontStyle.italic)),
           SourceReferenceList(
-              references: references, accent: accent, textColor: textColor),
+            references: references,
+            accent: accent,
+            textColor: textColor,
+            hasUnnamedFurtherReferences: hasUnnamedFurtherReferences,
+          ),
           const SizedBox(height: 10),
           const ContentKindBadge(
               kind: SupplicationContentKind.contextualEvidence),

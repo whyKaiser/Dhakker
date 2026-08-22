@@ -431,6 +431,8 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                                       body: item.dua.textByLanguage(langCode),
                                       attribution: item.dua.attribution,
                                       references: item.dua.sourceReferences,
+                                      hasUnnamedFurtherReferences:
+                                          item.dua.hasUnnamedFurtherReferences,
                                       isPropheticDirective: true,
                                       usageNoteAr: item.dua.usageNoteAr,
                                       relatedRecordTitle: _relatedTitle(
@@ -451,6 +453,8 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                                           attribution: item.dua.attribution,
                                           references:
                                               item.dua.sourceReferences,
+                                          hasUnnamedFurtherReferences: item
+                                              .dua.hasUnnamedFurtherReferences,
                                           cardColor: palette.card,
                                           textColor: palette.text,
                                         )
