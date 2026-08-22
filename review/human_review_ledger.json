@@ -828,12 +828,34 @@
       "printedContextNote": "ص69 تنص صراحةً: «ويقول بين الركن اليماني والحجَر الأسود» — فالتخصيص بالموضع من المصدر لا منّا.",
       "sourceReferencesReviewStatus": "reviewed_present",
       "uncertaintyGroup": "U5"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-halq-shamil",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 74,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "29f4b7b78e0f998d6e4990706a0b9a558f8657c4b909832adb4383b3220fc9ce",
+      "reviewedAt": "2026-08-22T03:00:00Z",
+      "reviewedFromFullSourcePdf": true,
+      "agentRenderedPage": false,
+      "reviewEvidenceNote": "المراجعة البصرية لص74 أجراها المراجع البشري من ملف المصدر الكامل (136 صفحة). ملفات الصفحات المرفوعة للوكيل تنتهي عند ص73، فلم يُعِد الوكيل رسم الصفحة ولا يدّعي مقابلةً حرفية أجراها بنفسه عليها.",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "contentKindConfirmed": "procedural_guidance",
+      "transcriptionCorrected": false,
+      "transcriptionNote": "لا تصحيح: لم تثبت مراجعةُ الصفحة أيَّ خطأ نقل. والاقتباس القرآني المطبوع يستعمل السكون العادي (U+0652) حيث يستعمل مصحف المجمع السكون العثماني (U+06E1)؛ نصُّ الوزارة محفوظٌ كما طُبع ولا يُقوَّم على المصحف.",
+      "embeddedQuranEquivalence": "canonically_equivalent_not_byte_identical",
+      "sourceReferencesReviewStatus": "reviewed_present"
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
-    "totalReviews": 36,
-    "passed": 35,
+    "totalReviews": 37,
+    "passed": 36,
     "pending": 0,
     "blocked": 1,
     "failed": 0,
@@ -871,7 +893,8 @@
     "sourceReferencesReviewed": {
       "reviewed_present": [
         "moia-1446-safa-dhikr",
-        "moia-mukhtasar-1446-tawaf-between-corners"
+        "moia-mukhtasar-1446-tawaf-between-corners",
+        "moia-mukhtasar-1446-umrah-halq-shamil"
       ],
       "reviewed_none": [
         "moia-1446-marwah-same",

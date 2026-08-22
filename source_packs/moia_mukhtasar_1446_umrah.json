@@ -3096,6 +3096,22 @@
           "referenceKind": "surah_ayah",
           "citedBy": "moia_1446",
           "citedOnPage": 74
+        },
+        {
+          "type": "hadith",
+          "collection": "صحيح البخاري",
+          "reference": "1540",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 74
+        },
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1305",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 74
         }
       ],
       "recitationPolicy": null

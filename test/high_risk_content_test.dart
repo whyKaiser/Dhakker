@@ -174,15 +174,66 @@ void main() {
       expect((e['textRasm'] ?? '').toString(), isEmpty);
     });
 
-    test('the Quran citation is recorded as a structured reference', () {
+    test('all three page-74 citations are recorded as structured refs', () {
       final refs = (_entry(kHalq)['sourceReferences'] as List)
           .cast<Map<String, dynamic>>();
-      expect(refs, hasLength(1));
-      expect(refs.first['type'], 'quran');
-      expect(refs.first['referenceKind'], 'surah_ayah');
-      expect(refs.first['citedBy'], 'moia_1446');
-      expect(refs.first['citedOnPage'], 74);
-      expect(refs.first['reference'], isNotEmpty);
+      expect(refs, hasLength(3));
+      for (final r in refs) {
+        expect(r['citedBy'], 'moia_1446',
+            reason: 'these are what the MINISTRY cited, not our own research');
+        expect(r['citedOnPage'], 74);
+        expect((r['reference'] as String).trim(), isNotEmpty);
+      }
+      final byCollection = {
+        for (final r in refs) r['collection'] as String: r,
+      };
+      expect(byCollection['القرآن الكريم']!['type'], 'quran');
+      expect(byCollection['القرآن الكريم']!['referenceKind'], 'surah_ayah');
+      expect(byCollection['صحيح البخاري']!['type'], 'hadith');
+      expect(byCollection['صحيح البخاري']!['reference'], '1540');
+      expect(byCollection['صحيح البخاري']!['referenceKind'], 'hadith_number');
+      expect(byCollection['صحيح مسلم']!['type'], 'hadith');
+      expect(byCollection['صحيح مسلم']!['reference'], '1305');
+      expect(byCollection['صحيح مسلم']!['referenceKind'], 'hadith_number');
+    });
+
+    test('the hadith numbers live in the citations, not in the prose', () {
+      // Page 74 prints them as citations for the sentence; the sentence
+      // itself does not contain them. Splicing them into text.ar would put
+      // administrative apparatus into ministry prose.
+      final t = _entry(kHalq)['text']['ar'] as String;
+      expect(t.contains('1540'), isFalse);
+      expect(t.contains('1305'), isFalse);
+    });
+
+    test('the ministry sentence is preserved exactly as printed', () {
+      // Page 74 sets رُءُوسَكُمْ with the ORDINARY sukun. It is never
+      // rewritten toward the mushaf's Uthmani sukun: this record is the
+      // ministry writing, and correcting its orthography would be editing
+      // a source we only quote.
+      final guid = _entry(kHalq)['text']['ar'] as String;
+      final embedded = RegExp('﴿(.*?)﴾').firstMatch(guid)!.group(1)!;
+      expect(embedded.contains('ْ'), isTrue,
+          reason: 'plain sukun U+0652, as the ministry printed it');
+      expect(embedded.contains('ۡ'), isFalse,
+          reason: 'the Uthmani sukun must not be substituted in');
+    });
+
+    test('the page-74 review is recorded, with its evidence stated', () {
+      final r = _reviews()[kHalq]!;
+      expect(r['reviewStatus'], 'passed');
+      expect(r['textReviewStatus'], 'passed');
+      expect(r['reviewedPage'], 74);
+      expect(r['transcriptionCorrected'], isFalse);
+      expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
+      expect(r['embeddedQuranEquivalence'],
+          'canonically_equivalent_not_byte_identical');
+      // The agent could not render page 74 — the uploaded page files stop at
+      // 73 — so the ledger records who actually looked, rather than implying
+      // a machine comparison that never happened.
+      expect(r['agentRenderedPage'], isFalse);
+      expect(r['reviewedFromFullSourcePdf'], isTrue);
+      expect(_entry(kHalq)['verificationStatus'], 'unverified');
     });
 
     test('the embedded quotation shares 48:27 word-for-word', () {
@@ -304,7 +355,7 @@ void main() {
       final reviewed = _reviews().keys.toSet();
       final unreviewed =
           _entries().where((e) => !reviewed.contains(e['duaId'])).toList();
-      expect(unreviewed, hasLength(49));
+      expect(unreviewed, hasLength(48));
       for (final e in unreviewed) {
         expect(_reviews()[e['duaId']]?['sourceReferencesReviewStatus'], isNull);
       }
@@ -406,6 +457,102 @@ void main() {
       final s = File('lib/Screens/Assistant/assistant_screen.dart')
           .readAsStringSync();
       expect(s.contains('excerpt.mayShowVerbatimLabel'), isTrue);
+    });
+  });
+
+  group('isVerbatimFromStoredRecord means one thing only', () {
+    test('it is equality with the stored record, nothing more', () {
+      final w = File('assistant-proxy/worker.js').readAsStringSync();
+      expect(
+          w.contains('isVerbatimFromStoredRecord: excerptText === doc.content'),
+          isTrue,
+          reason: 'the only comparison is shipped-string vs stored-string');
+      // No Quran corpus, authority field, or external source is consulted
+      // anywhere in the excerpt builder.
+      final withComments = w.substring(
+          w.indexOf('function buildVerifiedExcerpts'),
+          w.indexOf('function canonicalizeCitations'));
+      // Comments are stripped first: the rule is about what the CODE reads,
+      // and the doc comment above the flag legitimately names the fields it
+      // must not consult in order to say that it does not consult them.
+      final builder = withComments
+          .split('\n')
+          .where((l) => !l.trimLeft().startsWith('//'))
+          .join('\n');
+      for (final forbidden in [
+        'hafsData',
+        'kfgqpc',
+        'quranRef',
+        'textAuthority'
+      ]) {
+        expect(builder.contains(forbidden), isFalse,
+            reason: 'the flag must not consult $forbidden');
+      }
+    });
+
+    test('a true flag on guidance never yields a Quran-verbatim label', () {
+      // The halq record is guidance that EMBEDS Quran. Even when the proxy
+      // proves the string is the stored one, the card must not present it as
+      // a verbatim scriptural text.
+      final e = VerifiedExcerpt.listFrom([
+        {
+          'documentId': kHalq,
+          'text': _entry(kHalq)['text']['ar'],
+          'contentKind': 'procedural_guidance',
+          'isVerbatimFromStoredRecord': true,
+        }
+      ]).single;
+      expect(e.isVerbatimFromStoredRecord, isTrue,
+          reason: 'store-to-wire fidelity really does hold');
+      expect(e.isRecitable, isFalse);
+      expect(e.mayShowVerbatimLabel, isFalse,
+          reason: 'guidance never carries a verbatim recitation label, '
+              'however faithfully it was transported');
+    });
+
+    test('the flag does not certify the embedded Quran against KFGQPC', () {
+      // Proof by counter-example: the stored halq sentence is transported
+      // perfectly AND its embedded quotation is NOT a KFGQPC excerpt. If the
+      // flag implied scriptural identity, these two could not both hold.
+      final guid = _entry(kHalq)['text']['ar'] as String;
+      final embedded = RegExp('﴿(.*?)﴾').firstMatch(guid)!.group(1)!;
+      expect(_ayah(48, 27).contains(embedded), isFalse);
+      final e = VerifiedExcerpt.listFrom([
+        {
+          'documentId': kHalq,
+          'text': guid,
+          'contentKind': 'procedural_guidance',
+          'isVerbatimFromStoredRecord': true,
+        }
+      ]).single;
+      expect(e.isVerbatimFromStoredRecord, isTrue);
+    });
+  });
+
+  group('audio scope excludes guidance', () {
+    test('the halq record is never counted toward an audio file', () {
+      const recitable = {
+        'specific_text',
+        'general_dua',
+        'general_dhikr',
+        'mosque_entry',
+      };
+      final entries = _entries();
+      final rec =
+          entries.where((e) => recitable.contains(e['contentKind'])).toList();
+      expect(rec.map((e) => e['duaId']), isNot(contains(kHalq)));
+      expect(rec.map((e) => e['duaId']), isNot(contains(kReturnHajar)));
+      expect(rec, hasLength(60));
+      final uniqueTexts =
+          rec.map((e) => (e['text']['ar'] as String).trim()).toSet();
+      expect(uniqueTexts, hasLength(59),
+          reason: 'the one legitimate duplicate shares a single audio file');
+      // And no guidance record carries an audio URL that would bypass this.
+      for (final e in entries) {
+        if (recitable.contains(e['contentKind'])) continue;
+        expect((e['audioUrl'] ?? '').toString().trim(), isEmpty,
+            reason: '${e['duaId']}: guidance must own no audio');
+      }
     });
   });
 
