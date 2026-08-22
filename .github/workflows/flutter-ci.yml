@@ -16,6 +16,7 @@ on:
       - "claude/content-kind-contextual-evidence"
       - "claude/batch-c-review"
       - "claude/batch-d-review"
+      - "claude/batch-e-review"
   pull_request:
     branches:
       - main
@@ -72,6 +73,7 @@ jobs:
             "test/source_references_test.dart"
             "test/recitation_policy_test.dart"
             "test/safa_trigger_gap_test.dart"
+            "test/marwah_relation_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

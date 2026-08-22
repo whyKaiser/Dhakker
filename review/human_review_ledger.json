@@ -780,12 +780,40 @@
         "liftedAt": null,
         "liftedBy": null
       }
+    },
+    {
+      "recordId": "moia-1446-marwah-same",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 73,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "c3f2501accbeaa1dd3943e4a3f12dbc1166c16b680165d868d8b4c8282956dc0",
+      "reviewedAt": "2026-08-22T00:40:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "deploymentBlocked": true,
+      "deploymentBlockReason": "content_kind_not_yet_deployed",
+      "excludedFromImport": true,
+      "deploymentBlockDetail": "أُعيد تصنيفه إرشادًا: النص جملة إجرائية تحيل على ذكر الصفا، ولا نصَّ ذِكرٍ فيها.",
+      "deploymentBlockLiftConditions": {
+        "//": "الحظر لا يُرفع بدمج الكود. الشروط تراكمية.",
+        "codeMerged": false,
+        "appAndWorkerReleased": false,
+        "badgeAndNoAutoPlayVerifiedOnDevice": false,
+        "liftedAt": null,
+        "liftedBy": null
+      },
+      "contentKindConfirmed": "procedural_guidance",
+      "contentKindChangedFrom": "specific_text",
+      "transcriptionCorrected": true,
+      "transcriptionNote": "النص المخزَّن سابقًا كان ناقصًا ابتداءَه وفيه ألفان خنجريّتان لا وجود لهما في المطبوع. أُعيد النقل من ص73 المرسومة بدقة 300dpi."
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
-    "totalReviews": 34,
-    "passed": 30,
+    "totalReviews": 35,
+    "passed": 31,
     "pending": 3,
     "blocked": 1,
     "failed": 0,
@@ -806,6 +834,7 @@
       "moia-1446-hajar-umar",
       "moia-1446-hijr-not-valid",
       "moia-1446-maqam-rakatayn",
+      "moia-1446-marwah-same",
       "moia-1446-return-hajar",
       "moia-1446-safa-ayah",
       "moia-1446-safa-dhikr",
@@ -817,6 +846,7 @@
       "moia-1446-hajar-umar",
       "moia-1446-hijr-not-valid",
       "moia-1446-maqam-rakatayn",
+      "moia-1446-marwah-same",
       "moia-1446-return-hajar",
       "moia-1446-safa-ayah",
       "moia-1446-safa-dhikr",

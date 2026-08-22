@@ -149,6 +149,38 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
     _listAnimationController.forward(from: 0.0);
   }
 
+  /// عنوان السجل المتلوّ الذي يحيل إليه الإرشاد — **عنوانه فقط**.
+  ///
+  /// لا تُقرأ من هنا نصوصٌ ولا تُنسخ: بطاقة المروة تدلّ على بطاقة ذكر الصفا
+  /// ولا تحمل نصّه. فالنص الشرعيّ يبقىٰ في سجل واحد، ويُستمع إليه من زرّه هو.
+  String? _relatedTitle(SupplicationModel dua, String langCode) {
+    final target = _findRelated(dua);
+    if (target == null) return null;
+    final t = target.titleByLanguage(langCode).trim();
+    return t.isEmpty ? null : t;
+  }
+
+  SupplicationModel? _findRelated(SupplicationModel dua) {
+    final ids = SupplicationModel.sanitizeRelatedIds(
+        dua.relatedRecordIds, dua.duaId);
+    for (final id in ids) {
+      for (final item in _allItems) {
+        if (item.dua.duaId == id && item.dua.canPlayManually) return item.dua;
+      }
+    }
+    // إحالة لا نجد هدفها لا تُعرض أصلًا — سهمٌ إلىٰ لا شيء أسوأ من غيابه.
+    return null;
+  }
+
+  /// ينقل الحاج إلىٰ البطاقة الأصلية. لا يشغّل شيئًا: الاستماع اختيارُه هو،
+  /// من زرّ تلك البطاقة.
+  void _openRelated(SupplicationModel dua, String langCode) {
+    final target = _findRelated(dua);
+    if (target == null) return;
+    _searchController.text = target.titleByLanguage(langCode);
+    _applyFilters();
+  }
+
   Future<void> _playDua(SupplicationModel dua) async {
     // الحارس الأخير قبل النطق. الواجهة لا تعرض زر تشغيل لغير المتلوّ، لكن
     // البحث الصوتي يشغّل النتيجة الوحيدة دون مرور بزر — فلولا هذا الفحص
@@ -397,6 +429,11 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                                       attribution: item.dua.attribution,
                                       references: item.dua.sourceReferences,
                                       isPropheticDirective: true,
+                                      usageNoteAr: item.dua.usageNoteAr,
+                                      relatedRecordTitle: _relatedTitle(
+                                          item.dua, langCode),
+                                      onOpenRelated: () => _openRelated(
+                                          item.dua, langCode),
                                       cardColor: palette.card,
                                       textColor: palette.text,
                                     )
@@ -420,6 +457,7 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                                 text: item.dua.textByLanguage(langCode),
                                 kind: item.dua.contentKind,
                                 policy: item.dua.recitationPolicy,
+                                usageNoteAr: item.dua.usageNoteAr,
                                 zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
                                 buttonText: s.duasPlayButton,
                                 onPlay: () async => await _playDua(item.dua),
@@ -694,12 +732,17 @@ class _DuaResultCard extends StatefulWidget {
   /// كيفية الأداء إن نصّ عليها المصدر — «مرة واحدة»، «ثلاث مرات».
   final RecitationPolicy? policy;
 
+  /// تعليمة استعمال منقولة عن المطبوع. تُعرض ولا تدخل النطق أبدًا: نصّ
+  /// التلاوة هو [text] وحده، ولا يُضمّ إليه شيء.
+  final String usageNoteAr;
+
   const _DuaResultCard({
     required this.palette,
     required this.title,
     required this.text,
     required this.kind,
     this.policy,
+    this.usageNoteAr = '',
     required this.zoneName,
     required this.buttonText,
     required this.onPlay,
@@ -768,6 +811,18 @@ class _DuaResultCardState extends State<_DuaResultCard> {
             policy: widget.policy,
             textColor: widget.palette.text,
           ),
+          if (widget.usageNoteAr.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.usageNoteAr.trim(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: widget.palette.text.withOpacity(0.8),
+                fontSize: 12.5,
+                height: 1.8,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Text(
             widget.text,

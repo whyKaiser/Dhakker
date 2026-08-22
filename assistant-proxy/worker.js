@@ -675,6 +675,11 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
         ? doc.sourceReferences
         : [],
       recitationPolicy: doc.recitationPolicy ?? null,
+      // Carried so the model can say a guidance record POINTS at a recitable
+      // one. It never carries that record's text — the pointer is an id.
+      relatedRecordIds: Array.isArray(doc.relatedRecordIds)
+        ? doc.relatedRecordIds
+        : [],
       isVerbatim: true,
     });
   }
@@ -787,6 +792,20 @@ function buildSystemPrompt(language, context, retrieved, policy) {
         "record. State them if relevant, exactly as given. You must NOT invent a policy " +
         "for a record that has none, must NOT change a count or a condition, and must NOT " +
         "tell the pilgrim to repeat a text a number of times the record does not state.\n" +
+        "A recitationPolicy is a DESCRIPTION, never an instruction to the app: a count " +
+        "of three does not mean the app will play the text three times, and you must not " +
+        "tell the pilgrim that it will. Repetitions the source says the pilgrim fills with " +
+        "their own dua are the pilgrim's to make.\n" +
+        "REPEATED VS ONCE-ONLY: a record that states it is said once must NEVER be " +
+        "presented as repeatable, and a record whose repetition the source ties to a " +
+        "second place must not absorb a neighbouring once-only text into that repetition. " +
+        "Where one record says 'say the like of what was said' at another place, that " +
+        "refers ONLY to the record it points to. Never extend it to any other retrieved " +
+        "record, and never tell the pilgrim to repeat a Quranic text whose own record says " +
+        "it is not repeated.\n" +
+        "RELATED RECORDS: a record may point at another by id. You may say that it points " +
+        "there. You must NOT reproduce the pointed-to text as though the pointing record " +
+        "contained it, and you must cite whichever record you actually quote.\n" +
         "If a record's kind forbids presenting it as something to say, that holds even " +
         "when the user explicitly asks for a dua for that place: answer with what the " +
         "record actually is, and say plainly that it is not a supplication.\n\n" +
@@ -796,6 +815,8 @@ function buildSystemPrompt(language, context, retrieved, policy) {
               `[${i + 1}] documentId=${d.documentId} title=${JSON.stringify(d.title)} ` +
               `authority=${JSON.stringify(d.authority)} section=${JSON.stringify(d.section || "")} ` +
               `contentKind=${JSON.stringify(d.contentKind || "unspecified")} ` +
+              `recitationPolicy=${JSON.stringify(d.recitationPolicy || null)} ` +
+              `relatedRecordIds=${JSON.stringify(d.relatedRecordIds || [])} ` +
               `url=${JSON.stringify(d.url || "")}\ncontent: ${JSON.stringify(d.content).slice(0, 1200)}`
           )
           .join("\n\n");
@@ -1144,6 +1165,12 @@ function mapSupplicationRows(rows, language) {
       // HOW the source says the text is performed. Server fact, read from
       // the stored record — the model never authors or edits it.
       recitationPolicy: mapRecitationPolicy(fields.recitationPolicy),
+      // Pointer to the canonical recitable record, by id. Never text: the
+      // guidance record must not arrive carrying a copy of the dhikr it
+      // refers to, or the model would quote it under the wrong citation.
+      relatedRecordIds: (fields.relatedRecordIds?.arrayValue?.values || [])
+        .map((v) => (v?.stringValue || "").trim())
+        .filter(Boolean),
       content,
     });
   }
