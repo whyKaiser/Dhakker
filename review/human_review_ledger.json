@@ -1373,12 +1373,30 @@
       "transcriptionCorrected": false,
       "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. ذِكر لا دعاء بسبب دلالي لا موضعي: النص كله جُمَل خبرية تقرّر التوحيد والعظمة والحلم والربوبية، ولا يحوي طلبًا واحدًا — لا فعل أمر موجَّهًا إلى الله، ولا «اللهم»، ولا سؤالًا ولا استعاذة. الدعاء يسأل وهذا يُثبت. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
       "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-tamam-umrah",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 74,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "406da1bc6300bc40dedac79854fb3fd875fa566379ff5ce0b58a30cc9a0a678d",
+      "reviewedAt": "2026-08-22T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "procedural_guidance",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": true,
+      "transcriptionNote": "صُحّح موضعان، والطول لم يتغيّر (80 محرفًا). (1) «حِلًّا» ← «حِلًا» بحذف الشدّة (U+0651) وحدها. الأساس هو القراءة المباشرة للمطبوع من البكسلات الأصلية لص74: فوق الموضع شرطتان متوازيتان متطابقتان (ارتفاع 37، عرض 62، استطالة 5.4 و5.7) هما التنوين، وكسرة أسفل، ولا وجود لأي مكوّن بتوقيع الشدّة. وضابط الشدّة مأخوذ من الصفحة والخط والحجم نفسها: شدّة «يعمُّ» في السطر المجاور، وشكلها متمايز تمامًا (ارتفاع 50، عرض 56، استطالة 2.1). ولم تندمج علامتان هنا: الشرطتان منفصلتان ومتساويتان، وهو ما لا يحدث عند الاندماج. وكلمة «جدًا» في ص103 استُعملت قرينةً مساندة فقط — الكتاب يطبعها كذلك بلا شدّة — ولم تكن بديلًا عن قراءة الصفحة نفسها. (2) «جميع» ← «جميعَ» بإضافة فتحة (U+064E) على العين، وهي مطبوعة وساقطة من النقل (شرطة بلا ثقب، استطالة 4.6، ملء 0.37). ولم يُمسّ موضع التنوين في «حِلًا» و«كاملًا»، ولا نوع الشرطتين الاعتراضيتين: الصفحة صورة بلا ربط Unicode، وموضع رسم العلامة وحده لا يثبت الترميز، ولا توجد قاعدة تطبيع معلنة للشرطات. القوسان الهلاليان والنقطة الواقعة بعد القوس المغلق جهاز طباعي لا يدخل text.ar.",
+      "sourceReferencesReviewStatus": "reviewed_none"
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
-    "totalReviews": 65,
-    "passed": 64,
+    "totalReviews": 66,
+    "passed": 65,
     "pending": 0,
     "blocked": 1,
     "failed": 0,
@@ -1451,6 +1469,7 @@
         "moia-mukhtasar-1446-general-031",
         "moia-mukhtasar-1446-general-032",
         "moia-mukhtasar-1446-general-033",
+        "moia-mukhtasar-1446-umrah-tamam-umrah",
         "moia-mukhtasar-1446-umrah-taqsir-mara",
         "moia-mukhtasar-1446-umrah-taqsir-shamil"
       ],

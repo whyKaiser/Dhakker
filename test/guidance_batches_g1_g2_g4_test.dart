@@ -322,13 +322,27 @@ void main() {
       }
     });
 
-    test('tamam-umrah stays unreviewed while its marks are open', () {
-      // «جميعَ» is printed with a fatha the record lacks, and whether «حِلاً»
-      // carries a shadda could not be settled: no word in the available pages
-      // combines a shadda with tanwin fath to calibrate against.
-      expect(_reviews().containsKey('moia-mukhtasar-1446-umrah-tamam-umrah'),
-          isFalse,
-          reason: 'an unresolved mark must not be recorded as reviewed');
+    test('tamam-umrah was reviewed once its marks were settled', () {
+      // It was held unreviewed while «حِلاً» was open — no word in the
+      // available pages combines a shadda with tanwin fath, so there was
+      // nothing to calibrate a merged reading against. It was settled on the
+      // negative reading of page 74 itself and recorded then, not before.
+      final r = _reviews()['moia-mukhtasar-1446-umrah-tamam-umrah'];
+      expect(r, isNotNull);
+      expect(r!['reviewedPage'], 74);
+    });
+
+    test('all four page-74 records are reviewed and none is held', () {
+      final r = _reviews();
+      for (final id in [
+        'moia-mukhtasar-1446-umrah-halq-shamil',
+        'moia-mukhtasar-1446-umrah-taqsir-shamil',
+        'moia-mukhtasar-1446-umrah-taqsir-mara',
+        'moia-mukhtasar-1446-umrah-tamam-umrah',
+      ]) {
+        expect(r[id], isNotNull, reason: id);
+        expect(r[id]!['deploymentBlocked'], isFalse, reason: id);
+      }
     });
   });
 

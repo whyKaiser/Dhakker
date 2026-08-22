@@ -169,22 +169,21 @@ void main() {
     });
   });
 
-  group('tamam-umrah stays unreviewed and untouched', () {
-    // «جميعَ» is printed with a fatha the record lacks, and whether «حِلاً»
-    // carries a shadda is still open. Both are held so the record can be
-    // settled in one edit rather than piecemeal.
-    test('it is not recorded as reviewed', () {
-      expect(_reviews().containsKey(kTamamUmrah), isFalse,
-          reason: 'unresolved marks remain; guessing would be worse than '
-              'leaving it unreviewed');
+  group('tamam-umrah was held back here and settled separately', () {
+    // This group once asserted the record was unreviewed, which was right
+    // while «حِلاً» was open: it was held so it could be fixed whole rather
+    // than half. Both its marks have since been settled, so the assertions
+    // now check that it left this batch's scope rather than that it is
+    // still waiting. Its own conditions live in tamam_umrah_test.dart.
+    test('it is reviewed now, and against page 74', () {
+      expect(_reviews().containsKey(kTamamUmrah), isTrue);
+      expect(_reviews()[kTamamUmrah]!['reviewedPage'], 74);
     });
 
-    test('its text still holds both open sites unchanged', () {
-      final t = _ar(kTamamUmrah);
-      expect(t.contains('جميع محظورات'), isTrue,
-          reason: 'the fatha on «جميعَ» is confirmed but deliberately not '
-              'applied yet');
-      expect(t.contains('حِلًّا'), isTrue, reason: 'shadda left as stored');
+    test('it was not folded into the page-98 batch', () {
+      expect(kPage98.contains(kTamamUmrah), isFalse);
+      expect(_reviews()[kTamamUmrah]!['transcriptionCorrected'], isTrue,
+          reason: 'unlike every page-98 record, this one needed edits');
     });
   });
 

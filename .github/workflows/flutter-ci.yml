@@ -84,6 +84,7 @@ jobs:
             "test/page_97_general_duas_test.dart"
             "test/halq_shamil_citation_test.dart"
             "test/page_98_and_g7_batch_test.dart"
+            "test/tamam_umrah_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
