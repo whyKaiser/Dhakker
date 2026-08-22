@@ -704,16 +704,14 @@
     {
       "recordId": "moia-1446-return-hajar",
       "reviewer": "whyKaiser",
-      "reviewStatus": "pending",
-      "textReviewStatus": "pending",
-      "pendingReason": "awaiting_visual_review_of_printed_page",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
       "reviewedPage": 72,
       "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
       "reviewedTextHash": "3a259d15b0a83cb0416894695d85a1549d6fd4c34b6fdc914e9fafcb07d22857",
-      "reviewedAt": "2026-08-21T10:40:00Z",
+      "reviewedAt": "2026-08-22T02:00:00Z",
       "firestoreVerificationPerformed": false,
       "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
-      "blockReason": "content_kind_not_yet_deployed",
       "deploymentBlocked": true,
       "deploymentBlockReason": "content_kind_not_yet_deployed",
       "excludedFromImport": true,
@@ -727,7 +725,10 @@
         "liftedBy": null
       },
       "contentKindConfirmed": "procedural_guidance",
-      "contentKindChangedFrom": "specific_text"
+      "contentKindChangedFrom": "specific_text",
+      "transcriptionCorrected": false,
+      "transcriptionNote": "قوبل الحرفُ بالحرف على ص72 المرسومة بدقة 450dpi. الألف الخنجرية في «إلىٰ» ثابتةٌ في المطبوع، والنقطتان بعد «الأسود» والفاصلة والنقطة كما هي مخزَّنة. لا تصحيح.",
+      "sourceReferencesReviewStatus": "reviewed_none"
     },
     {
       "recordId": "moia-1446-safa-ayah",
@@ -751,7 +752,8 @@
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
         "liftedBy": null
-      }
+      },
+      "sourceReferencesReviewStatus": "reviewed_none"
     },
     {
       "recordId": "moia-1446-safa-dhikr",
@@ -775,7 +777,8 @@
         "badgeAndNoAutoPlayVerifiedOnDevice": false,
         "liftedAt": null,
         "liftedBy": null
-      }
+      },
+      "sourceReferencesReviewStatus": "reviewed_present"
     },
     {
       "recordId": "moia-1446-marwah-same",
@@ -803,14 +806,35 @@
       "contentKindConfirmed": "procedural_guidance",
       "contentKindChangedFrom": "specific_text",
       "transcriptionCorrected": true,
-      "transcriptionNote": "النص المخزَّن سابقًا كان ناقصًا ابتداءَه وفيه ألفان خنجريّتان لا وجود لهما في المطبوع. أُعيد النقل من ص73 المرسومة بدقة 300dpi."
+      "transcriptionNote": "النص المخزَّن سابقًا كان ناقصًا ابتداءَه وفيه ألفان خنجريّتان لا وجود لهما في المطبوع. أُعيد النقل من ص73 المرسومة بدقة 300dpi.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-tawaf-between-corners",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 69,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "793b4f556e8cfa31497cb238eaab8a582537511bae7a39ed09b641bb3b1bd911",
+      "reviewedAt": "2026-08-22T02:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "contentKindConfirmed": "specific_text",
+      "quranTextAuthorityVerified": true,
+      "quranTextAuthorityNote": "النص المخزَّن مقطعٌ مطابقٌ حرفًا بحرف (code points) لآية البقرة 201 في ملف مجمع الملك فهد hafsData_v2-0.json المثبَّت في المستودع.",
+      "printedContextNote": "ص69 تنص صراحةً: «ويقول بين الركن اليماني والحجَر الأسود» — فالتخصيص بالموضع من المصدر لا منّا.",
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "uncertaintyGroup": "U5"
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
-    "totalReviews": 35,
-    "passed": 33,
-    "pending": 1,
+    "totalReviews": 36,
+    "passed": 35,
+    "pending": 0,
     "blocked": 1,
     "failed": 0,
     "byUncertainty": {
@@ -820,9 +844,7 @@
     "blockedRecordIds": [
       "moia-mukhtasar-1446-general-009"
     ],
-    "pendingRecordIds": [
-      "moia-1446-return-hajar"
-    ],
+    "pendingRecordIds": [],
     "excludedFromImportRecordIds": [
       "moia-1446-hajar-crowding",
       "moia-1446-hajar-umar",
@@ -846,6 +868,18 @@
       "moia-1446-safa-dhikr",
       "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
+    "sourceReferencesReviewed": {
+      "reviewed_present": [
+        "moia-1446-safa-dhikr",
+        "moia-mukhtasar-1446-tawaf-between-corners"
+      ],
+      "reviewed_none": [
+        "moia-1446-marwah-same",
+        "moia-1446-return-hajar",
+        "moia-1446-safa-ayah"
+      ],
+      "not_reviewed_count": 31
+    },
     "firestoreVerificationPerformed": false,
     "verifiedRecords": 0
   }

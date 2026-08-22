@@ -375,6 +375,10 @@ void _consumerTests() {
           text: 'نص',
           textLanguage: 'ar',
           contentKind: kind,
+          // Verbatim is proven here so these cases isolate the CONTENT-KIND
+          // half of the heading rule; the flag half is covered in
+          // high_risk_content_test.dart.
+          isVerbatimFromStoredRecord: true,
         );
 
     test('evidence and guidance are not recitable; a dua is', () {

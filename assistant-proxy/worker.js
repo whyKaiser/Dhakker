@@ -656,6 +656,10 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
   for (const c of citations || []) {
     const doc = byId.get(c.documentId);
     if (!doc) continue;
+    // Bound once, so the value shipped and the value compared are the same
+    // expression. Reading doc.content twice would let a future edit change
+    // one and leave the flag describing the other.
+    const excerptText = doc.content;
     out.push({
       documentId: doc.documentId,
       title: doc.title,
@@ -663,8 +667,11 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       section: doc.section || "",
       url: doc.url || "",
       version: doc.version || "",
-      // Byte-for-byte, exactly as stored.
-      text: doc.content,
+      // Byte-for-byte, exactly as stored — and `isVerbatimFromStoredRecord`
+      // below proves it rather than promising it. If anything ever
+      // transforms, trims, normalizes, translates or truncates this string,
+      // the comparison fails and the flag turns false on its own.
+      text: excerptText,
       // The language the TEXT is in — not the reply language. A French reply
       // still carries Arabic scripture, and the client must label it as such
       // rather than presenting it as translated.
@@ -680,7 +687,20 @@ function buildVerifiedExcerpts(citations, retrieved, policy) {
       relatedRecordIds: Array.isArray(doc.relatedRecordIds)
         ? doc.relatedRecordIds
         : [],
-      isVerbatim: true,
+      // COMPUTED, not asserted. True only when the string above is the exact
+      // code-point sequence retrieved from Firestore for this documentId.
+      //
+      // What it does NOT mean: that the text matches the Quran, a hadith
+      // collection, or the printed page. It is a statement about ONE hop —
+      // store to wire — and nothing else. Quran authority lives in the
+      // record's own textAuthority/quranRef fields and is checked against the
+      // pinned KFGQPC corpus, never inferred from this flag.
+      isVerbatimFromStoredRecord: excerptText === doc.content,
+      // DEPRECATED. The old field was an unconditional `true` that no code
+      // computed and the app never read. Kept only so an older client sees
+      // the shape it expects; it is now derived from the real check rather
+      // than hardcoded, and new consumers must read the field above.
+      isVerbatim: excerptText === doc.content,
     });
   }
   return out;

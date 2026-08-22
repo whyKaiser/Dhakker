@@ -201,6 +201,10 @@ void main() {
           authority: 'Example Authority',
           text: uthmani,
           textLanguage: 'ar',
+          // The proxy PROVED this string is the stored record's text. The
+          // «كما ورد في المصدر» heading asserts exactly that, so the card
+          // only shows it when this is true.
+          isVerbatimFromStoredRecord: true,
         ),
       ],
     );
@@ -240,6 +244,41 @@ void main() {
     await tester.pumpWidget(harness(withExcerpt(), isRtl: true));
     expect(find.byType(VerifiedExcerptCard), findsOneWidget);
     expect(find.text('نص موثّق — كما ورد في المصدر'), findsOneWidget);
+  });
+
+  testWidgets('an unproven excerpt still renders, without the verbatim claim',
+      (tester) async {
+    // An older proxy sends no `isVerbatimFromStoredRecord` (its `isVerbatim`
+    // was an unconditional literal nobody computed). The pilgrim must still
+    // see the stored text — withholding scripture would be worse — but the
+    // app must not assert a fidelity it cannot prove.
+    const r = AssistantResponse(
+      answer: 'Explanation',
+      language: 'ar',
+      grounded: true,
+      confidence: 'high',
+      citations: [],
+      requiresHumanGuide: false,
+      verifiedExcerpts: [
+        VerifiedExcerpt(
+          documentId: 'legacy',
+          title: 'Supplication',
+          authority: 'Example Authority',
+          text: uthmani,
+          textLanguage: 'ar',
+          contentKind: 'specific_text',
+          // isVerbatimFromStoredRecord deliberately omitted -> false
+        ),
+      ],
+    );
+    await tester.pumpWidget(harness(r, isRtl: true));
+
+    expect(find.byType(VerifiedExcerptCard), findsOneWidget);
+    expect(find.text(uthmani), findsOneWidget,
+        reason: 'the text itself is never withheld');
+    expect(find.text('نص موثّق — كما ورد في المصدر'), findsNothing,
+        reason: 'the verbatim claim is withheld, not the text');
+    expect(find.text('نص من المصدر'), findsOneWidget);
   });
 
   testWidgets('the verified text is not duplicated inside the explanation',
