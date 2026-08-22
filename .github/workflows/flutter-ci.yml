@@ -18,6 +18,7 @@ on:
       - "claude/batch-d-review"
       - "claude/batch-e-review"
       - "claude/high-risk-content-audit"
+      - "claude/remaining-guidance-review"
   pull_request:
     branches:
       - main
@@ -76,6 +77,7 @@ jobs:
             "test/safa_trigger_gap_test.dart"
             "test/marwah_relation_test.dart"
             "test/high_risk_content_test.dart"
+            "test/guidance_batches_g3_g5_g6_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
