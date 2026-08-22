@@ -147,6 +147,23 @@ export const SUPPORTED_REFERENCE_KINDS = [
   "unspecified",
 ];
 
+// What the MINISTRY says about a citation's chain. Transcription vocabulary,
+// not a grading system we author: a value is added only when a printed page
+// uses it. Absence is silence — it never means "authenticated".
+export const SUPPORTED_SOURCE_ASSESSMENTS = ["weak_isnad"];
+
+// Where the chain STOPS. Orthogonal to soundness: "mawquf" says a report ends
+// at a companion, which is a different fact from whether it is strong.
+export const SUPPORTED_ATTRIBUTION_LEVELS = ["mawquf"];
+
+// Whether the stored citation list is everything the page cites. MOIA's
+// footnotes sometimes end «وغيرهم» — the list is then NAMED, not complete,
+// and must never be read as exhaustive.
+export const SUPPORTED_REFERENCE_COMPLETENESS = [
+  "named_references_only",
+  "named_references_plus_unnamed_others",
+];
+
 const REFERENCE_REQUIRED_KEYS = [
   "type",
   "collection",
@@ -154,7 +171,13 @@ const REFERENCE_REQUIRED_KEYS = [
   "citedBy",
   "citedOnPage",
 ];
-const REFERENCE_KNOWN_KEYS = new Set([...REFERENCE_REQUIRED_KEYS, "reference"]);
+const REFERENCE_KNOWN_KEYS = new Set([
+  ...REFERENCE_REQUIRED_KEYS,
+  "reference",
+  "sourceAssessment",
+  "attributionLevel",
+  "attributedTo",
+]);
 
 /** Validates one entry's sourceReferences array. Throws on the first fault. */
 export function validateSourceReferences(refs, where) {
@@ -182,6 +205,40 @@ export function validateSourceReferences(refs, where) {
     }
     if (!SUPPORTED_REFERENCE_KINDS.includes(r.referenceKind)) {
       throw new Error(`${at}: unknown referenceKind "${r.referenceKind}".`);
+    }
+    if ("sourceAssessment" in r) {
+      if (!SUPPORTED_SOURCE_ASSESSMENTS.includes(r.sourceAssessment)) {
+        throw new Error(
+          `${at}: unknown sourceAssessment "${r.sourceAssessment}". ` +
+            `Supported: ${SUPPORTED_SOURCE_ASSESSMENTS.join(", ")}.`,
+        );
+      }
+      // The Qur'an's transmission is not assessed by isnad grading, and a
+      // record's Quran citation must never carry one.
+      if (r.type === "quran") {
+        throw new Error(`${at}: sourceAssessment is not valid on a quran reference.`);
+      }
+    }
+    if ("attributionLevel" in r) {
+      if (!SUPPORTED_ATTRIBUTION_LEVELS.includes(r.attributionLevel)) {
+        throw new Error(
+          `${at}: unknown attributionLevel "${r.attributionLevel}". ` +
+            `Supported: ${SUPPORTED_ATTRIBUTION_LEVELS.join(", ")}.`,
+        );
+      }
+      if (r.type === "quran") {
+        throw new Error(`${at}: attributionLevel is not valid on a quran reference.`);
+      }
+    }
+    if ("attributedTo" in r) {
+      if (typeof r.attributedTo !== "string" || !r.attributedTo.trim()) {
+        throw new Error(`${at}: attributedTo must be a non-empty string.`);
+      }
+      // Naming who a report stops at only means something once we have said
+      // that it stops there at all.
+      if (!("attributionLevel" in r)) {
+        throw new Error(`${at}: attributedTo requires an attributionLevel.`);
+      }
     }
     if (typeof r.collection !== "string" || !r.collection.trim()) {
       throw new Error(`${at}: collection must be a non-empty string.`);
@@ -330,6 +387,28 @@ export function validateRelatedRecordIds(
         );
       }
     }
+  }
+}
+
+/**
+ * Validates the record-level citation-completeness declaration.
+ *
+ * Its whole purpose is to stop a NAMED list from being read as a COMPLETE
+ * one. Declaring completeness with no references at all would say something
+ * about a list that does not exist, so it is refused.
+ */
+export function validateReferenceCompleteness(raw, refs, where) {
+  if (raw === undefined || raw === null) return;
+  if (!SUPPORTED_REFERENCE_COMPLETENESS.includes(raw)) {
+    throw new Error(
+      `${where}: unknown sourceReferencesCompleteness "${raw}". ` +
+        `Supported: ${SUPPORTED_REFERENCE_COMPLETENESS.join(", ")}.`,
+    );
+  }
+  if (!Array.isArray(refs) || refs.length === 0) {
+    throw new Error(
+      `${where}: sourceReferencesCompleteness needs at least one reference.`,
+    );
   }
 }
 
@@ -508,6 +587,9 @@ const OPTIONAL_FIELDS = {
   // nothing beyond the text itself.
   usageNoteAr: "",
 
+  // Is the stored citation list everything the page cites? null = not stated.
+  sourceReferencesCompleteness: null,
+
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
   quranRef: null,
@@ -624,6 +706,11 @@ export function buildRecords(pack) {
     }
 
     validateSourceReferences(entry.sourceReferences, where);
+    validateReferenceCompleteness(
+      entry.sourceReferencesCompleteness,
+      entry.sourceReferences,
+      where,
+    );
     validateRecitationPolicy(entry.recitationPolicy, where);
     validateRelatedRecordIds(
       entry.relatedRecordIds,

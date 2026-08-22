@@ -19,6 +19,7 @@ on:
       - "claude/batch-e-review"
       - "claude/high-risk-content-audit"
       - "claude/remaining-guidance-review"
+      - "claude/guidance-g1-g2-g4-g7"
   pull_request:
     branches:
       - main
@@ -78,6 +79,7 @@ jobs:
             "test/marwah_relation_test.dart"
             "test/high_risk_content_test.dart"
             "test/guidance_batches_g3_g5_g6_test.dart"
+            "test/guidance_batches_g1_g2_g4_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 

@@ -171,6 +171,9 @@ class SourceReference {
     required this.citedBy,
     required this.citedOnPage,
     this.reference,
+    this.sourceAssessment,
+    this.attributionLevel,
+    this.attributedTo,
   });
 
   final String type;
@@ -179,6 +182,35 @@ class SourceReference {
   final String citedBy;
   final int citedOnPage;
   final String? reference;
+
+  /// ما قاله المصدر المطبوع عن إسناد هذا المرجع، إن قال شيئًا.
+  ///
+  /// `weak_isnad` نقلٌ لعبارة الوزارة «بإسنادٍ فيه ضعف»، لا حكمٌ منّا.
+  /// و`null` تعني: **لم يقل المصدر شيئًا** — لا أنه صحّحه. الغياب سكوت.
+  final String? sourceAssessment;
+
+  /// أين ينتهي الإسناد. `mawquf` تعني أن الخبر موقوفٌ على صحابي.
+  ///
+  /// مستقلٌّ تمامًا عن [sourceAssessment]: «موقوف» ليست درجةَ صحة، بل بيانُ
+  /// منتهىٰ السند. الخلط بينهما يجعل الوقف عيبًا وليس كذلك.
+  final String? attributionLevel;
+
+  /// مَن وُقف عليه الخبر. لا معنىٰ له بلا [attributionLevel].
+  final String? attributedTo;
+
+  static const String weakIsnad = 'weak_isnad';
+  static const String mawquf = 'mawquf';
+
+  /// السطر الظاهر بعد اسم المرجع: «بإسنادٍ فيه ضعف» أو «موقوف على فلان».
+  /// نصٌّ مقرَّر هنا، لا يولّده نموذج ولا يُترجم.
+  String? qualifierAr() {
+    if (sourceAssessment == weakIsnad) return 'بإسنادٍ فيه ضعف';
+    if (attributionLevel == mawquf) {
+      final who = attributedTo?.trim() ?? '';
+      return who.isEmpty ? 'موقوف' : 'موقوف على $who';
+    }
+    return null;
+  }
 
   /// «صحيح البخاري (1597)» أو «الشافعي» حين لا رقم.
   String get display {
@@ -204,9 +236,22 @@ class SourceReference {
         // Absent stays absent: an empty string would claim something the
         // printed page did not say.
         reference: ref.isEmpty ? null : ref,
+        // Controlled values only. An unknown one reads as absent, never as
+        // a grading the client cannot render — same rule as usageQualifier.
+        sourceAssessment: _oneOf(m['sourceAssessment'], const [weakIsnad]),
+        attributionLevel: _oneOf(m['attributionLevel'], const [mawquf]),
+        attributedTo: () {
+          final v = (m['attributedTo'] ?? '').toString().trim();
+          return v.isEmpty ? null : v;
+        }(),
       ));
     }
     return out;
+  }
+
+  static String? _oneOf(dynamic raw, List<String> allowed) {
+    final v = (raw ?? '').toString().trim();
+    return allowed.contains(v) ? v : null;
   }
 
   Map<String, dynamic> toJson() => {
@@ -214,6 +259,9 @@ class SourceReference {
         'collection': collection,
         'referenceKind': referenceKind,
         'citedBy': citedBy,
+        if (sourceAssessment != null) 'sourceAssessment': sourceAssessment,
+        if (attributionLevel != null) 'attributionLevel': attributionLevel,
+        if (attributedTo != null) 'attributedTo': attributedTo,
         'citedOnPage': citedOnPage,
         if (reference != null) 'reference': reference,
       };
@@ -386,6 +434,21 @@ class SupplicationModel {
   /// أن **تنسخ** نصّها.
   final List<String> relatedRecordIds;
 
+  /// هل قائمة [sourceReferences] هي كلُّ ما عزا إليه المصدر؟
+  ///
+  /// حواشي الوزارة تنتهي أحيانًا بـ«وغيرهم»، فالمُسمَّون ليسوا كلَّ المُخرِّجين.
+  /// `named_references_plus_unnamed_others` تحفظ هذا الفرق، فلا تُقرأ الأربعةُ
+  /// المخزَّنة على أنها حصرٌ لم يقله المصدر.
+  final String? sourceReferencesCompleteness;
+
+  static const String namedReferencesPlusUnnamedOthers =
+      'named_references_plus_unnamed_others';
+
+  /// هل تُذيَّل قائمةُ المراجع بـ«وغيرهم»؟
+  bool get hasUnnamedFurtherReferences =>
+      sourceReferencesCompleteness == namedReferencesPlusUnnamedOthers &&
+      sourceReferences.isNotEmpty;
+
   /// معنىٰ الإحالة. `recitation_link` تعني: «قُل هنا مثل ما هناك».
   ///
   /// تُصرَّح ولا تُستنتج. وإحالةٌ بلا معنىً مصرَّح يرفضها المستورد، لأن
@@ -436,6 +499,7 @@ class SupplicationModel {
     this.relatedRecordIds = const [],
     this.relatedRecordRole,
     this.usageNoteAr = '',
+    this.sourceReferencesCompleteness,
   });
 
   /// تنقية الإحالات: بلا تكرار، وبلا إحالةٍ إلى النفس.
@@ -551,6 +615,11 @@ class SupplicationModel {
           ? (data['relatedRecordRole'] ?? '').toString().trim()
           : null,
       usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
+      sourceReferencesCompleteness: const [
+        namedReferencesPlusUnnamedOthers
+      ].contains((data['sourceReferencesCompleteness'] ?? '').toString().trim())
+          ? (data['sourceReferencesCompleteness'] ?? '').toString().trim()
+          : null,
     );
   }
 
@@ -621,6 +690,7 @@ class SupplicationModel {
         'relatedRecordIds': relatedRecordIds,
         'relatedRecordRole': relatedRecordRole,
         'usageNoteAr': usageNoteAr,
+        'sourceReferencesCompleteness': sourceReferencesCompleteness,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -683,6 +753,11 @@ class SupplicationModel {
           ? (data['relatedRecordRole'] ?? '').toString().trim()
           : null,
       usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
+      sourceReferencesCompleteness: const [
+        namedReferencesPlusUnnamedOthers
+      ].contains((data['sourceReferencesCompleteness'] ?? '').toString().trim())
+          ? (data['sourceReferencesCompleteness'] ?? '').toString().trim()
+          : null,
     );
   }
 }

@@ -3631,7 +3631,7 @@
         "en": "Etiquette: do not harm others"
       },
       "text": {
-        "ar": "ويجب علىٰ الطائف في الحالات الثلاث الأولىٰ: أن لا يؤذي الطائفين، ويلحق الضرر بهم؛ لأن الاستلام سنة، وترك الإيذاء واجب، فالإتيان بالواجب أولىٰ، وينبغي له إذا كان قويًّا، وكان فيه زحام أن يبتعد عن مزاحمة الضعفاء لئلا يؤذيهم.",
+        "ar": "ويجب علىٰ الطائف في الحالات الثلاث الأولىٰ: أن لا يؤذي الطائفين، ويلحق الضرر بهم؛ لأن الاستلام سنة، وترك الإيذاء واجب، فالإتيان بالواجب أولىٰ، وينبغي له إذا كان قويًّا، وكان فيه زحام أن يبتعد عن مزاحمة الضعفاء لئلا يؤذيهم، وعلىٰ الطائف أن يدرك ويلاحظ جلالة هذه البقعة، وأن يتلطف بمن يزاحم، ويعذره، ويرحمه، لأن الرحمة ما نزعت إلا من شقي، وأن يحرص علىٰ الخشوع والتضرع لله، ويترك كل ما يُذهب هذا الخشوع والتضرع كالمزاحمة، أو أن يَخرج بالطواف عما شُرع من أجله من التعبُّد لله، كما يحصل من بعض الطائفين من اللغو، والجدال، والمشاجرة.",
         "en": ""
       },
       "tagsAr": [
@@ -3720,7 +3720,7 @@
         "en": "Direction of Tawaf"
       },
       "text": {
-        "ar": "ثم بعد قوله: (بسم الله والله أكبر)، عند الحجر الأسود يأخذُ ذات اليمين، ويجعلُ الكعبة علىٰ يساره.",
+        "ar": "ثم بعد قوله: (بسم الله والله أكبر)، عند الحجر الأسود يأخذُ ذات اليمين، ويجعلُ الكعبة علىٰ يساره، فإذا وصل الركنَ اليماني استلمه إن تيسّر له بدون تقبيلٍ فإن لم يتيسر له فلا يزاحم، ولا يُشير إليه.",
         "en": ""
       },
       "tagsAr": [
@@ -3741,7 +3741,7 @@
       "sourceUrl": "https://ebook.moia.gov.sa/lib/book/582",
       "sourceVersion": "الطبعة الأولى، 1446هـ / 2025م",
       "sourceLanguage": "ar",
-      "sourceSection": "قسم العمرة — اتجاه الطواف — صفحة 68",
+      "sourceSection": "قسم العمرة — اتجاه الطواف واستلام الركن اليماني — صفحتا 68-69",
       "printedPage": 68,
       "verifiedAt": null,
       "verifiedBy": null,
@@ -3792,8 +3792,47 @@
       "revokedAt": null,
       "reviewNotes": "أساس نصّي صريح لقاعدة: لا دعاء مخصّص لكل شوط.",
       "visuallyUncertain": [],
-      "sourceReferences": [],
-      "recitationPolicy": null
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "سنن أبي داود",
+          "reference": "1888",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 70,
+          "sourceAssessment": "weak_isnad"
+        },
+        {
+          "type": "hadith",
+          "collection": "جامع الترمذي",
+          "reference": "902",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 70,
+          "sourceAssessment": "weak_isnad"
+        },
+        {
+          "type": "hadith",
+          "collection": "مسند أحمد",
+          "reference": "24351",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 70,
+          "sourceAssessment": "weak_isnad"
+        },
+        {
+          "type": "athar",
+          "collection": "مصنف عبدالرزاق",
+          "reference": "5/49",
+          "referenceKind": "volume_page",
+          "citedBy": "moia_1446",
+          "citedOnPage": 70,
+          "attributionLevel": "mawquf",
+          "attributedTo": "عائشة رضي الله عنها"
+        }
+      ],
+      "recitationPolicy": null,
+      "sourceReferencesCompleteness": "named_references_plus_unnamed_others"
     },
     {
       "duaId": "moia-1446-tawaf-no-per-circuit",
