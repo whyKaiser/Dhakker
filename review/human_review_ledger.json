@@ -732,16 +732,14 @@
     {
       "recordId": "moia-1446-safa-ayah",
       "reviewer": "whyKaiser",
-      "reviewStatus": "pending",
-      "textReviewStatus": "pending",
-      "pendingReason": "awaiting_visual_review_of_printed_page",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
       "reviewedPage": 72,
       "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
       "reviewedTextHash": "1d1088dfe39a74fd9ea199125d031924e698cdd684f7220968fa0584e8a204e0",
-      "reviewedAt": "2026-08-21T10:40:00Z",
+      "reviewedAt": "2026-08-22T01:10:00Z",
       "firestoreVerificationPerformed": false,
       "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
-      "blockReason": "recitation_policy_not_yet_deployed",
       "deploymentBlocked": true,
       "deploymentBlockReason": "recitation_policy_not_yet_deployed",
       "excludedFromImport": true,
@@ -758,16 +756,14 @@
     {
       "recordId": "moia-1446-safa-dhikr",
       "reviewer": "whyKaiser",
-      "reviewStatus": "pending",
-      "textReviewStatus": "pending",
-      "pendingReason": "awaiting_visual_review_of_printed_page",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
       "reviewedPage": 72,
       "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
       "reviewedTextHash": "8d48daaa49971f2c0b365f868ec3791d287a3617c60fb1bfac565e3185a5cd6e",
-      "reviewedAt": "2026-08-21T10:40:00Z",
+      "reviewedAt": "2026-08-22T01:10:00Z",
       "firestoreVerificationPerformed": false,
       "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
-      "blockReason": "recitation_policy_not_yet_deployed",
       "deploymentBlocked": true,
       "deploymentBlockReason": "recitation_policy_not_yet_deployed",
       "excludedFromImport": true,
@@ -813,8 +809,8 @@
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
     "totalReviews": 35,
-    "passed": 31,
-    "pending": 3,
+    "passed": 33,
+    "pending": 1,
     "blocked": 1,
     "failed": 0,
     "byUncertainty": {
@@ -825,9 +821,7 @@
       "moia-mukhtasar-1446-general-009"
     ],
     "pendingRecordIds": [
-      "moia-1446-return-hajar",
-      "moia-1446-safa-ayah",
-      "moia-1446-safa-dhikr"
+      "moia-1446-return-hajar"
     ],
     "excludedFromImportRecordIds": [
       "moia-1446-hajar-crowding",

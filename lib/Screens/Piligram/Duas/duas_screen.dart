@@ -161,6 +161,9 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
   }
 
   SupplicationModel? _findRelated(SupplicationModel dua) {
+    // بلا دورٍ مصرَّح لا رابط. والدور الوحيد المعروف اليوم هو الإحالة إلىٰ
+    // نصٍّ يُتلىٰ، فلا يُعرض «انظر: …» إلىٰ بطاقة إرشاد لا تُتلىٰ أصلًا.
+    if (!dua.hasRecitationLink) return null;
     final ids = SupplicationModel.sanitizeRelatedIds(
         dua.relatedRecordIds, dua.duaId);
     for (final id in ids) {

@@ -386,6 +386,19 @@ class SupplicationModel {
   /// أن **تنسخ** نصّها.
   final List<String> relatedRecordIds;
 
+  /// معنىٰ الإحالة. `recitation_link` تعني: «قُل هنا مثل ما هناك».
+  ///
+  /// تُصرَّح ولا تُستنتج. وإحالةٌ بلا معنىً مصرَّح يرفضها المستورد، لأن
+  /// الفحص الوحيد الذي يستحقّ إجراءه — أن يكون الهدف نصًّا يُتلىٰ فعلًا —
+  /// متعلّقٌ بمعناها.
+  final String? relatedRecordRole;
+
+  static const String recitationLink = 'recitation_link';
+
+  /// هل تُعرض هذه الإحالة زرَّ «انظر: …» إلىٰ بطاقة متلوّة؟
+  bool get hasRecitationLink =>
+      relatedRecordRole == recitationLink && relatedRecordIds.isNotEmpty;
+
   /// تعليمة استعمال مستخرجة من المطبوع نفسه — لا اجتهاد فيها ولا تعميم.
   ///
   /// تُعرض للحاج كما هي. وليست نصًّا شرعيًّا يُتلىٰ، فلا تُنطق أبدًا.
@@ -421,6 +434,7 @@ class SupplicationModel {
     this.sourceReferences = const [],
     this.recitationPolicy,
     this.relatedRecordIds = const [],
+    this.relatedRecordRole,
     this.usageNoteAr = '',
   });
 
@@ -532,6 +546,10 @@ class SupplicationModel {
         safeStringList(data['relatedRecordIds']),
         (data['duaId'] ?? doc.id).toString(),
       ),
+      relatedRecordRole: const [recitationLink]
+              .contains((data['relatedRecordRole'] ?? '').toString().trim())
+          ? (data['relatedRecordRole'] ?? '').toString().trim()
+          : null,
       usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
     );
   }
@@ -601,6 +619,7 @@ class SupplicationModel {
         // dhikr offline. It carries the ID only — never the text, so an
         // offline copy can never drift from the record it points to.
         'relatedRecordIds': relatedRecordIds,
+        'relatedRecordRole': relatedRecordRole,
         'usageNoteAr': usageNoteAr,
       };
 
@@ -659,6 +678,10 @@ class SupplicationModel {
         safeStringList(data['relatedRecordIds']),
         (data['duaId'] ?? '').toString(),
       ),
+      relatedRecordRole: const [recitationLink]
+              .contains((data['relatedRecordRole'] ?? '').toString().trim())
+          ? (data['relatedRecordRole'] ?? '').toString().trim()
+          : null,
       usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
     );
   }

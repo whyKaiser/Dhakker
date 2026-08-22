@@ -168,6 +168,57 @@ void main() {
           reason: 'the instruction must not quote the dhikr');
     });
 
+    test('the relationship is a declared recitation link', () {
+      final m = _model(kMarwah);
+      expect(m.relatedRecordRole, SupplicationModel.recitationLink);
+      expect(m.hasRecitationLink, isTrue);
+      // The target really is recitable — the whole point of the role check.
+      expect(_model(kDhikr).contentKind.isRecitable, isTrue);
+    });
+
+    test('a pointer with no declared role renders no link at all', () {
+      final raw = Map<String, dynamic>.from(
+          jsonDecode(jsonEncode(_model(kMarwah).toJson()))
+              as Map<String, dynamic>);
+      raw.remove('relatedRecordRole');
+      expect(SupplicationModel.fromJson(raw).hasRecitationLink, isFalse);
+      raw['relatedRecordRole'] = 'teleport';
+      expect(SupplicationModel.fromJson(raw).hasRecitationLink, isFalse,
+          reason: 'an unknown role reads as no role, never as a link');
+    });
+
+    test('the link cannot bypass the target\'s manual-only policy', () {
+      // Following the pointer lands the pilgrim on the target's own card.
+      // Nothing about being pointed at changes what that card does.
+      final target = _model(kDhikr);
+      expect(target.isAutoPlayable, isFalse,
+          reason: 'still blocked from location-driven playback');
+      expect(target.recitationPolicy!.autoPlayCapability,
+          RecitationPolicy.manualOnlyUntilTriggerSupported);
+      // And the pointing card gains no policy and no playability of its own.
+      final m = _model(kMarwah);
+      expect(m.recitationPolicy, isNull);
+      expect(m.canPlayManually, isFalse);
+      expect(m.isAutoPlayable, isFalse);
+    });
+
+    test('following the link requires an explicit tap, and plays nothing', () {
+      final src =
+          File('lib/Screens/Piligram/Duas/duas_screen.dart').readAsStringSync();
+      // The handler filters the list. It must not call playback.
+      final body = src.substring(src.indexOf('void _openRelated('),
+          src.indexOf('Future<void> _playDua('));
+      expect(body.contains('_playDua'), isFalse);
+      expect(body.contains('playbackService'), isFalse);
+      expect(body.contains('_playbackService'), isFalse);
+      // And it is wired to a button's onPressed, not to any lifecycle hook.
+      expect(src.contains('onOpenRelated: () => _openRelated('), isTrue);
+      final card = File(
+        'lib/Screens/Piligram/Duas/widgets/content_kind_card.dart',
+      ).readAsStringSync();
+      expect(card.contains('onPressed: onOpenRelated'), isTrue);
+    });
+
     test('the pointer changes neither recitability nor verification', () {
       final m = _model(kMarwah);
       expect(m.canPlayManually, isFalse,
@@ -231,9 +282,16 @@ void main() {
           reason: 'the card must say what is NOT repeated, not only what is');
     });
 
-    test('marwah does not point at the verse', () {
-      expect(_model(kMarwah).relatedRecordIds, isNot(contains(kAyah)),
+    test('marwah points at the dhikr and at nothing else', () {
+      expect(_model(kMarwah).relatedRecordIds, [kDhikr],
           reason: '«مثل ما قال على الصفا» reaches the dhikr, not the verse');
+      expect(_model(kMarwah).relatedRecordIds, isNot(contains(kAyah)));
+      // No other record in the pack points at the verse either.
+      for (final e in _entries()) {
+        final ids = (e['relatedRecordIds'] as List?)?.cast<String>() ?? [];
+        expect(ids, isNot(contains(kAyah)),
+            reason: '${e['duaId']} must not link the once-only verse');
+      }
     });
 
     test('no usage note anywhere tells the pilgrim to repeat the verse', () {
@@ -290,6 +348,8 @@ void main() {
           jsonDecode(jsonEncode(_model(kMarwah).toJson()))
               as Map<String, dynamic>);
       expect(back.relatedRecordIds, [kDhikr]);
+      expect(back.relatedRecordRole, SupplicationModel.recitationLink);
+      expect(back.hasRecitationLink, isTrue);
       expect(back.usageNoteAr, _model(kMarwah).usageNoteAr);
       expect(back.canPlayManually, isFalse);
       expect(back.isAutoPlayable, isFalse);

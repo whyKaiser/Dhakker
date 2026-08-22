@@ -1165,3 +1165,94 @@ test("every record in the real pack still imports as unverified", () => {
     assert.equal(r.verifiedBy, null, r.duaId);
   }
 });
+
+// ---------------------------------------------------------------------------
+// A recitation_link must land on something the pilgrim can actually say.
+// Pointing one at guidance would put "say the like of what was said there"
+// on a card that has no recitation and no play button — an arrow to a dead
+// end, dressed as an instruction.
+// ---------------------------------------------------------------------------
+
+test("a recitation_link pointing at guidance is refused", () => {
+  // moia-1446-sai-seven is procedural_guidance in the real pack.
+  const guidance = realPack.entries.find(
+    (e) => e.duaId === "moia-1446-sai-seven",
+  );
+  assert.equal(guidance.contentKind, "procedural_guidance");
+
+  assert.throws(
+    () =>
+      buildRecords(
+        packWithMarwah({
+          relatedRecordIds: ["moia-1446-sai-seven"],
+          relatedRecordRole: "recitation_link",
+        }),
+      ),
+    /is not recitable — a recitation_link must point at a text the pilgrim may say/,
+  );
+});
+
+test("a recitation_link pointing at contextual evidence is refused too", () => {
+  const evidence = realPack.entries.find(
+    (e) => e.contentKind === "contextual_evidence",
+  );
+  assert.ok(evidence, "the pack should contain contextual evidence");
+  assert.throws(
+    () =>
+      buildRecords(
+        packWithMarwah({
+          relatedRecordIds: [evidence.duaId],
+          relatedRecordRole: "recitation_link",
+        }),
+      ),
+    /is not recitable/,
+  );
+});
+
+test("the real pack's recitation_link points at a recitable target", () => {
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const marwah = built.get("moia-1446-marwah-same");
+  assert.equal(marwah.relatedRecordRole, "recitation_link");
+  assert.deepEqual(marwah.relatedRecordIds, ["moia-1446-safa-dhikr"]);
+  const target = built.get("moia-1446-safa-dhikr");
+  assert.ok(RECITABLE_CONTENT_KINDS.includes(target.contentKind));
+});
+
+test("a pointer with no declared role is refused", () => {
+  const entries = realPack.entries.map((e) =>
+    e.duaId === "moia-1446-marwah-same"
+      ? (() => {
+          const copy = { ...e, relatedRecordIds: ["moia-1446-safa-dhikr"] };
+          delete copy.relatedRecordRole;
+          return copy;
+        })()
+      : e,
+  );
+  assert.throws(
+    () => buildRecords({ ...realPack, entries }),
+    /relatedRecordIds requires a relatedRecordRole/,
+  );
+});
+
+test("an unknown relatedRecordRole is refused", () => {
+  assert.throws(
+    () => buildRecords(packWithMarwah({ relatedRecordRole: "teleport" })),
+    /unknown relatedRecordRole "teleport"/,
+  );
+});
+
+test("the link never changes the target's own policy", () => {
+  // The pointer navigates. The target keeps its manual-only capability and
+  // its repeat instruction — a guidance card cannot borrow a play button.
+  const built = new Map(buildRecords(realPack).map((r) => [r.duaId, r]));
+  const target = built.get("moia-1446-safa-dhikr");
+  assert.equal(
+    target.recitationPolicy.autoPlayCapability,
+    "manual_only_until_trigger_supported",
+  );
+  assert.equal(target.recitationPolicy.repeatCount, 3);
+  assert.equal(target.recitationPolicy.autoRepeat, false);
+  // And the pointing record gains nothing.
+  assert.equal(built.get("moia-1446-marwah-same").contentKind, "procedural_guidance");
+  assert.equal(built.get("moia-1446-marwah-same").recitationPolicy, null);
+});
