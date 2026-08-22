@@ -226,6 +226,9 @@ class GuidanceCard extends StatelessWidget {
     this.attribution,
     this.references = const [],
     this.isPropheticDirective = false,
+    this.usageNoteAr = '',
+    this.relatedRecordTitle,
+    this.onOpenRelated,
     this.cardColor,
     this.textColor,
   });
@@ -243,6 +246,18 @@ class GuidanceCard extends StatelessWidget {
   /// هل هذا الإرشاد حديث نبوي بلفظه؟ يغيّر العنوان الظاهر وحده — لا يمنحه
   /// زر تشغيل ولا يجعله ذكرًا يُتلىٰ.
   final bool isPropheticDirective;
+
+  /// تعليمة استعمال منقولة عن المطبوع. تُعرض ولا تُنطق.
+  final String usageNoteAr;
+
+  /// عنوان السجل المتلوّ الذي يحيل إليه هذا الإرشاد، إن وُجد.
+  ///
+  /// **العنوان فقط.** نصّ الذكر لا يُنسخ إلىٰ هنا: المروة تحيل على ذكر الصفا،
+  /// ونسخُه يُنشئ نسخةً ثانية من نصٍّ شرعيّ تفترق عن أصلها بأول تعديل.
+  final String? relatedRecordTitle;
+
+  /// فتح البطاقة الأصلية. الاستماع يكون هناك، من زرّها هي.
+  final VoidCallback? onOpenRelated;
 
   final Color? cardColor;
   final Color? textColor;
@@ -290,6 +305,36 @@ class GuidanceCard extends StatelessWidget {
                     fontSize: 11.5,
                     height: 1.7,
                     fontStyle: FontStyle.italic)),
+          ],
+          if (usageNoteAr.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(usageNoteAr.trim(),
+                  style:
+                      TextStyle(color: textColor, fontSize: 12.5, height: 1.8)),
+            ),
+          ],
+          if ((relatedRecordTitle ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            // يدلّ على البطاقة الأصلية ولا ينسخ نصّها. زر الاستماع هناك.
+            TextButton.icon(
+              onPressed: onOpenRelated,
+              icon: const Icon(Icons.north_east_rounded, size: 16),
+              label: Text('انظر: ${relatedRecordTitle!.trim()}',
+                  style: const TextStyle(fontSize: 12.5)),
+              style: TextButton.styleFrom(
+                foregroundColor: accent,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 34),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
           ],
           SourceReferenceList(
               references: references, accent: accent, textColor: textColor),

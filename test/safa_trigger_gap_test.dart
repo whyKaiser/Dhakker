@@ -91,12 +91,23 @@ void main() {
       }
     });
 
-    test('a masaa record with no such capability is unaffected', () {
-      // The block must be a property of the two records, not of the zone.
-      final marwah = _one('moia-1446-marwah-same');
-      expect(marwah.recitationPolicy, isNull);
-      expect(_autoPlayable(_zone('masaa')).map((e) => e.duaId),
-          contains('moia-1446-marwah-same'));
+    test('the block is a property of the records, not of the zone', () {
+      // This used to be demonstrated by `marwah-same`, the one auto-playable
+      // record left in the corridor. Batch E reclassified it as guidance —
+      // for an unrelated reason — so the point is made with a synthetic
+      // record instead: same zone, no capability, auto-playable.
+      final unblocked = SupplicationModel.fromJson({
+        'duaId': 'synthetic-masaa-dua',
+        'zoneKey': 'masaa',
+        'contentKind': 'general_dua',
+        'text': {'ar': 'نص اختباري', 'en': ''},
+        'title': {'ar': 'اختبار', 'en': ''},
+      });
+      expect(unblocked.isAutoPlayable, isTrue);
+      expect(
+          _autoPlayable([unblocked, _one('moia-1446-safa-ayah')])
+              .map((e) => e.duaId),
+          ['synthetic-masaa-dua']);
     });
   });
 

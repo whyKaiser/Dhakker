@@ -252,6 +252,62 @@ const POLICY_KNOWN_KEYS = new Set([
 ]);
 
 /** Validates one entry's recitationPolicy. Throws on the first fault. */
+/**
+ * Validates one entry's relatedRecordIds.
+ *
+ * The Marwah guidance points at the canonical Safa dhikr rather than
+ * repeating it, so a dangling pointer is not cosmetic: the pilgrim would
+ * be shown an instruction to say something the app can no longer show.
+ * Every fault below is a hard error — the importer never publishes a
+ * relationship it cannot resolve inside the very pack being imported.
+ *
+ * `knownIds` is the set of duaIds in THIS pack. Cross-pack references are
+ * refused for the same reason: the importer cannot verify them.
+ */
+export function validateRelatedRecordIds(raw, selfId, knownIds, where) {
+  if (raw === undefined || raw === null) return;
+  if (!Array.isArray(raw)) {
+    throw new Error(`${where}: relatedRecordIds must be an array.`);
+  }
+  const seen = new Set();
+  for (const id of raw) {
+    if (typeof id !== "string" || !id.trim()) {
+      throw new Error(
+        `${where}: relatedRecordIds entries must be non-empty strings.`,
+      );
+    }
+    const v = id.trim();
+    if (v === selfId) {
+      throw new Error(`${where}: relatedRecordIds must not reference itself.`);
+    }
+    if (seen.has(v)) {
+      throw new Error(`${where}: duplicate relatedRecordId "${v}".`);
+    }
+    seen.add(v);
+    if (!knownIds.has(v)) {
+      throw new Error(
+        `${where}: relatedRecordId "${v}" is not present in this pack.`,
+      );
+    }
+  }
+}
+
+/** Validates one entry's usageNoteAr: absent, or a non-empty string. */
+export function validateUsageNote(raw, where) {
+  if (raw === undefined || raw === null) return;
+  if (typeof raw !== "string") {
+    throw new Error(`${where}: usageNoteAr must be a string.`);
+  }
+  // An empty string would render as a blank instruction line, which reads
+  // as "there is guidance here" while saying nothing. Omit the field.
+  if (raw.trim() === "") {
+    throw new Error(`${where}: usageNoteAr must not be empty — omit it.`);
+  }
+  if (raw.length > 400) {
+    throw new Error(`${where}: usageNoteAr exceeds 400 characters.`);
+  }
+}
+
 export function validateRecitationPolicy(policy, where) {
   if (policy === undefined || policy === null) return;
   if (typeof policy !== "object" || Array.isArray(policy)) {
@@ -400,6 +456,14 @@ const OPTIONAL_FIELDS = {
   // How the source says the text is performed. null = it did not say.
   recitationPolicy: null,
 
+  // Pointer to the canonical recitable record this guidance refers to,
+  // by ID only. Empty = this record stands alone.
+  relatedRecordIds: [],
+
+  // Usage guidance lifted from the printed page. Empty = the page said
+  // nothing beyond the text itself.
+  usageNoteAr: "",
+
   // Quranic text authority (King Fahd Complex) — see
   // source_packs/QURAN_TEXT_AUTHORITY.md.
   quranRef: null,
@@ -436,6 +500,14 @@ export function buildRecords(pack) {
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new Error("Pack has no `entries` array.");
   }
+
+  // Every duaId in THIS pack, gathered before validation so a relationship
+  // may point forwards as well as backwards.
+  const knownIds = new Set(
+    entries
+      .map((e) => (typeof e?.duaId === "string" ? e.duaId.trim() : ""))
+      .filter(Boolean),
+  );
 
   const seen = new Set();
   return entries.map((entry, index) => {
@@ -506,6 +578,8 @@ export function buildRecords(pack) {
 
     validateSourceReferences(entry.sourceReferences, where);
     validateRecitationPolicy(entry.recitationPolicy, where);
+    validateRelatedRecordIds(entry.relatedRecordIds, duaId, knownIds, where);
+    validateUsageNote(entry.usageNoteAr, where);
 
     const textAr = String(entry?.text?.ar || "").trim();
     if (!textAr) throw new Error(`${where}: empty Arabic text.`);

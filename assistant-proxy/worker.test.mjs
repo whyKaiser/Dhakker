@@ -999,6 +999,9 @@ test("supplications adapter maps the legacy schema onto the retrieval shape", ()
     sourceReferences: [],
     // How the source says it is performed. null = it did not say.
     recitationPolicy: null,
+    // Which recitable record this one points at, by id. Empty when it
+    // points at none — and it never carries that record's text.
+    relatedRecordIds: [],
     content: "PLACEHOLDER BODY",
   });
 });
