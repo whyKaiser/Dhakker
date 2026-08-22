@@ -122,3 +122,59 @@ understand, and it is never allowed to invent one.
 Tests hold both halves: the importer suite asserts the hard errors, and
 `recitation_policy_test.dart` / `safa_trigger_gap_test.dart` assert the
 client's silent drop.
+
+## `relatedRecordIds` — pointing instead of copying
+
+Printed page 73 says of Marwah: «ويقولَ مثل ما قال على الصفا». It prints no
+independent text there. The wrong implementation is to copy the Safa dhikr
+into a Marwah record — two copies of one religious text are two different
+texts as soon as either is edited.
+
+So `moia-1446-marwah-same` is `procedural_guidance` (an instruction, not a
+recitation) and carries:
+
+```json
+"relatedRecordIds": ["moia-1446-safa-dhikr"]
+```
+
+The pointer is an **id**, never text. Rules:
+
+- The importer is strict: the referenced id must exist **in the same pack**;
+  no self-reference; no duplicates; entries must be non-empty strings. Each
+  is a hard error. A dangling pointer would show the pilgrim an instruction
+  to say something the app can no longer show them.
+- The client is lenient in the one safe direction: a cached self-reference or
+  duplicate is dropped (`SupplicationModel.sanitizeRelatedIds`), and an
+  unresolvable pointer renders as no pointer at all rather than a dead link.
+- The relationship affects **nothing** else: not recitability, not
+  `verificationStatus`, not auto-play. `contentKind` still decides what a
+  record is.
+- The UI may only **point** at the canonical card («انظر: …»). It must never
+  copy the target's text or offer its own play button — the pilgrim listens
+  from the original card, so one text keeps one audio path.
+- The Worker receives `relatedRecordIds` and is told it may say a record
+  points elsewhere, but must not reproduce the pointed-to text under the
+  pointing record's citation.
+
+Because `masaa` is one polygon over the whole corridor, the single
+`safa-dhikr` record is already reachable at Safa **and** at Marwah. The zone
+geometry that created the trigger gap is what removes the need for a
+duplicate.
+
+## `usageNoteAr` — guidance lifted from the page
+
+An optional per-record sentence taken from the printed source, displayed and
+never spoken. It is not religious text and never joins what TTS reads: the
+recitation is `text.ar` alone.
+
+The scoping case it exists for: page 72 says the Safa Quran excerpt is read
+once before Sa'i begins «ولا يقرؤها مرة أخرى», so «مثل ما قال على الصفا» at
+Marwah reaches the dhikr and the pilgrim's own dua — not the verse. Both
+cards say so explicitly rather than leaving the reader to infer the scope:
+
+- `safa-ayah`: «تُقرأ عند الصفا مرة واحدة قبل بدء السعي، ولا تُعاد عند المروة.»
+- `marwah-same`: names the Safa dhikr as what is repeated, and repeats the
+  verse's exclusion.
+
+The importer refuses an empty `usageNoteAr` — a blank instruction line reads
+as "there is guidance here" while saying nothing. Omit the field instead.
