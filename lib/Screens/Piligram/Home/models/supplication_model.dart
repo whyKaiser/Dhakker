@@ -375,6 +375,35 @@ class SupplicationModel {
   /// كيفية الأداء إن نصّ عليها المصدر. `null` = لم ينصّ، وليس «بلا قيد».
   final RecitationPolicy? recitationPolicy;
 
+  /// إحالة إلى السجل المتلوّ الذي يقصده هذا الإرشاد — بالمعرّف لا بالنص.
+  ///
+  /// المروة مثالها: المطبوع يقول «ويقولَ مثل ما قال على الصفا» ولا يذكر نصًّا
+  /// مستقلًّا للمروة. فنسخ ذكر الصفا هنا يُنشئ نسخةً ثانية من نصٍّ شرعيّ
+  /// تفترقان بأول تعديل. الإحالة تُبقي النص الشرعيّ واحدًا في مكان واحد.
+  ///
+  /// ولا أثر لها البتّة في التوثيق ولا في كون السجل متلوًّا: هي إشارةُ عرضٍ
+  /// لا صفةُ محتوى. وللواجهة أن **تدلّ** على البطاقة الأصلية، ولا يجوز لها
+  /// أن **تنسخ** نصّها.
+  final List<String> relatedRecordIds;
+
+  /// معنىٰ الإحالة. `recitation_link` تعني: «قُل هنا مثل ما هناك».
+  ///
+  /// تُصرَّح ولا تُستنتج. وإحالةٌ بلا معنىً مصرَّح يرفضها المستورد، لأن
+  /// الفحص الوحيد الذي يستحقّ إجراءه — أن يكون الهدف نصًّا يُتلىٰ فعلًا —
+  /// متعلّقٌ بمعناها.
+  final String? relatedRecordRole;
+
+  static const String recitationLink = 'recitation_link';
+
+  /// هل تُعرض هذه الإحالة زرَّ «انظر: …» إلىٰ بطاقة متلوّة؟
+  bool get hasRecitationLink =>
+      relatedRecordRole == recitationLink && relatedRecordIds.isNotEmpty;
+
+  /// تعليمة استعمال مستخرجة من المطبوع نفسه — لا اجتهاد فيها ولا تعميم.
+  ///
+  /// تُعرض للحاج كما هي. وليست نصًّا شرعيًّا يُتلىٰ، فلا تُنطق أبدًا.
+  final String usageNoteAr;
+
   /// سطر العزو الظاهر: الموضع في المطبوع ثم الجهة. فارغ إن غابا معًا.
   String get attribution {
     final parts = [sourceSection.trim(), authority.trim()]
@@ -404,7 +433,25 @@ class SupplicationModel {
     this.sourceSection = '',
     this.sourceReferences = const [],
     this.recitationPolicy,
+    this.relatedRecordIds = const [],
+    this.relatedRecordRole,
+    this.usageNoteAr = '',
   });
+
+  /// تنقية الإحالات: بلا تكرار، وبلا إحالةٍ إلى النفس.
+  ///
+  /// المستورد يرفض الحالتين رفضًا صريحًا؛ وهذا تشديدٌ من جانب العميل على
+  /// بيانات قديمة قد تكون كُتبت قبل وجود ذلك الفحص.
+  static List<String> sanitizeRelatedIds(List<String> raw, String selfId) {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final id in raw) {
+      final v = id.trim();
+      if (v.isEmpty || v == selfId.trim()) continue;
+      if (seen.add(v)) out.add(v);
+    }
+    return List.unmodifiable(out);
+  }
 
   /// هل يجوز للحاج تشغيله بنفسه؟ شرطٌ واحد: أن يكون نصًّا يُتلىٰ.
   ///
@@ -495,6 +542,15 @@ class SupplicationModel {
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
       sourceReferences: SourceReference.listFrom(data['sourceReferences']),
       recitationPolicy: RecitationPolicy.fromJson(data['recitationPolicy']),
+      relatedRecordIds: sanitizeRelatedIds(
+        safeStringList(data['relatedRecordIds']),
+        (data['duaId'] ?? doc.id).toString(),
+      ),
+      relatedRecordRole: const [recitationLink]
+              .contains((data['relatedRecordRole'] ?? '').toString().trim())
+          ? (data['relatedRecordRole'] ?? '').toString().trim()
+          : null,
+      usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
     );
   }
 
@@ -559,6 +615,12 @@ class SupplicationModel {
             sourceReferences.map((e) => e.toJson()).toList(growable: false),
         // Persisted so the once-only / repeat instruction survives offline.
         'recitationPolicy': recitationPolicy?.toJson(),
+        // Persisted so the Marwah card can still point at the canonical
+        // dhikr offline. It carries the ID only — never the text, so an
+        // offline copy can never drift from the record it points to.
+        'relatedRecordIds': relatedRecordIds,
+        'relatedRecordRole': relatedRecordRole,
+        'usageNoteAr': usageNoteAr,
       };
 
   factory SupplicationModel.fromJson(Map<String, dynamic> data) {
@@ -612,6 +674,15 @@ class SupplicationModel {
       sourceSection: (data['sourceSection'] ?? '').toString().trim(),
       sourceReferences: SourceReference.listFrom(data['sourceReferences']),
       recitationPolicy: RecitationPolicy.fromJson(data['recitationPolicy']),
+      relatedRecordIds: sanitizeRelatedIds(
+        safeStringList(data['relatedRecordIds']),
+        (data['duaId'] ?? '').toString(),
+      ),
+      relatedRecordRole: const [recitationLink]
+              .contains((data['relatedRecordRole'] ?? '').toString().trim())
+          ? (data['relatedRecordRole'] ?? '').toString().trim()
+          : null,
+      usageNoteAr: (data['usageNoteAr'] ?? '').toString().trim(),
     );
   }
 }

@@ -4186,7 +4186,8 @@
         "trigger": "first_safa_approach",
         "autoPlayCapability": "manual_only_until_trigger_supported",
         "autoRepeat": false
-      }
+      },
+      "usageNoteAr": "تُقرأ عند الصفا مرة واحدة قبل بدء السعي، ولا تُعاد عند المروة."
     },
     {
       "duaId": "moia-1446-safa-dhikr",
@@ -4246,20 +4247,21 @@
         "interleave": "personal_dua",
         "autoPlayCapability": "manual_only_until_trigger_supported",
         "autoRepeat": false
-      }
+      },
+      "usageNoteAr": "يُقال على الصفا وعلى المروة كليهما — يُكرَّر ثلاث مرات ويدعو بين المرات. ولا يوجد دعاء معين أو ذكر معين لكل شوط."
     },
     {
       "duaId": "moia-1446-marwah-same",
       "zoneNameAr": "المسعى (ممر السعي)",
       "zoneKey": "masaa",
       "zoneId": "",
-      "contentKind": "specific_text",
+      "contentKind": "procedural_guidance",
       "title": {
         "ar": "ما يقال على المروة",
         "en": "Said upon Al-Marwah"
       },
       "text": {
-        "ar": "فيرقىٰ المروةَ، ويستقبلَ القِبلةَ، ويرفعَ يديه ويقولَ مثل ما قال علىٰ الصفا.",
+        "ar": "حتى يصلَ المروةَ، فيرقى عليها، ويستقبلَ القِبلةَ، ويرفعَ يديه ويقولَ مثل ما قال على الصفا.",
         "en": ""
       },
       "tagsAr": [
@@ -4286,10 +4288,15 @@
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
-      "reviewNotes": "المصدر يحيل على ذكر الصفا نفسه — لم يذكر نصًّا مستقلًّا للمروة.",
+      "reviewNotes": "المصدر يحيل على ذكر الصفا نفسه — لم يذكر نصًّا مستقلًّا للمروة. وص73 ينص أنه لا يوجد دعاء معين أو ذكر معين لكل شوط.",
       "visuallyUncertain": [],
       "sourceReferences": [],
-      "recitationPolicy": null
+      "recitationPolicy": null,
+      "relatedRecordIds": [
+        "moia-1446-safa-dhikr"
+      ],
+      "usageNoteAr": "الذكر المذكور هنا هو ذكر الصفا نفسه (ص72) — يُكرَّر ثلاث مرات ويدعو بينها. أما آية ﴿إِنَّ ٱلصَّفَا وَٱلۡمَرۡوَةَ…﴾ فتُقرأ عند الصفا مرة واحدة قبل بدء السعي ولا تُعاد عند المروة.",
+      "relatedRecordRole": "recitation_link"
     },
     {
       "duaId": "moia-1446-sai-no-per-circuit",

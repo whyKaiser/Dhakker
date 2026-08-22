@@ -169,20 +169,32 @@ void main() {
             in (ledger['reviews'] as List).cast<Map<String, dynamic>>())
           r['recordId'] as String: r
       };
+      // The principle this guard exists for is unchanged: deriving text from
+      // the pinned KFGQPC file is NOT a human reading a printed page, and can
+      // never by itself produce a pass. What changed is the evidence — page 72
+      // has now been read — so the guard checks for that evidence rather than
+      // forbidding a pass outright. A pass with no page recorded still fails.
       for (final id in [
         'moia-mukhtasar-1446-tawaf-between-corners',
         'moia-1446-safa-ayah',
       ]) {
-        // Presence alone is no longer the test: a record may appear in the
-        // ledger as `pending`, which is the ledger saying nobody has read
-        // its page. What must never appear is a PASS — deriving text from a
-        // pinned file is not a human reading a printed page.
         final r = byId[id];
         if (r == null) continue;
-        expect(r['reviewStatus'], isNot('passed'),
-            reason: '$id must not be recorded as reviewed');
-        expect(r['textReviewStatus'], isNot('passed'), reason: id);
+        if (r['reviewStatus'] == 'passed') {
+          final entry = entries.firstWhere((e) => e['duaId'] == id);
+          expect(r['reviewedPage'], entry['printedPage'],
+              reason: '$id passed without a human reading its printed page');
+          expect(r['textReviewStatus'], 'passed', reason: id);
+        } else {
+          expect(r['textReviewStatus'], isNot('passed'), reason: id);
+        }
+        // Neither a pinned-file derivation nor a page reading confers
+        // verification, and neither lifts the deployment hold.
         expect(r['excludedFromImport'], isTrue, reason: id);
+        expect(
+            entries.firstWhere((e) => e['duaId'] == id)['verificationStatus'],
+            'unverified',
+            reason: id);
       }
     });
   });
