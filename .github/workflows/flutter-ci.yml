@@ -86,6 +86,7 @@ jobs:
             "test/page_98_and_g7_batch_test.dart"
             "test/tamam_umrah_test.dart"
             "test/page_99_test.dart"
+            "test/page_100_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
