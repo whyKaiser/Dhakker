@@ -338,10 +338,23 @@ void main() {
       expect(s['totalReviews'], rs.length);
       expect(s['totalReviews'], greaterThanOrEqualTo(76),
           reason: 'page 100 took the ledger to 76; it can only grow');
-      expect(s['passed'], rs.length - (s['blocked'] as int));
-      expect(s['blocked'], 1);
-      expect(s['pending'], 0);
-      expect(s['failed'], 0);
+      // Every status the schema supports is counted from the reviews
+      // themselves and must add up. Not «passed == total - blocked»: that
+      // would quietly assert pending and failed are always zero and would
+      // start failing the day a real one is recorded, which is exactly the
+      // case the ledger exists to carry.
+      for (final st in ['passed', 'blocked', 'pending', 'failed']) {
+        expect(s[st], rs.where((r) => r['reviewStatus'] == st).length,
+            reason: 'summary.$st disagrees with the reviews array');
+      }
+      expect(
+          (s['passed'] as int) +
+              (s['blocked'] as int) +
+              (s['pending'] as int) +
+              (s['failed'] as int),
+          s['totalReviews'],
+          reason: 'a review carries a status outside the four the schema '
+              'supports, or a status is being double-counted');
       expect(s['verifiedRecords'], 0);
       expect(s['firestoreVerificationPerformed'], isFalse);
       expect(rs.map((r) => r['recordId']).toSet().length, rs.length,

@@ -377,15 +377,28 @@ void main() {
         File('review/human_review_ledger.json').readAsStringSync(),
       ) as Map<String, dynamic>;
       final s = l['summary'] as Map<String, dynamic>;
-      expect(s['totalReviews'], 82);
-      expect(s['passed'], 81);
-      expect(s['blocked'], 1);
-      expect(s['pending'], 0);
-      expect(s['failed'], 0);
+      final rs = _rawReviews();
+      expect(s['totalReviews'], rs.length);
+      expect(s['totalReviews'], greaterThanOrEqualTo(82),
+          reason: 'page 101 took the ledger to 82; it can only grow');
+      // Counted per status from the reviews themselves, so pending and
+      // failed stay supported rather than assumed away.
+      for (final st in ['passed', 'blocked', 'pending', 'failed']) {
+        expect(s[st], rs.where((r) => r['reviewStatus'] == st).length,
+            reason: 'summary.$st disagrees with the reviews array');
+      }
+      expect(
+          (s['passed'] as int) +
+              (s['blocked'] as int) +
+              (s['pending'] as int) +
+              (s['failed'] as int),
+          s['totalReviews'],
+          reason: 'a review carries a status outside the four the schema '
+              'supports, or a status is being double-counted');
       expect(s['verifiedRecords'], 0);
       expect(s['firestoreVerificationPerformed'], isFalse);
-      expect(85 - _rawReviews().map((r) => r['recordId']).toSet().length, 3,
-          reason: 'three records remain unreviewed after page 101');
+      expect(rs.map((r) => r['recordId']).toSet().length, rs.length,
+          reason: 'no record may be reviewed twice');
     });
   });
 }
