@@ -53,3 +53,21 @@ corrected transcription can never keep playing the old recitation.
   hash change is the signal.
 - Audio does not confer verification, and a record with audio is still
   governed by `contentKind`, `recitationPolicy`, and the review ledger.
+
+## Pronunciation notes for recitation
+
+Some records reproduce a typographic feature of the printed page that a
+reader resolves silently but a voice engine will not. They are listed here so
+whoever records or synthesises the audio does not inherit the artefact.
+
+| record | as printed / stored | must be voiced as |
+|---|---|---|
+| `moia-mukhtasar-1446-general-048` (p101–102) | `وَقِنِي شَرَّمَا قَضَيْتَ` — no space between `شَرَّ` and `مَا` | `وَقِنِي شَرَّ مَا قَضَيْتَ` — two words |
+
+The missing space is real and measured, not a transcription slip: on that
+line of page 102 the word gaps run 87–112 px at 450 dpi, while the gap inside
+`شَرَّمَا` is 18 px — a letter gap, not a word gap. The text stays as the
+ministry set it; only the recitation separates the two words.
+
+This table is documentation, not schema. Nothing in the pack, the importer,
+or the app reads it, and no field was added to carry it.

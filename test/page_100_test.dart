@@ -322,23 +322,32 @@ void main() {
       expect(all.every((e) => e['verificationStatus'] == 'unverified'), isTrue);
     });
 
-    test('the ledger counters are what page 100 leaves behind', () {
+    test('the ledger stayed consistent and conferred nothing', () {
+      // Deliberately NOT a snapshot of totalReviews. This file once pinned
+      // "76 reviews, 9 unreviewed", which was true the day page 100 was
+      // recorded and false the moment page 101 was — a counter that every
+      // later batch must break is a tripwire, not an invariant. What page
+      // 100 is entitled to assert is that its own four records are in the
+      // ledger exactly once (asserted above) and that recording them moved
+      // nothing else. The live counters belong to the newest batch's test.
       final l = jsonDecode(
         File('review/human_review_ledger.json').readAsStringSync(),
       ) as Map<String, dynamic>;
       final s = l['summary'] as Map<String, dynamic>;
       final rs = (l['reviews'] as List).cast<Map<String, dynamic>>();
-      expect(s['totalReviews'], 76);
-      expect(s['passed'], 75);
+      expect(s['totalReviews'], rs.length);
+      expect(s['totalReviews'], greaterThanOrEqualTo(76),
+          reason: 'page 100 took the ledger to 76; it can only grow');
+      expect(s['passed'], rs.length - (s['blocked'] as int));
       expect(s['blocked'], 1);
       expect(s['pending'], 0);
       expect(s['failed'], 0);
       expect(s['verifiedRecords'], 0);
       expect(s['firestoreVerificationPerformed'], isFalse);
-      expect(rs.map((r) => r['recordId']).toSet().length, 76,
+      expect(rs.map((r) => r['recordId']).toSet().length, rs.length,
           reason: 'no record may be reviewed twice');
-      expect(85 - rs.map((r) => r['recordId']).toSet().length, 9,
-          reason: 'nine records remain unreviewed after page 100');
+      expect(rs.length, lessThanOrEqualTo(85),
+          reason: 'the ledger cannot hold more reviews than there are records');
     });
   });
 }
