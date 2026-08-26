@@ -310,13 +310,19 @@ void main() {
       }
     });
 
-    test('the canonical audio estimate is still 59', () {
+    test('the canonical audio estimate is now 58', () {
+      // Was 60/59 until the page-64 review moved the mosque-entry hadith to
+      // contextual_evidence: the ministry uses that narration as the evidence
+      // for the wording above it, so it is not voiced and left the recitable
+      // set. The count is a real consequence of a classification decision,
+      // not a number to be pinned for its own sake — docs/AUDIO_INVENTORY.md
+      // carries the reasoning.
       final rec = _entries()
           .where((e) => recitable.contains(e['contentKind']))
           .toList();
-      expect(rec, hasLength(60));
+      expect(rec, hasLength(59));
       final unique = rec.map((e) => (e['text']['ar'] as String).trim()).toSet();
-      expect(unique, hasLength(59),
+      expect(unique, hasLength(58),
           reason: 'one legitimate duplicate shares a single audio file');
     });
 

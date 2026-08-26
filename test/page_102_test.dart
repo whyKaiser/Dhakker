@@ -13,9 +13,9 @@
 // Muzdalifah section. It belongs to neither dua: nothing follows «قَدِيرٌ)»
 // or «وَتَعَالَيْتَ)» but the full stop, with no raised numeral.
 //
-// This file also carries the live ledger counters. That job moves to whichever
-// batch is recorded next — a snapshot of a growing counter belongs to exactly
-// one test, and every other page's test asserts the identity instead.
+// The live ledger counters moved on to test/page_64_test.dart when page 64
+// was recorded — a snapshot of a growing counter belongs to exactly one test,
+// and every other page's test asserts the identity instead.
 
 import 'dart:convert';
 import 'dart:io';
@@ -160,7 +160,8 @@ void main() {
     });
 
     test('it shares a formula with al-Taghabun 1, and that is recorded', () {
-      // The scan DID hit here, unlike every other page in this batch: 34
+      // The scan raised a real candidate here, unlike every other page in
+      // this batch: 34
       // characters of the vowel-stripped skeleton — «لَهُ الْمُلْكُ وَلَهُ
       // الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ» — occur in al-Taghabun 1. The
       // record still carries no quranRef, because the ministry prints it as
@@ -239,11 +240,10 @@ void main() {
       ) as Map<String, dynamic>;
       final s = l['summary'] as Map<String, dynamic>;
       final rs = _rawReviews();
-      expect(s['totalReviews'], 83);
-      expect(s['passed'], 82);
+      expect(s['totalReviews'], rs.length);
+      expect(s['totalReviews'], greaterThanOrEqualTo(83),
+          reason: 'page 102 took the ledger to 83; it can only grow');
       expect(s['blocked'], 1);
-      expect(s['pending'], 0);
-      expect(s['failed'], 0);
       // The identity, not «passed == total - blocked»: pending and failed are
       // real statuses the schema supports, and this must keep adding up when
       // one of them is finally used.
@@ -261,21 +261,28 @@ void main() {
       expect(s['firestoreVerificationPerformed'], isFalse);
       expect(rs.map((r) => r['recordId']).toSet().length, rs.length,
           reason: 'no record may be reviewed twice');
-      expect(85 - rs.map((r) => r['recordId']).toSet().length, 2,
-          reason: 'the two page-64 records remain unreviewed');
+      expect(rs.map((r) => r['recordId']).toSet().length, lessThanOrEqualTo(85),
+          reason: 'the ledger cannot hold more reviews than there are '
+              'records');
     });
 
-    test('the two records still unreviewed are the page-64 pair', () {
+    test('the page-64 pair that was still open here is now recorded too', () {
+      // When page 102 was recorded these two were the whole remainder. They
+      // were reviewed in the next batch, so the assertion is inverted rather
+      // than deleted: what mattered was that the remainder was exactly this
+      // pair and nothing else had been skipped along the way.
       final done = _rawReviews().map((r) => r['recordId']).toSet();
+      for (final id in const [
+        'moia-mukhtasar-1446-umrah-entering-masjid',
+        'moia-mukhtasar-1446-umrah-entering-masjid-hadith',
+      ]) {
+        expect(done, contains(id), reason: id);
+      }
       final left = _entries()
           .where((e) => !done.contains(e['duaId']))
           .map((e) => e['duaId'])
-          .toList()
-        ..sort();
-      expect(left, [
-        'moia-mukhtasar-1446-umrah-entering-masjid',
-        'moia-mukhtasar-1446-umrah-entering-masjid-hadith',
-      ]);
+          .toList();
+      expect(left, isEmpty, reason: 'nothing was skipped on the way here');
     });
   });
 }

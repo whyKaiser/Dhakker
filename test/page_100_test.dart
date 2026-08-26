@@ -275,12 +275,13 @@ void main() {
 
   group('none of the four quotes the Quran', () {
     test('no 25-character window matches the pinned KFGQPC corpus', () {
-      // Scope, stated plainly: this rules out a shared run of 25 characters
-      // or more in the vowel-stripped skeleton. It does NOT rule out a
-      // shorter fragment, nor a passage written with a different rasm or
-      // orthography. The finding that these are not Quran quotations rests on
-      // the full comparison with the printed page and on the bracketed unit's
-      // context; this check is corroboration, not the basis.
+      // What this check is: a CANDIDATE detector, within its own limits. A
+      // clean run means no shared 25-character window in the vowel-stripped
+      // skeleton — not that the text is non-Quranic, and not that it came
+      // from anywhere in particular. It sees nothing shorter than the window
+      // and nothing across a difference of rasm or orthography. Whether a
+      // record quotes the Quran is settled by the full comparison with the
+      // printed page and by what the ministry's own layout says the unit is.
       final corpus = (jsonDecode(File(kCorpus).readAsStringSync()) as List)
           .cast<Map<String, dynamic>>();
       expect(corpus.length, 6236);

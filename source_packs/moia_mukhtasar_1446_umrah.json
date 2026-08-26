@@ -286,13 +286,13 @@
       "zoneNameAr": "المسجد الحرام (عام)",
       "zoneKey": "",
       "zoneId": "",
-      "contentKind": "mosque_entry",
+      "contentKind": "contextual_evidence",
       "title": {
-        "ar": "حديث دخول المسجد والخروج منه",
-        "en": "Hadith: entering and leaving the mosque"
+        "ar": "حديث نبوي: دخول المسجد والخروج منه",
+        "en": "Prophetic hadith: entering and leaving the mosque"
       },
       "text": {
-        "ar": "إِذَا دَخَلَ أَحَدُكُمُ الْمَسْجِدَ، فَلْيَقُلْ: اللهُمَّ افتَحْ لِي أَبْوَابَ رَحْمَتِكَ، وَإِذَا خَرَجَ، فَلْيَقُلْ: اللهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+        "ar": "إِذَا دَخَلَ أَحَدُكُمُ الْمَسْجِدَ، فَلْيَقُلْ: اللهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ، وَإِذَا خَرَجَ، فَلْيَقُلْ: اللهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
         "en": ""
       },
       "tagsAr": [
@@ -323,10 +323,17 @@
       "contentHash": null,
       "revokedAt": null,
       "reviewNotes": "عن أبي حُميد أو أبي أُسيد رضي الله عنهما، صفحة 64. المصدر يعزوه لمسلم رقم (713). عام في كل المساجد.",
-      "visuallyUncertain": [
-        "«افتَحْ» — رُسمت في الصورة بفتحة على التاء دون سكون ظاهر على الفاء؛ يُرجى تأكيدها على الورق المطبوع"
+      "visuallyUncertain": [],
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "713",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 64
+        }
       ],
-      "sourceReferences": [],
       "recitationPolicy": null
     },
     {

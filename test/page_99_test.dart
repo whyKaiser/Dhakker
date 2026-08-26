@@ -241,8 +241,14 @@ void main() {
     });
   });
 
-  group('none of the six quotes the Quran', () {
+  group('none of the six raises a Quranic candidate', () {
     test('checked against the pinned KFGQPC corpus, not assumed', () {
+      // A candidate detector, within its limits: it sees shared runs of 25
+      // characters or more in the vowel-stripped skeleton, nothing shorter,
+      // and nothing across a difference of rasm or orthography. A clean run
+      // is not a verdict that the text is non-Quranic, and a hit would not
+      // be a verdict that it quotes — the printed page and the unit's own
+      // layout settle that.
       final corpus = (jsonDecode(File(kCorpus).readAsStringSync()) as List)
           .cast<Map<String, dynamic>>();
       expect(corpus.length, 6236);

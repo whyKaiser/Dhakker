@@ -10,7 +10,7 @@ That is **not** a claim that no audio exists. The project owner has existing
 AI-generated audio files **outside the repository**. They cannot be matched
 to records yet: matching needs either the filenames, the files themselves, or
 a hash of each file's source text. Until one of those is supplied, no
-statement can be made about how many of the 59 needed recitations are already
+statement can be made about how many of the 58 needed recitations are already
 covered.
 
 ## How many files are needed
@@ -18,11 +18,11 @@ covered.
 | | count |
 |---|---|
 | records in the pack | 85 |
-| recitable (`specific_text`, `general_dua`, `general_dhikr`, `mosque_entry`) | 60 |
-| non-recitable — guidance and evidence, **never** voiced | 25 |
-| **unique canonical texts among the recitable 60** | **59** |
+| recitable (`specific_text`, `general_dua`, `general_dhikr`, `mosque_entry`) | 59 |
+| non-recitable — guidance and evidence, **never** voiced | 26 |
+| **unique canonical texts among the recitable 59** | **58** |
 
-59, not 60, because two records hold the same canonical text:
+58, not 59, because two records hold the same canonical text:
 `moia-mukhtasar-1446-tawaf-between-corners` (p69, location-specific, between
 the two corners) and `moia-mukhtasar-1446-general-001` (p94, general dua) both
 carry البقرة 201. They stay two records — the ministry prints the ayah twice
@@ -30,7 +30,16 @@ under different classifications, and collapsing them would erase a real
 distinction — but they must **share one audio file**. One text, one
 recitation, one set of bytes.
 
-All 60 are `ar` only; **no record has `text.en`**, so no English audio is
+These were 60 and 59 until the page-64 review. The mosque-entry hadith
+(`…-entering-masjid-hadith`) was reclassified `contextual_evidence`: the
+ministry uses that narration as the evidence for the wording set out just
+above it, not as a wording to recite, and voicing it would read the narrator's
+instructions — «إذا دخل أحدكم … وإذا خرج فليقل …» — to the pilgrim as though
+they were his supplication. So it needs no audio file, and one recitable text
+left the set. The record it evidences, `…-entering-masjid`, stays recitable
+and still needs its own file.
+
+All 59 are `ar` only; **no record has `text.en`**, so no English audio is
 implied by the current pack.
 
 ## Matching key
