@@ -3,6 +3,7 @@ name: Flutter CI
 on:
   push:
     branches:
+      - "main"
       - "claude/dhakker-context-ai-upgrade-v0ilmk"
       - "claude/moia-umrah-source-pack"
       - "claude/quran-text-authority-u5-u12"
