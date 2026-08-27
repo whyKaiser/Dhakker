@@ -443,14 +443,26 @@ void main() {
       }
     });
 
-    test('the status was NOT mass-applied to the unreviewed 50', () {
+    test('the status was NOT mass-applied', () {
+      // This test used to assert the complement — that some reviews still
+      // carried no status — to stop the field being stamped across records
+      // nobody had examined. The takhrij round read the last ten printed
+      // pages, so that remainder is now empty and the assertion would only
+      // pass vacuously. What replaces it is the thing the old test was
+      // really protecting: a status that was applied per record discriminates
+      // between records, so both values must actually occur, and neither may
+      // account for the whole ledger.
       final reviews = _reviews();
-      final withStatus = reviews.values
-          .where((r) => r['sourceReferencesReviewStatus'] != null)
+      final present = reviews.values
+          .where((r) => r['sourceReferencesReviewStatus'] == 'reviewed_present')
           .length;
-      expect(withStatus, lessThan(reviews.length),
-          reason: 'an absent status means not_reviewed, and most entries '
-              'have not had their citations examined');
+      final none = reviews.values
+          .where((r) => r['sourceReferencesReviewStatus'] == 'reviewed_none')
+          .length;
+      expect(present, greaterThan(0));
+      expect(none, greaterThan(0));
+      expect(present + none, reviews.length,
+          reason: 'every review must carry one of the two resolved values');
       // And nothing outside the ledger carries it: it is administrative.
       for (final e in _entries()) {
         expect(e.containsKey('sourceReferencesReviewStatus'), isFalse,
@@ -476,11 +488,11 @@ void main() {
       expect(entries.where((e) => !reviewed.containsKey(e['duaId'])), isEmpty,
           reason: 'the batch flow is finished; nothing is unreviewed');
 
-      // Not every review carries the status: 31 of them were recorded before
-      // the field existed. Those are NOT backfilled — writing a citation
-      // finding for a page nobody re-read under that heading would be
-      // inventing a review. So the absence stays visible and counted, and
-      // the ledger summary has to keep agreeing with it.
+      // 31 reviews predated the field and were left visibly unset rather than
+      // backfilled from nothing. The takhrij round earned them: the ten
+      // remaining printed pages were read for footnote rules, marker
+      // positions and their anchors. So the remainder is now empty — and the
+      // ledger summary has to agree, computed rather than typed.
       final withoutStatus = entries
           .map((e) => e['duaId'] as String)
           .where((id) => reviewed[id]?['sourceReferencesReviewStatus'] == null)
@@ -488,9 +500,28 @@ void main() {
       final sr = ((_ledger()['summary']
               as Map<String, dynamic>)['sourceReferencesReviewed'])
           as Map<String, dynamic>;
+      expect(withoutStatus, isEmpty,
+          reason: 'every record must carry a resolved citation status');
+      expect(sr['not_reviewed_count'], 0);
       expect(withoutStatus, hasLength(sr['not_reviewed_count']),
           reason: 'the summary and the reviews disagree about how many '
-              'reviews predate the citation-status field');
+              'reviews still lack the citation-status field');
+      // The two summary lists are derived, not hand-maintained.
+      for (final status in const ['reviewed_present', 'reviewed_none']) {
+        final actual = entries
+            .map((e) => e['duaId'] as String)
+            .where(
+                (id) => reviewed[id]?['sourceReferencesReviewStatus'] == status)
+            .toList()
+          ..sort();
+        expect(List<String>.from(sr[status] as List), actual,
+            reason: 'summary.$status disagrees with the reviews array');
+      }
+      expect(
+          (sr['reviewed_present'] as List).length +
+              (sr['reviewed_none'] as List).length +
+              (sr['not_reviewed_count'] as int),
+          entries.length);
 
       // Where a status IS claimed, it must be one of the two values and must
       // match what the pack actually holds. This is the half that carries

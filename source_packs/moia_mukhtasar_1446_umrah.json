@@ -177,7 +177,16 @@
         "miqat_yalamlam",
         "miqat_qarn_manazil"
       ],
-      "sourceReferences": [],
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1218",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 59
+        }
+      ],
       "recitationPolicy": null
     },
     {
@@ -230,7 +239,16 @@
         "miqat_yalamlam",
         "miqat_qarn_manazil"
       ],
-      "sourceReferences": [],
+      "sourceReferences": [
+        {
+          "type": "hadith",
+          "collection": "صحيح مسلم",
+          "reference": "1184",
+          "referenceKind": "hadith_number",
+          "citedBy": "moia_1446",
+          "citedOnPage": 59
+        }
+      ],
       "recitationPolicy": null
     },
     {
@@ -3583,7 +3601,7 @@
       "verifiedBy": null,
       "contentHash": null,
       "revokedAt": null,
-      "reviewNotes": "قاله النبي ﷺ لعمر رضي الله عنه. المصدر يعزوه لعبدالرزاق (5/36) وابن أبي شيبة (3/171) والشافعي وأحمد. مفيد جدًّا لتوجيه الحاج وقت الزحام.",
+      "reviewNotes": "قاله النبي ﷺ لعمر رضي الله عنه. المصدر يعزوه لعبدالرزاق (5/36) وابن أبي شيبة (3/171) والشافعي وأحمد. مفيد جدًّا لتوجيه الحاج وقت الزحام. وفي جولة مراجعة التخريج قُرئت تكملة الحاشية في أعلى ص68، فتبيّن أن المصدر يسمّي الكتابين ويطبع الرقمين: السنن المأثورة للشافعي (510)، ومسند أحمد (190).",
       "visuallyUncertain": [],
       "sourceReferences": [
         {
@@ -3604,17 +3622,19 @@
         },
         {
           "type": "athar",
-          "collection": "الشافعي",
-          "referenceKind": "unspecified",
+          "collection": "السنن المأثورة للشافعي",
+          "reference": "510",
+          "referenceKind": "hadith_number",
           "citedBy": "moia_1446",
-          "citedOnPage": 67
+          "citedOnPage": 68
         },
         {
           "type": "athar",
-          "collection": "أحمد",
-          "referenceKind": "unspecified",
+          "collection": "مسند أحمد",
+          "reference": "190",
+          "referenceKind": "hadith_number",
           "citedBy": "moia_1446",
-          "citedOnPage": 67
+          "citedOnPage": 68
         }
       ],
       "recitationPolicy": null
