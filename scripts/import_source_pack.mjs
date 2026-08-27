@@ -616,6 +616,100 @@ export const KNOWN_PACK_FIELDS = new Set([
   ...Object.keys(FORCED_FIELDS),
 ]);
 
+// ── Field ownership ─────────────────────────────────────────────────────
+//
+// Who owns each of the 47 fields decides what an import may overwrite. The
+// question only became urgent once there were live documents: a PATCH with
+// no updateMask REPLACES the document, so every field absent from the
+// payload is deleted. That silently reset `usage_count`, wiped a hand-set
+// `audioUrl`, and removed any admin field this script has never heard of.
+//
+// The four classes below are exhaustive over the payload and are asserted to
+// be so at module load. D is the class that cannot be enumerated — which is
+// exactly why it needs an updateMask rather than a list.
+
+/**
+ * A — owned by the source pack. The pack is the authority; an import may
+ * freely overwrite these, because that is the whole point of importing.
+ */
+export const PACK_OWNED_FIELDS = Object.freeze([
+  ...REQUIRED_FIELDS,
+  ...Object.keys(OPTIONAL_FIELDS),
+]);
+
+/**
+ * B — operational. Owned by the running app and its admins, never by the
+ * pack. On a NEW document the importer seeds them; on an EXISTING one it
+ * must leave whatever is there alone.
+ *
+ *   audioMode / audioUrl  a recording an admin uploaded by hand. Re-importing
+ *                         the text is not a reason to unpublish the audio.
+ *   usage_count           live analytics the pilgrim's own client increments
+ *                         (firestore.rules allows exactly this one field).
+ */
+export const OPERATIONAL_FIELDS = Object.freeze([
+  "audioMode",
+  "audioUrl",
+  "usage_count",
+]);
+
+/**
+ * C — verification. Always written, on create AND on update, always to the
+ * unverified state. Re-importing content invalidates any prior approval: the
+ * bytes a human approved are not necessarily the bytes now being written, so
+ * the record must fall out of the pilgrim's view until someone re-approves
+ * it. This is a fail-closed reset, not a preservation.
+ */
+export const VERIFICATION_FIELDS = Object.freeze([
+  "verificationStatus",
+  "verifiedAt",
+  "verifiedBy",
+  "revokedAt",
+]);
+
+/**
+ * D — unknown administrative fields. Not listed, because they cannot be:
+ * anything the admin console or a future migration adds lives here. They are
+ * protected structurally — by never appearing in the updateMask — rather
+ * than by enumeration. A list would be wrong the moment someone adds a field.
+ */
+export const UNKNOWN_ADMIN_FIELDS_ARE_PRESERVED = true;
+
+/** The mask used when a document already exists: A ∪ C, never B, never D. */
+export const UPDATE_MASK_FIELDS = Object.freeze([
+  ...PACK_OWNED_FIELDS,
+  ...VERIFICATION_FIELDS,
+]);
+
+// The classification must cover the payload exactly — no field unclassified,
+// none claimed twice. Checked here so a new field cannot be added to the
+// schema without someone deciding who owns it.
+{
+  const classified = [
+    ...PACK_OWNED_FIELDS,
+    ...OPERATIONAL_FIELDS,
+    ...VERIFICATION_FIELDS,
+  ];
+  const dupes = classified.filter((f, i) => classified.indexOf(f) !== i);
+  if (dupes.length) {
+    throw new Error(`Field claimed by two ownership classes: ${dupes}`);
+  }
+  const payload = new Set([
+    ...REQUIRED_FIELDS,
+    ...Object.keys(OPTIONAL_FIELDS),
+    ...Object.keys(FORCED_FIELDS),
+  ]);
+  const missing = [...payload].filter((f) => !classified.includes(f));
+  const extra = classified.filter((f) => !payload.has(f));
+  if (missing.length || extra.length) {
+    throw new Error(
+      `Field ownership does not cover the payload. Unclassified: ` +
+        `${missing.join(", ") || "none"}. Not in payload: ` +
+        `${extra.join(", ") || "none"}.`,
+    );
+  }
+}
+
 /**
  * Validates a pack and returns the Firestore-shaped records to write.
  * Throws on the first structural problem — a partial import is worse than
@@ -745,6 +839,323 @@ export function buildRecords(pack) {
 
     return record;
   });
+}
+
+// ── The wire ────────────────────────────────────────────────────────────
+//
+// Every request goes through these three helpers so a test can hand in a
+// fake `fetch` and drive the whole write path with no network and no
+// credential. `plan.token` is passed in a header and never logged; the
+// helpers below never print a URL or a response body.
+
+export function documentUrl(plan, duaId) {
+  return (
+    `https://firestore.googleapis.com/v1/projects/${plan.projectId}` +
+    `/databases/${plan.database}/documents/${plan.collection}` +
+    `/${encodeURIComponent(duaId)}`
+  );
+}
+
+/**
+ * Does the document already exist? Never guessed — a 404 from a real GET is
+ * the only thing that licenses a create, and anything else is an error we
+ * must not paper over by writing.
+ */
+export async function readExisting(duaId, plan, deps = {}) {
+  const doFetch = deps.fetch ?? globalThis.fetch;
+  const res = await doFetch(documentUrl(plan, duaId), {
+    headers: { Authorization: `Bearer ${plan.token}` },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`read of ${duaId} failed: HTTP ${res.status}`);
+  }
+  const body = await res.json();
+  const out = {};
+  for (const [k, v] of Object.entries(body.fields ?? {})) {
+    out[k] = fromFirestoreValue(v);
+  }
+  return out;
+}
+
+/**
+ * The request for one record, given whether the document already exists.
+ *
+ *   create  every field, including the operational seeds.
+ *   update  updateMask = A ∪ C. B is absent from mask AND body, so the live
+ *           values survive; D is absent from the mask, so unknown admin
+ *           fields survive too.
+ *
+ * The verification fields are in the mask on BOTH paths and are serialised
+ * as nullValue rather than omitted: a masked field missing from the body is
+ * DELETED by Firestore, which would leave the document with no verifiedAt at
+ * all. Writing null keeps the field present and explicitly empty, which is
+ * what the schema and the security rules expect.
+ */
+export function buildWriteRequest(record, existing, plan) {
+  const isCreate = existing === null || existing === undefined;
+  const bodyFields = isCreate
+    ? Object.keys(record)
+    : UPDATE_MASK_FIELDS.filter((f) => f in record);
+
+  const fields = {};
+  for (const k of bodyFields) fields[k] = toFirestoreValue(record[k]);
+
+  let url = documentUrl(plan, record.duaId);
+  if (!isCreate) {
+    const mask = bodyFields
+      .map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`)
+      .join("&");
+    url = `${url}?${mask}`;
+  }
+  return { url, isCreate, maskFields: isCreate ? null : bodyFields, fields };
+}
+
+export async function writeRecords(records, plan, deps = {}) {
+  const doFetch = deps.fetch ?? globalThis.fetch;
+  let created = 0;
+  let updated = 0;
+  let writes = 0;
+
+  for (const record of records) {
+    const existing = await readExisting(record.duaId, plan, deps);
+    const req = buildWriteRequest(record, existing, plan);
+
+    const res = await doFetch(req.url, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${plan.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields: req.fields }),
+    });
+    writes += 1;
+
+    if (!res.ok) {
+      throw new Error(
+        `write of ${record.duaId} failed: HTTP ${res.status}`,
+      );
+    }
+    if (req.isCreate) {
+      created += 1;
+      console.log(`created ${record.duaId}`);
+    } else {
+      updated += 1;
+      console.log(
+        `updated ${record.duaId} (${req.maskFields.length} field(s); ` +
+          `kept ${OPERATIONAL_FIELDS.join(", ")} and any admin fields)`,
+      );
+    }
+  }
+  return { created, updated, writes };
+}
+
+/** Fields whose value must match the payload exactly after a write. */
+export const VERIFIED_AFTER_WRITE = Object.freeze([
+  "duaId",
+  "contentKind",
+  "verificationStatus",
+  "verifiedAt",
+  "verifiedBy",
+  "revokedAt",
+]);
+
+/**
+ * Read one document back and prove it holds what was sent. Compares the
+ * text by hash rather than by printing it, and never prints audioUrl or any
+ * other value — a mismatch names the field, not its contents.
+ */
+export async function verifyWritten(record, plan, deps = {}) {
+  const doc = await readExisting(record.duaId, plan, deps);
+  if (doc === null) {
+    throw new Error(`${record.duaId}: not found after write`);
+  }
+  for (const f of VERIFIED_AFTER_WRITE) {
+    const want = record[f] ?? null;
+    const got = doc[f] ?? null;
+    if (want !== got) {
+      throw new Error(
+        `${record.duaId}: field "${f}" does not match what was sent`,
+      );
+    }
+  }
+  if (doc.verificationStatus !== "unverified") {
+    throw new Error(
+      `${record.duaId}: verificationStatus is "${doc.verificationStatus}", ` +
+        `not "unverified"`,
+    );
+  }
+  const wantHash = contentHashOf(record);
+  const gotHash = contentHashOf(doc);
+  if (wantHash !== gotHash) {
+    throw new Error(
+      `${record.duaId}: stored text hash ${gotHash.slice(0, 12)} does not ` +
+        `match the payload hash ${wantHash.slice(0, 12)}`,
+    );
+  }
+  return true;
+}
+
+// ── Reconciliation ──────────────────────────────────────────────────────
+//
+// The importer only ever writes. That leaves a hole nothing else covered: a
+// hold stops the NEXT write, it does not retract the last one. A record that
+// was imported and verified months ago, and has since been blocked or
+// dropped from the pack, stays live in front of pilgrims — and no dry-run,
+// log line or test said so, because every one of them reasons about the pack
+// and the ledger while the live collection is never read.
+//
+// This mode reads. It never writes, deletes or revokes: there is no flag in
+// this file that can make it do so. Retraction is a human decision, and this
+// exists so that decision can be made on evidence.
+
+export const RECONCILE_CASES = Object.freeze([
+  "expected_and_present",
+  "expected_missing",
+  "present_but_excluded",
+  "present_but_removed_from_pack",
+  "text_changed",
+]);
+
+/** Cases that must never be seen in production. Both mean a live document
+ *  contradicts the ledger, and no amount of writing fixes either. */
+export const PRODUCTION_BLOCKING_CASES = Object.freeze([
+  "present_but_excluded",
+  "present_but_removed_from_pack",
+]);
+
+export async function listCollection(plan, deps = {}) {
+  const doFetch = deps.fetch ?? globalThis.fetch;
+  const base =
+    `https://firestore.googleapis.com/v1/projects/${plan.projectId}` +
+    `/databases/${plan.database}/documents/${plan.collection}`;
+  const docs = [];
+  let pageToken;
+  do {
+    const url = pageToken
+      ? `${base}?pageSize=300&pageToken=${encodeURIComponent(pageToken)}`
+      : `${base}?pageSize=300`;
+    const res = await doFetch(url, {
+      headers: { Authorization: `Bearer ${plan.token}` },
+    });
+    if (!res.ok) throw new Error(`list failed: HTTP ${res.status}`);
+    const body = await res.json();
+    for (const d of body.documents ?? []) {
+      const fields = {};
+      for (const [k, v] of Object.entries(d.fields ?? {})) {
+        fields[k] = fromFirestoreValue(v);
+      }
+      docs.push({ documentId: (d.name ?? "").split("/").pop(), ...fields });
+    }
+    pageToken = body.nextPageToken;
+  } while (pageToken);
+  return docs;
+}
+
+/**
+ * Compares the live collection against the pack and the ledger. Pure: it is
+ * handed the live documents rather than fetching them, so the whole
+ * classification is testable without a network.
+ *
+ * Reports `documentId` and a case. It deliberately prints no field VALUES —
+ * not audioUrl (which can carry a download token), not text, not tokens.
+ */
+export function reconcile({ live, cleared, excluded, packIds }) {
+  const clearedById = new Map(cleared.map((r) => [r.duaId, r]));
+  const excludedById = new Map(excluded.map((e) => [e.duaId, e]));
+  const liveById = new Map(live.map((d) => [d.documentId ?? d.duaId, d]));
+  const findings = [];
+
+  for (const [id, record] of clearedById) {
+    const doc = liveById.get(id);
+    if (!doc) {
+      findings.push({ documentId: id, case: "expected_missing" });
+      continue;
+    }
+    const changed = contentHashOf(record) !== contentHashOf(doc);
+    findings.push({
+      documentId: id,
+      case: changed ? "text_changed" : "expected_and_present",
+      verificationStatus: doc.verificationStatus ?? null,
+    });
+  }
+
+  for (const [id, doc] of liveById) {
+    if (clearedById.has(id)) continue;
+    const held = excludedById.get(id);
+    if (held) {
+      findings.push({
+        documentId: id,
+        case: "present_but_excluded",
+        verificationStatus: doc.verificationStatus ?? null,
+        reason: held.reasons.join("; "),
+      });
+    } else if (!packIds.has(id)) {
+      findings.push({
+        documentId: id,
+        case: "present_but_removed_from_pack",
+        verificationStatus: doc.verificationStatus ?? null,
+      });
+    }
+  }
+  return findings;
+}
+
+export function printReconcile(findings, collection) {
+  console.log(`\nReconciling ${collection} — READ ONLY, nothing is written.`);
+  const byCase = {};
+  for (const f of findings) (byCase[f.case] ??= []).push(f);
+  for (const c of RECONCILE_CASES) {
+    const rows = byCase[c] ?? [];
+    console.log(`\n${c}: ${rows.length}`);
+    if (c === "expected_and_present") continue;
+    for (const r of rows) {
+      const bits = [r.documentId];
+      if (r.verificationStatus) bits.push(`verification=${r.verificationStatus}`);
+      if (r.reason) bits.push(r.reason);
+      console.log(`  - ${bits.join("  |  ")}`);
+    }
+  }
+  console.log("\nNo document was written, deleted or revoked.");
+}
+
+/**
+ * The production preflight. A live document that the ledger holds back, or
+ * that the pack no longer contains, is not something a write can correct —
+ * so the run stops and a human decides what to retract.
+ */
+export function assertReconciledForProduction(findings) {
+  const blocking = findings.filter((f) =>
+    PRODUCTION_BLOCKING_CASES.includes(f.case),
+  );
+  if (blocking.length) {
+    throw new Error(
+      "Refusing to write to production: the live collection holds " +
+        `${blocking.length} document(s) the ledger does not clear:\n` +
+        blocking.map((b) => `  - ${b.documentId}: ${b.case}`).join("\n") +
+        "\nRetraction is a human decision; this importer will not make it.",
+    );
+  }
+}
+
+export function fromFirestoreValue(v) {
+  if (v == null) return null;
+  if ("nullValue" in v) return null;
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return v.doubleValue;
+  if ("stringValue" in v) return v.stringValue;
+  if ("arrayValue" in v) {
+    return (v.arrayValue.values ?? []).map(fromFirestoreValue);
+  }
+  if ("mapValue" in v) {
+    const out = {};
+    for (const [k, x] of Object.entries(v.mapValue.fields ?? {})) {
+      out[k] = fromFirestoreValue(x);
+    }
+    return out;
+  }
+  return null;
 }
 
 function toFirestoreValue(value) {
@@ -979,7 +1390,7 @@ export function resolvePlan(argv, env = {}) {
 
   const known = new Set([
     "--dry-run", "--write", "--staging", "--production", "--limit",
-    "--confirm-project", "--confirm-count", "--database",
+    "--confirm-project", "--confirm-count", "--database", "--reconcile",
   ]);
   for (const f of flags) {
     const name = f.split("=")[0];
@@ -998,8 +1409,15 @@ export function resolvePlan(argv, env = {}) {
   if (!inputPath) throw new Error("No source pack given.");
 
   const write = has("--write");
+  const reconcile = has("--reconcile");
   const staging = has("--staging");
   const production = has("--production");
+
+  if (reconcile && write) {
+    throw new Error(
+      "--reconcile is read-only and cannot be combined with --write.",
+    );
+  }
 
   if (staging && production) {
     throw new Error("--staging and --production are mutually exclusive.");
@@ -1021,6 +1439,31 @@ export function resolvePlan(argv, env = {}) {
     if (!staging) {
       throw new Error("--limit is only meaningful with --staging.");
     }
+  }
+
+  if (reconcile) {
+    if (!staging && !production) {
+      throw new Error(
+        "--reconcile requires a destination to read: --staging or --production.",
+      );
+    }
+    const projectId = (env.FIREBASE_PROJECT_ID || "").trim();
+    const token = (env.FIREBASE_ADMIN_TOKEN || "").trim();
+    if (!projectId || !token) {
+      throw new Error(
+        "--reconcile reads the live collection: set FIREBASE_PROJECT_ID and " +
+          "FIREBASE_ADMIN_TOKEN. It still writes nothing.",
+      );
+    }
+    const database = (valueOf("--database") || "(default)").trim();
+    return {
+      mode: "reconcile",
+      inputPath,
+      collection: production ? PRODUCTION_COLLECTION : STAGING_COLLECTION,
+      projectId,
+      token,
+      database,
+    };
   }
 
   if (!write) {
@@ -1129,8 +1572,16 @@ export function assertProductionSetIsClean(records, classification) {
   }
 }
 
-function printPlan(plan, records, excluded = []) {
+function printPlan(plan, records, excluded = [], clearedCount = null) {
   console.log(`Pack:       ${plan.inputPath}`);
+  // Both numbers, always. Printing only the post-limit count made the log of
+  // a `--limit 1` run read "Included: 1", which is true of the write and
+  // silent about the ledger: the reader could not tell whether 1 or 73
+  // records had passed review. The limit is a slice taken AFTER the ledger,
+  // and the log now says so.
+  if (clearedCount !== null) {
+    console.log(`Cleared by ledger (before --limit): ${clearedCount}`);
+  }
   console.log(`Included:   ${records.length}  (zone-tied: ` +
     `${records.filter((r) => r.zoneKey).length})`);
   console.log(`Excluded:   ${excluded.length}  (held back by the review ledger)`);
@@ -1140,7 +1591,12 @@ function printPlan(plan, records, excluded = []) {
   console.log(`Project:    ${plan.projectId ?? "(not read in dry-run)"}`);
   console.log(`Database:   ${plan.database ?? "(not read in dry-run)"}`);
   console.log(`Collection: ${plan.collection ?? "(none — dry-run)"}`);
-  if (plan.limit) console.log(`Limit:      ${plan.limit}`);
+  if (plan.limit) {
+    console.log(
+      `Limit:      ${plan.limit}  ` +
+        `(${clearedCount ?? "?"} cleared → ${records.length} to write)`,
+    );
+  }
   console.log("verificationStatus: unverified for every record.");
 }
 
@@ -1176,6 +1632,36 @@ async function main() {
   }
   const isProduction = plan.collection === PRODUCTION_COLLECTION;
 
+  // ── Reconcile: read the live collection, report, write nothing ────────
+  if (plan.mode === "reconcile") {
+    const r = applyLedger(all, ledger);
+    let live;
+    try {
+      live = await listCollection(plan);
+    } catch (err) {
+      console.error(`\n${err.message}`);
+      process.exit(1);
+    }
+    const findings = reconcile({
+      live,
+      cleared: r.included,
+      excluded: r.excluded,
+      packIds: new Set(all.map((x) => x.duaId)),
+    });
+    printReconcile(findings, plan.collection);
+    const blocking = findings.filter((f) =>
+      PRODUCTION_BLOCKING_CASES.includes(f.case),
+    );
+    if (isProduction && blocking.length) {
+      console.error(
+        `::error::production preflight FAILED: ${blocking.length} live ` +
+          `document(s) the ledger does not clear.`,
+      );
+      process.exit(1);
+    }
+    return;
+  }
+
   let records;
   let excluded;
   if (isProduction) {
@@ -1189,17 +1675,42 @@ async function main() {
       ...c.unreviewedExcluded.map((id) => ({ duaId: id, reasons: ["unreviewed"] })),
     ];
     printProductionPlan(plan, c);
+
+    // Preflight: a live document the ledger holds back, or one the pack no
+    // longer contains, cannot be corrected by writing. Stop and let a human
+    // decide what to retract. Read-only — it lists, it never deletes.
+    if (plan.mode === "write") {
+      try {
+        const live = await listCollection(plan);
+        const findings = reconcile({
+          live,
+          cleared: c.reviewedIncluded,
+          excluded: [
+            ...c.blockedExcluded.map((id) => ({ duaId: id, reasons: ["blocked"] })),
+            ...c.deploymentHeld.map((id) => ({ duaId: id, reasons: ["deployment hold"] })),
+            ...c.unreviewedExcluded.map((id) => ({ duaId: id, reasons: ["unreviewed"] })),
+          ],
+          packIds: new Set(all.map((x) => x.duaId)),
+        });
+        printReconcile(findings, plan.collection);
+        assertReconciledForProduction(findings);
+      } catch (err) {
+        console.error(`\n${err.message}`);
+        process.exit(1);
+      }
+    }
     // Belt and braces: prove the set about to be written really is the
     // cleared set, whatever any flag above may have done to `records`.
     assertProductionSetIsClean(records, c);
   } else {
     const r = applyLedger(all, ledger);
     excluded = r.excluded;
+    const cleared = r.included.length;
     records = plan.limit ? r.included.slice(0, plan.limit) : r.included;
     if (!ledger) {
       console.log(`(no ${LEDGER_PATH} found — nothing is held back)`);
     }
-    printPlan(plan, records, excluded);
+    printPlan(plan, records, excluded, cleared);
   }
 
   if (plan.mode === "dry-run") {
@@ -1215,29 +1726,31 @@ async function main() {
   }
 
   console.log(`\nWriting ${records.length} record(s) to ${plan.collection}...`);
+  const summary = await writeRecords(records, plan);
+  console.log(
+    `\ncreated: ${summary.created}  updated: ${summary.updated}  ` +
+      `writes: ${summary.writes}`,
+  );
+  if (summary.writes !== records.length) {
+    console.error(
+      `::error::expected exactly ${records.length} write(s), performed ` +
+        `${summary.writes}.`,
+    );
+    process.exit(1);
+  }
+
+  // Post-write verification. A write that returns 200 proves the request was
+  // accepted, not that the document holds what we meant. Read each one back
+  // through the same credential and compare.
+  console.log("\nVerifying what was written...");
   for (const record of records) {
-    const fields = {};
-    for (const [k, v] of Object.entries(record)) fields[k] = toFirestoreValue(v);
-
-    const url =
-      `https://firestore.googleapis.com/v1/projects/${plan.projectId}` +
-      `/databases/${plan.database}/documents/${plan.collection}` +
-      `/${encodeURIComponent(record.duaId)}`;
-
-    const res = await fetch(url, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${plan.token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ fields }),
-    });
-
-    if (!res.ok) {
-      console.error(`FAILED ${record.duaId}: ${res.status} ${await res.text()}`);
+    try {
+      await verifyWritten(record, plan);
+      console.log(`verified ${record.duaId}`);
+    } catch (err) {
+      console.error(`::error::${err.message}`);
       process.exit(1);
     }
-    console.log(`upserted ${record.duaId}`);
   }
 }
 

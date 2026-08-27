@@ -175,7 +175,16 @@ jobs:
           set -euo pipefail
           node scripts/import_source_pack.mjs \
             source_packs/moia_mukhtasar_1446_umrah.json \
-            --staging --limit 1
+            --staging --limit 1 | tee dry-run.log
+
+          # The log must state BOTH counts. Printing only the post-limit
+          # number made a --limit 1 run read "Included: 1", which is true of
+          # the write and silent about the ledger: nobody could tell from the
+          # log whether 1 or 73 records had passed review.
+          grep -q "Cleared by ledger (before --limit): 73" dry-run.log
+          grep -q "^Included:   1" dry-run.log
+          grep -q "^Excluded:   12" dry-run.log
+          echo "Counts confirmed in the log: 73 cleared, 12 excluded, 1 to write."
 
       # ── Authentication: short-lived, no key file ──────────────────────
       #
@@ -243,7 +252,18 @@ jobs:
             --staging --limit 1 --write \
             --database="$FIREBASE_DATABASE_ID" \
             --confirm-project="$CONFIRM_PROJECT" \
-            --confirm-count="$CONFIRM_COUNT"
+            --confirm-count="$CONFIRM_COUNT" | tee write.log
+
+          # The importer reads each document back through the same
+          # credential and compares id, collection, verificationStatus and
+          # the text hash; a mismatch exits non-zero. These greps prove that
+          # verification actually ran and that exactly one write happened —
+          # a silent skip would otherwise look identical to a pass.
+          grep -qE "^(created|updated) moia-mukhtasar-1446-umrah-talbiyah$" write.log
+          grep -q "^verified moia-mukhtasar-1446-umrah-talbiyah$" write.log
+          grep -qE "^created: [01]  updated: [01]  writes: 1$" write.log
+          test "$(grep -cE '^(created|updated) ' write.log)" = "1"
+          echo "One write, read back and verified."
 
       - name: Summary
         if: always()

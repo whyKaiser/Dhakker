@@ -8,12 +8,24 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import childProcess from "node:child_process";
 
 import {
+  OPERATIONAL_FIELDS,
+  PACK_OWNED_FIELDS,
+  PRODUCTION_BLOCKING_CASES,
   PRODUCTION_COLLECTION,
   STAGING_COLLECTION,
+  UPDATE_MASK_FIELDS,
+  VERIFICATION_FIELDS,
   assertConfirmations,
+  assertReconciledForProduction,
+  listCollection,
+  printReconcile,
+  reconcile,
   resolvePlan,
+  verifyWritten,
+  writeRecords,
 } from "./import_source_pack.mjs";
 
 const PACK = "source_packs/moia_mukhtasar_1446_umrah.json";
@@ -1427,3 +1439,439 @@ test("the new qualifiers change no import decision", () => {
   assert.equal(stripped.contentKind, r.contentKind);
   assert.equal(stripped.verificationStatus, r.verificationStatus);
 });
+
+// ── Safe write, reconciliation, and post-write verification ─────────────
+//
+// Everything below drives the real write path with a fake `fetch`. No
+// network, no credential, no Firebase. The bug these guard against is not
+// hypothetical: a PATCH with no updateMask REPLACES the document, so the
+// importer was silently deleting `usage_count`, any hand-set `audioUrl`, and
+// every admin field it had never heard of.
+
+const PLAN = {
+  projectId: "test-project",
+  database: "(default)",
+  collection: "supplications_staging",
+  token: "FAKE-TOKEN-NEVER-LOGGED",
+};
+
+/** A fake Firestore. `docs` maps duaId → the stored document (plain JS). */
+function fakeFirestore(docs = {}) {
+  const calls = [];
+  const store = { ...docs };
+  const toValue = (v) => {
+    if (v === null || v === undefined) return { nullValue: null };
+    if (typeof v === "boolean") return { booleanValue: v };
+    if (typeof v === "number") {
+      return Number.isInteger(v)
+        ? { integerValue: String(v) }
+        : { doubleValue: v };
+    }
+    if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+    if (typeof v === "object") {
+      const f = {};
+      for (const [k, x] of Object.entries(v)) f[k] = toValue(x);
+      return { mapValue: { fields: f } };
+    }
+    return { stringValue: String(v) };
+  };
+  const encode = (o) => {
+    const f = {};
+    for (const [k, v] of Object.entries(o)) f[k] = toValue(v);
+    return f;
+  };
+
+  const doFetch = async (url, init = {}) => {
+    const method = init.method ?? "GET";
+    const [path, query] = url.split("?");
+    const id = decodeURIComponent(path.split("/").pop());
+    calls.push({ method, url, id });
+
+    if (method === "GET") {
+      if (path.endsWith("/documents/" + PLAN.collection)) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            documents: Object.entries(store).map(([k, v]) => ({
+              name: `projects/p/databases/(default)/documents/${PLAN.collection}/${k}`,
+              fields: encode(v),
+            })),
+          }),
+        };
+      }
+      if (!(id in store)) return { ok: false, status: 404 };
+      return { ok: true, status: 200, json: async () => ({ fields: encode(store[id]) }) };
+    }
+
+    if (method === "PATCH") {
+      const sent = JSON.parse(init.body);
+      const incoming = {};
+      for (const [k, v] of Object.entries(sent.fields)) {
+        incoming[k] = decodeValue(v);
+      }
+      const mask = new URLSearchParams(query ?? "").getAll("updateMask.fieldPaths");
+      if (mask.length === 0) {
+        // No mask: Firestore REPLACES the document.
+        store[id] = incoming;
+      } else {
+        // Masked: only listed paths change. A masked path absent from the
+        // body is deleted; an unmasked field is untouched.
+        const next = { ...(store[id] ?? {}) };
+        for (const f of mask) {
+          if (f in incoming) next[f] = incoming[f];
+          else delete next[f];
+        }
+        store[id] = next;
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    return { ok: false, status: 405 };
+  };
+
+  function decodeValue(v) {
+    if ("nullValue" in v) return null;
+    if ("booleanValue" in v) return v.booleanValue;
+    if ("integerValue" in v) return Number(v.integerValue);
+    if ("doubleValue" in v) return v.doubleValue;
+    if ("stringValue" in v) return v.stringValue;
+    if ("arrayValue" in v) return (v.arrayValue.values ?? []).map(decodeValue);
+    if ("mapValue" in v) {
+      const o = {};
+      for (const [k, x] of Object.entries(v.mapValue.fields ?? {})) {
+        o[k] = decodeValue(x);
+      }
+      return o;
+    }
+    return null;
+  }
+
+  return { fetch: doFetch, calls, store };
+}
+
+const REC = () =>
+  new Map(buildRecords(realPack).map((r) => [r.duaId, r])).get(
+    "moia-mukhtasar-1446-umrah-talbiyah",
+  );
+
+test("field ownership covers all 47 fields exactly once", () => {
+  const all = [
+    ...PACK_OWNED_FIELDS,
+    ...OPERATIONAL_FIELDS,
+    ...VERIFICATION_FIELDS,
+  ];
+  assert.equal(all.length, 47);
+  assert.equal(new Set(all).size, 47, "a field is claimed twice");
+  assert.equal(Object.keys(REC()).length, 47);
+  for (const f of Object.keys(REC())) {
+    assert.ok(all.includes(f), `${f} belongs to no ownership class`);
+  }
+  // The mask is A ∪ C and must never contain an operational field.
+  assert.equal(UPDATE_MASK_FIELDS.length, 44);
+  for (const f of OPERATIONAL_FIELDS) {
+    assert.ok(!UPDATE_MASK_FIELDS.includes(f), `${f} must not be in the mask`);
+  }
+});
+
+test("1) a new document is created with the operational defaults", async () => {
+  const fs = fakeFirestore();
+  const rec = REC();
+  const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+
+  assert.equal(out.created, 1);
+  assert.equal(out.updated, 0);
+  assert.equal(out.writes, 1);
+  const doc = fs.store[rec.duaId];
+  assert.equal(Object.keys(doc).length, 47);
+  assert.equal(doc.audioMode, "tts");
+  assert.equal(doc.audioUrl, "");
+  assert.equal(doc.usage_count, 0);
+  assert.equal(doc.verificationStatus, "unverified");
+  // A create carries no updateMask: there is nothing to preserve.
+  const patch = fs.calls.find((c) => c.method === "PATCH");
+  assert.ok(!patch.url.includes("updateMask"));
+});
+
+test("2) an existing document keeps audio, usage_count and admin fields", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      audioMode: "file",
+      audioUrl: "https://storage.example/x.mp3?token=SECRET",
+      usage_count: 412,
+      adminNote: "hand written, do not lose",
+      text: { ar: "old text", en: "" },
+      verificationStatus: "unverified",
+    },
+  });
+
+  const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(out.updated, 1);
+  assert.equal(out.created, 0);
+
+  const doc = fs.store[rec.duaId];
+  assert.equal(doc.audioMode, "file", "live audio mode was overwritten");
+  assert.equal(
+    doc.audioUrl,
+    "https://storage.example/x.mp3?token=SECRET",
+    "a hand-uploaded recording was unpublished by an import",
+  );
+  assert.equal(doc.usage_count, 412, "live analytics were reset");
+  assert.equal(doc.adminNote, "hand written, do not lose");
+  // And the pack-owned content really was refreshed.
+  assert.equal(doc.text.ar, rec.text.ar);
+});
+
+test("3) a verified document falls back to unverified, with the stamps cleared",
+  async () => {
+    const rec = REC();
+    const fs = fakeFirestore({
+      [rec.duaId]: {
+        duaId: rec.duaId,
+        verificationStatus: "verified",
+        verifiedBy: "admin@example.com",
+        verifiedAt: "2026-01-01T00:00:00Z",
+        revokedAt: null,
+        text: { ar: "stale", en: "" },
+        usage_count: 9,
+      },
+    });
+
+    await writeRecords([rec], PLAN, { fetch: fs.fetch });
+    const doc = fs.store[rec.duaId];
+    assert.equal(doc.verificationStatus, "unverified");
+    assert.equal(doc.verifiedBy, null, "the old approver survived the import");
+    assert.equal(doc.verifiedAt, null, "the old timestamp survived the import");
+    assert.ok("verifiedAt" in doc, "the field must exist and be null, not vanish");
+    assert.ok("verifiedBy" in doc);
+    assert.equal(doc.usage_count, 9, "operational data is still preserved");
+  });
+
+test("4) an unknown admin field is never deleted", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      someFutureField: { nested: true },
+      anotherOne: [1, 2, 3],
+      usage_count: 1,
+    },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const doc = fs.store[rec.duaId];
+  assert.deepEqual(doc.someFutureField, { nested: true });
+  assert.deepEqual(doc.anotherOne, [1, 2, 3]);
+});
+
+test("9) the updateMask lists owned fields only, never the operational ones",
+  async () => {
+    const rec = REC();
+    const fs = fakeFirestore({ [rec.duaId]: { duaId: rec.duaId } });
+    await writeRecords([rec], PLAN, { fetch: fs.fetch });
+
+    const patch = fs.calls.find((c) => c.method === "PATCH");
+    const mask = new URLSearchParams(patch.url.split("?")[1]).getAll(
+      "updateMask.fieldPaths",
+    );
+    assert.equal(mask.length, 44);
+    for (const f of OPERATIONAL_FIELDS) {
+      assert.ok(!mask.includes(f), `${f} must not be masked`);
+    }
+    for (const f of VERIFICATION_FIELDS) {
+      assert.ok(mask.includes(f), `${f} must be masked so it is reset`);
+    }
+    for (const f of PACK_OWNED_FIELDS) assert.ok(mask.includes(f));
+  });
+
+test("existence is read, never guessed: one GET precedes each PATCH", async () => {
+  const rec = REC();
+  const fs = fakeFirestore();
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const methods = fs.calls.map((c) => c.method);
+  assert.deepEqual(methods, ["GET", "PATCH"]);
+});
+
+test("a failed read aborts rather than writing blind", async () => {
+  const fs = { fetch: async () => ({ ok: false, status: 500 }) };
+  await assert.rejects(
+    () => writeRecords([REC()], PLAN, fs),
+    /read of .* failed: HTTP 500/,
+  );
+});
+
+// ── Reconciliation ────────────────────────────────────────────────────
+
+function reconcileFixture() {
+  const all = buildRecords(realPack);
+  const r = applyLedger(all, loadLedger());
+  return { all, cleared: r.included, excluded: r.excluded };
+}
+
+test("5) an excluded record that exists live is reported and blocks production",
+  () => {
+    const { all, cleared, excluded } = reconcileFixture();
+    const held = excluded[0].duaId;
+    const findings = reconcile({
+      live: [{ documentId: held, verificationStatus: "verified", text: { ar: "x", en: "" } }],
+      cleared,
+      excluded,
+      packIds: new Set(all.map((x) => x.duaId)),
+    });
+    const hit = findings.find((f) => f.documentId === held);
+    assert.equal(hit.case, "present_but_excluded");
+    assert.equal(hit.verificationStatus, "verified");
+    assert.ok(hit.reason.length > 0, "the hold's reason must be reported");
+    assert.throws(
+      () => assertReconciledForProduction(findings),
+      /Refusing to write to production/,
+    );
+  });
+
+test("6) a document no longer in the pack is reported and blocks production", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const findings = reconcile({
+    live: [{ documentId: "some-retired-record", verificationStatus: "verified" }],
+    cleared,
+    excluded,
+    packIds: new Set(all.map((x) => x.duaId)),
+  });
+  const hit = findings.find((f) => f.documentId === "some-retired-record");
+  assert.equal(hit.case, "present_but_removed_from_pack");
+  assert.throws(() => assertReconciledForProduction(findings));
+});
+
+test("7) a cleared record with no live document is expected_missing", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const findings = reconcile({
+    live: [],
+    cleared,
+    excluded,
+    packIds: new Set(all.map((x) => x.duaId)),
+  });
+  assert.equal(findings.length, cleared.length);
+  assert.ok(findings.every((f) => f.case === "expected_missing"));
+  // Missing is not a production blocker: writing is exactly what fixes it.
+  assert.doesNotThrow(() => assertReconciledForProduction(findings));
+});
+
+test("a live document whose text drifted is text_changed, not present", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const one = cleared[0];
+  const same = reconcile({
+    live: [{ documentId: one.duaId, text: one.text }],
+    cleared: [one], excluded, packIds: new Set(all.map((x) => x.duaId)),
+  });
+  assert.equal(same[0].case, "expected_and_present");
+
+  const drifted = reconcile({
+    live: [{ documentId: one.duaId, text: { ar: "different", en: "" } }],
+    cleared: [one], excluded, packIds: new Set(all.map((x) => x.duaId)),
+  });
+  assert.equal(drifted[0].case, "text_changed");
+});
+
+test("8) reconcile issues no write of any kind", async () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const fs = fakeFirestore({ "some-retired-record": { duaId: "x" } });
+  const live = await listCollection(PLAN, { fetch: fs.fetch });
+  reconcile({ live, cleared, excluded, packIds: new Set(all.map((x) => x.duaId)) });
+  assert.ok(
+    fs.calls.every((c) => c.method === "GET"),
+    `reconcile performed a non-GET call: ${fs.calls.map((c) => c.method)}`,
+  );
+});
+
+// ── Post-write verification ───────────────────────────────────────────
+
+test("10a) verification passes when the document matches the payload", async () => {
+  const rec = REC();
+  const fs = fakeFirestore();
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(await verifyWritten(rec, PLAN, { fetch: fs.fetch }), true);
+});
+
+test("10b) verification fails on a wrong status, wrong text, or missing doc",
+  async () => {
+    const rec = REC();
+
+    const missing = fakeFirestore();
+    await assert.rejects(
+      () => verifyWritten(rec, PLAN, { fetch: missing.fetch }),
+      /not found after write/,
+    );
+
+    const wrongStatus = fakeFirestore({
+      [rec.duaId]: { ...rec, verificationStatus: "verified" },
+    });
+    await assert.rejects(
+      () => verifyWritten(rec, PLAN, { fetch: wrongStatus.fetch }),
+      /verificationStatus/,
+    );
+
+    const wrongText = fakeFirestore({
+      [rec.duaId]: { ...rec, text: { ar: "tampered", en: "" } },
+    });
+    await assert.rejects(
+      () => verifyWritten(rec, PLAN, { fetch: wrongText.fetch }),
+      /stored text hash/,
+    );
+  });
+
+test("12) no token and no audioUrl value can reach a log line", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      audioUrl: "https://storage.example/x.mp3?token=SUPER-SECRET",
+      audioMode: "file",
+    },
+  });
+  const lines = [];
+  const realLog = console.log;
+  console.log = (...a) => lines.push(a.join(" "));
+  try {
+    await writeRecords([rec], PLAN, { fetch: fs.fetch });
+    await verifyWritten(rec, PLAN, { fetch: fs.fetch });
+  } finally {
+    console.log = realLog;
+  }
+  const all = lines.join("\n");
+  assert.ok(!all.includes(PLAN.token), "the bearer token was logged");
+  assert.ok(!all.includes("SUPER-SECRET"), "a signed audioUrl was logged");
+  assert.ok(!all.includes("storage.example"), "an audio host was logged");
+
+  // The reconcile printer is held to the same rule.
+  const rlines = [];
+  console.log = (...a) => rlines.push(a.join(" "));
+  try {
+    printReconcile(
+      [{ documentId: rec.duaId, case: "present_but_excluded",
+         verificationStatus: "verified", reason: "deployment hold" }],
+      PLAN.collection,
+    );
+  } finally {
+    console.log = realLog;
+  }
+  assert.ok(!rlines.join("\n").includes("SUPER-SECRET"));
+});
+
+test("11) the dry-run plan prints the count before AND after --limit", () => {
+  const { execFileSync } = require_execFile();
+  const out = execFileSync(
+    process.execPath,
+    ["scripts/import_source_pack.mjs", PACK, "--staging", "--limit", "1"],
+    { encoding: "utf8" },
+  );
+  // 73 must survive into the log. It vanished before, and the staging run of
+  // 2026-08-27 recorded only "Included: 1".
+  assert.match(out, /Cleared by ledger \(before --limit\): 73/);
+  assert.match(out, /^Included:   1 /m);
+  assert.match(out, /^Excluded:   12 /m);
+  assert.match(out, /Limit:      1  \(73 cleared → 1 to write\)/);
+  assert.match(out, /DRY RUN — validated only\. Nothing was sent anywhere\./);
+});
+
+function require_execFile() {
+  return { execFileSync: childProcess.execFileSync };
+}
