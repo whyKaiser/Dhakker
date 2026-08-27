@@ -10,7 +10,7 @@ That is **not** a claim that no audio exists. The project owner has existing
 AI-generated audio files **outside the repository**. They cannot be matched
 to records yet: matching needs either the filenames, the files themselves, or
 a hash of each file's source text. Until one of those is supplied, no
-statement can be made about how many of the 59 needed recitations are already
+statement can be made about how many of the 58 needed recitations are already
 covered.
 
 ## How many files are needed
@@ -18,11 +18,11 @@ covered.
 | | count |
 |---|---|
 | records in the pack | 85 |
-| recitable (`specific_text`, `general_dua`, `general_dhikr`, `mosque_entry`) | 60 |
-| non-recitable — guidance and evidence, **never** voiced | 25 |
-| **unique canonical texts among the recitable 60** | **59** |
+| recitable (`specific_text`, `general_dua`, `general_dhikr`, `mosque_entry`) | 59 |
+| non-recitable — guidance and evidence, **never** voiced | 26 |
+| **unique canonical texts among the recitable 59** | **58** |
 
-59, not 60, because two records hold the same canonical text:
+58, not 59, because two records hold the same canonical text:
 `moia-mukhtasar-1446-tawaf-between-corners` (p69, location-specific, between
 the two corners) and `moia-mukhtasar-1446-general-001` (p94, general dua) both
 carry البقرة 201. They stay two records — the ministry prints the ayah twice
@@ -30,8 +30,51 @@ under different classifications, and collapsing them would erase a real
 distinction — but they must **share one audio file**. One text, one
 recitation, one set of bytes.
 
-All 60 are `ar` only; **no record has `text.en`**, so no English audio is
+These were 60 and 59 until the page-64 review. The mosque-entry hadith
+(`…-entering-masjid-hadith`) was reclassified `contextual_evidence`: the
+ministry uses that narration as the evidence for the wording set out just
+above it, not as a wording to recite, and voicing it would read the narrator's
+instructions — «إذا دخل أحدكم … وإذا خرج فليقل …» — to the pilgrim as though
+they were his supplication. So it needs no audio file, and one recitable text
+left the set. The record it evidences, `…-entering-masjid`, stays recitable
+and still needs its own file.
+
+All 59 are `ar` only; **no record has `text.en`**, so no English audio is
 implied by the current pack.
+
+## How many are eligible to record today
+
+The 58 above is the **whole** canonical set. It is not the number of files
+that can be produced now: four recitable records are held back, and a held
+record must not be voiced while it is held — an audio file is a second
+playback path around the hold.
+
+| | count |
+|---|---|
+| unique canonical recitable texts (total) | **58** |
+| unique texts **eligible for audio today** | **54** |
+
+The four held recitable records, with the reason on each:
+
+| record | why it is held |
+|---|---|
+| `moia-mukhtasar-1446-general-009` | `reviewStatus: blocked` — ministry_source_omits_end_of_quranic_phrase; also excludedFromImport |
+| `moia-mukhtasar-1446-umrah-talbiyah-ziyadah` | `deploymentBlocked` — optionality_not_yet_supported; excludedFromImport |
+| `moia-1446-safa-ayah` | `deploymentBlocked` — recitation_policy_not_yet_deployed; excludedFromImport |
+| `moia-1446-safa-dhikr` | `deploymentBlocked` — recitation_policy_not_yet_deployed; excludedFromImport |
+
+58 − 4 = 54 here only because none of the four shares its text with another
+record. The one shared text in the pack —
+`moia-mukhtasar-1446-tawaf-between-corners` and
+`moia-mukhtasar-1446-general-001`, both البقرة 201 — is intact on the
+eligible side: two records, one file, counted once in both numbers. Had a
+held record shared a text with a free one, the text would still be needed and
+subtracting per record would have undercounted; the eligible figure is
+therefore counted over distinct texts, not by subtraction.
+
+Both numbers move whenever a hold lifts or a classification changes, and both
+are recomputed from the pack and the ledger — there is a test that recounts
+them rather than trusting this table.
 
 ## Matching key
 
@@ -53,3 +96,21 @@ corrected transcription can never keep playing the old recitation.
   hash change is the signal.
 - Audio does not confer verification, and a record with audio is still
   governed by `contentKind`, `recitationPolicy`, and the review ledger.
+
+## Pronunciation notes for recitation
+
+Some records reproduce a typographic feature of the printed page that a
+reader resolves silently but a voice engine will not. They are listed here so
+whoever records or synthesises the audio does not inherit the artefact.
+
+| record | as printed / stored | must be voiced as |
+|---|---|---|
+| `moia-mukhtasar-1446-general-048` (p101–102) | `وَقِنِي شَرَّمَا قَضَيْتَ` — no space between `شَرَّ` and `مَا` | `وَقِنِي شَرَّ مَا قَضَيْتَ` — two words |
+
+The missing space is real and measured, not a transcription slip: on that
+line of page 102 the word gaps run 87–112 px at 450 dpi, while the gap inside
+`شَرَّمَا` is 18 px — a letter gap, not a word gap. The text stays as the
+ministry set it; only the recitation separates the two words.
+
+This table is documentation, not schema. Nothing in the pack, the importer,
+or the app reads it, and no field was added to carry it.

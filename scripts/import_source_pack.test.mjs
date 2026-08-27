@@ -818,13 +818,30 @@ test("the real pack's references all import intact", () => {
   assert.equal(umar.length, 2);
   assert.ok(umar.every((r) => r.citedBy === "moia_1446"));
 
+  // All four of hajar-crowding's sources are numbered. Two of them are
+  // printed on page 68, as the continuation of footnote (٤) which opens at
+  // the foot of 67 — so the importer must carry a citedOnPage that differs
+  // from the record's own printedPage without rejecting or rewriting it.
   const crowding = built.get("moia-1446-hajar-crowding").sourceReferences;
   assert.equal(crowding.length, 4);
-  assert.equal(crowding.filter((r) => "reference" in r).length, 2);
-  assert.ok(
-    crowding.filter((r) => !("reference" in r))
-      .every((r) => r.referenceKind === "unspecified"),
+  assert.equal(crowding.filter((r) => "reference" in r).length, 4);
+  assert.ok(crowding.every((r) => r.referenceKind !== "unspecified"));
+  assert.deepEqual(
+    [...new Set(crowding.map((r) => r.citedOnPage))].sort(),
+    [67, 68],
   );
+
+  // The two talbiyah records each carry the one hadith page 59 cites.
+  for (const [id, num] of [
+    ["moia-mukhtasar-1446-umrah-talbiyah", "1218"],
+    ["moia-mukhtasar-1446-umrah-talbiyah-ziyadah", "1184"],
+  ]) {
+    const refs = built.get(id).sourceReferences;
+    assert.equal(refs.length, 1, id);
+    assert.equal(refs[0].reference, num, id);
+    assert.equal(refs[0].collection, "صحيح مسلم", id);
+    assert.equal(refs[0].citedOnPage, 59, id);
+  }
 
   // A record nobody cited keeps an explicit empty array.
   assert.deepEqual(built.get("moia-mukhtasar-1446-tawaf-takbir-hajar").sourceReferences, []);

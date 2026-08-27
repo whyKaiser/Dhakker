@@ -8,7 +8,8 @@
     "A ledger entry pinned to a hash means: 'a human reviewed THESE bytes'. It says nothing about any other bytes.",
     "reviewStatus 'passed' means ready-for-verification, NOT verified.",
     "reviewedPages is present only when a record spans more than one printed page, and must list exactly the pages its own sourceSection names. A record that spans pages 96-97 may not be recorded as though only page 96 was read.",
-    "A record may pass its TEXT review and still be held back from import. That is recorded as deploymentBlocked with a deploymentBlockReason, never as reviewStatus \"blocked\" — blocked is reserved for a problem with the text itself, and using it for a product limitation would wrongly suggest the religious text is at fault."
+    "A record may pass its TEXT review and still be held back from import. That is recorded as deploymentBlocked with a deploymentBlockReason, never as reviewStatus \"blocked\" — blocked is reserved for a problem with the text itself, and using it for a product limitation would wrongly suggest the religious text is at fault.",
+    "sourceReferencesReviewedPages هي الصفحات التي قُرئت لفحص التخريج وحده، وهي غير reviewedPages: reviewedPages صفحات النص الذي قوبل، وتطابق ما يسمّيه sourceSection؛ أما هذه فقد تمتد إلى الصفحة التالية حين تستمر الحاشية أو مادة التخريج خارجها، ولا تغيّر sourceSection ولا شيئًا مما يراه المستخدم. وهي إدارية بحتة: لا يقرؤها التطبيق ولا الـWorker ولا المستورد، ولا تُرسل إلى Firebase. ويجب أن تبدأ من reviewedPage، وأن تكون صفحات متتالية بلا تكرار، وأن توسّع نطاق قراءة التخريج دون أن تستبدل صفحات النص. ولا تُكتب إلا حين تمتد الحاشية أو مادة التخريج خارج reviewedPages."
   ],
   "reviews": [
     {
@@ -28,7 +29,9 @@
         "المقطع يبدأ بـ«وَٱتَّخِذُواْ» وينتهي بـ«مُصَلّٗى»",
         "النص مقطع من الآية وليس الآية كاملة",
         "تعليمات الركعتين والتنبيهات التالية سجلات منفصلة، وليست جزءًا من سجل الآية"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 71 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة. والعزو القرآني في هذا الكتاب يُطبع داخل المتن بين قوسين مربَّعين ولا يدخل الحواشي."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-001",
@@ -47,7 +50,9 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 94 بحواشيها ومواضع علاماتها: حاشية واحدة على سطرين وعلامة واحدة، ارتست على رواية لا يقابلها سجل في الحزمة. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-002",
@@ -67,7 +72,9 @@
         "مواضع الوقف الثلاثة (ج) وعلامة ۖ موجودة في المطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 94 بحواشيها ومواضع علاماتها: حاشية واحدة على سطرين وعلامة واحدة، ارتست على رواية لا يقابلها سجل في الحزمة. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-003",
@@ -87,7 +94,9 @@
         "آية كاملة فعلًا، والكتاب لا يقتطع منها",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 94 بحواشيها ومواضع علاماتها: حاشية واحدة على سطرين وعلامة واحدة، ارتست على رواية لا يقابلها سجل في الحزمة. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-004",
@@ -106,7 +115,9 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-005",
@@ -125,7 +136,9 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-006",
@@ -145,7 +158,9 @@
         "لا توجد علامة وقف في المطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-007",
@@ -168,7 +183,9 @@
         "علامتا الوقف ۚ و ۖ موجودتان في المطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-008",
@@ -188,7 +205,9 @@
         "لا توجد علامة وقف في المطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-010",
@@ -209,7 +228,9 @@
         "لا توجد علامة وقف في المطبوع",
         "السجل دعاء عام، غير مرتبط بموضع أو نسك",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-009",
@@ -229,7 +250,9 @@
       "reviewerConfirmed": [
         "مطبوع الوزارة ص95 يتوقف عند «رب العرش» ثم يضع المرجع [التوبة:129]",
         "المطبوع لا يطبع كلمة «العظيم»"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 95 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-011",
@@ -250,7 +273,9 @@
         "علامة الوقف ۚ بعد «ذريتي» موجودة في المطبوع",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-012",
@@ -269,7 +294,9 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-013",
@@ -289,7 +316,9 @@
         "«لِيٓ» الثانية تحمل المدّة، والأولى «لِي» بلا مدّة",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-014",
@@ -309,7 +338,9 @@
         "«رَّبِّ» بالشدّة على الراء موجودة في المطبوع كما في الرسم الرسمي",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-015",
@@ -329,7 +360,9 @@
         "«لَّآ» بالشدّة على اللام موجودة في المطبوع كما في الرسم الرسمي",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آية تامة",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-016",
@@ -348,7 +381,9 @@
         "بداية المقطع ونهايته مطابقتان للمطبوع",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-017",
@@ -369,7 +404,9 @@
         "الآية 98 كاملة",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-018",
@@ -390,7 +427,9 @@
         "علامة الوقف ۖ بعد «جهنم» موجودة",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-019",
@@ -410,7 +449,9 @@
         "الرسم في «أَعۡيُنٖ» مطابق",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-020",
@@ -435,7 +476,9 @@
         "الصفحتان 96 و97 كلتاهما روجعتا بصريًا",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية آخر آية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 96 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-021",
@@ -457,7 +500,9 @@
         "السجل كامل على الصفحة 97 وحدها ولا يمتد إلى الصفحة 98",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية الآية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 97 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-general-022",
@@ -479,7 +524,9 @@
         "السجل كامل على الصفحة 97 وحدها ولا يمتد إلى الصفحة 98",
         "لا قطع في منتصف عبارة — المقطع ينتهي عند نهاية الآية",
         "لا تنبيه إضافي في الصفحة يحتاج سجلًا مستقلًا"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 97 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة؛ فُحصت نطاقات الأسطر السفلى للتأكد من أنها متن لا حاشية بلا خط. والعزو القرآني مطبوع داخل المتن بين قوسين مربَّعين لا في حاشية."
     },
     {
       "recordId": "moia-mukhtasar-1446-umrah-talbiyah",
@@ -495,7 +542,9 @@
       "reviewerConfirmed": [
         "التلبية الأساسية موجودة كما نقلها الكتاب عن مسلم (1218)",
         "ربط السجل بنسك الإحرام صحيح، وzoneKey الفارغ مقصود"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "قُرئت صفحة 59 كاملة بحواشيها ومواضع علاماتها. العلامة (1) مرتسية على آخر فقرة التلبية، وحاشيتها تعزو الحديث إلى صحيح مسلم برقم 1218، وقد أُدخل المرجع بهذه الجولة بعد أن كان الحقل فارغًا."
     },
     {
       "recordId": "moia-mukhtasar-1446-umrah-talbiyah-ziyadah",
@@ -526,7 +575,9 @@
         "liftedBy": null,
         "codeMergedVia": "PR #10"
       },
-      "deploymentBlockLiftNote": "merge وحده لا يرفع الحظر. عميل قديم على جهاز حاجّ لا يعرف usageQualifier سيعرض الزيادة بلا شارة ويُشغّلها تلقائيًّا — وهو الضرر نفسه الذي أُنشئ الحقل لمنعه. الاستيراد يضع السجل في متناول كل النسخ المنشورة، لا النسخة الأحدث وحدها، فالشرط الحاسم هو (ج): التحقق الفعلي على جهاز من ظهور الشارة ومن عدم التشغيل التلقائي."
+      "deploymentBlockLiftNote": "merge وحده لا يرفع الحظر. عميل قديم على جهاز حاجّ لا يعرف usageQualifier سيعرض الزيادة بلا شارة ويُشغّلها تلقائيًّا — وهو الضرر نفسه الذي أُنشئ الحقل لمنعه. الاستيراد يضع السجل في متناول كل النسخ المنشورة، لا النسخة الأحدث وحدها، فالشرط الحاسم هو (ج): التحقق الفعلي على جهاز من ظهور الشارة ومن عدم التشغيل التلقائي.",
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "قُرئت صفحة 59 كاملة بحواشيها ومواضع علاماتها. العلامة (2) مرتسية على آخر فقرة الزيادة، وحاشيتها تعزو إلى صحيح مسلم برقم 1184، وقد أُدخل المرجع بهذه الجولة بعد أن كان الحقل فارغًا."
     },
     {
       "recordId": "moia-1446-hajar-tasmiya",
@@ -549,7 +600,9 @@
         "sourceSection صُحّح إلى «صفحات 65-67»، وprintedPage يبقى 65 كصفحة بداية",
         "هذا هو السجل الوحيد من الدفعة القابل للتلاوة والتشغيل الصوتي"
       ],
-      "contentKindConfirmed": "specific_text"
+      "contentKindConfirmed": "specific_text",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحات 65 و66 و67 بحواشيها ومواضع علاماتها. صفحة 65 بلا خط حواشٍ أصلًا، وفي 66 و67 تساوى عدد العلامات مع عدد الحواشي وارتست كلها على فقرات أخرى، فلا حاشية تخص هذا السجل."
     },
     {
       "recordId": "moia-1446-hajar-umar",
@@ -584,7 +637,9 @@
         "liftedBy": null,
         "codeMergedVia": "PR #11"
       },
-      "sourceReferencesConfirmed": true
+      "sourceReferencesConfirmed": true,
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "قُرئت صفحة 66 كاملة بحواشيها ومواضع علاماتها: علامتان وحاشيتان. العلامة (1) مرتسية على آخر فقرة أثر عمر، وحاشيتها تطابق المرجعين المخزَّنين (البخاري 1597 ومسلم 1270) بلا فرق."
     },
     {
       "recordId": "moia-1446-hajar-crowding",
@@ -618,7 +673,13 @@
         "liftedBy": null,
         "codeMergedVia": "PR #11"
       },
-      "sourceReferencesConfirmed": true
+      "sourceReferencesConfirmed": true,
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "قُرئت صفحة 67 كاملة بحواشيها ومواضع علاماتها: أربع علامات وأربع حواشٍ. العلامة (4) مرتسية على فقرة هذا السجل، وحاشيتها تبدأ في أسفل صفحة 67 وتنتهي بعلامة الاستمرار «=» ثم تُستكمل في أعلى صفحة 68؛ فالشافعي وأحمد جزء من الحاشية نفسها لا مرجعان مستقلان. صُحِّح المرجعان بهذه الجولة: سُمِّي الكتابان (السنن المأثورة للشافعي، ومسند أحمد)، وأُدخل الرقمان المطبوعان 510 و190، وضُبط citedOnPage على 68 حيث طُبعت التكملة فعلًا.",
+      "sourceReferencesReviewedPages": [
+        67,
+        68
+      ]
     },
     {
       "recordId": "moia-mukhtasar-1446-tawaf-takbir-hajar",
@@ -636,7 +697,9 @@
         "النص «الله أكبر» مطابق للمطبوع ص69",
         "سجل واحد للطواف كله، غير مرتبط برقم شوط",
         "المصدر ينص أن تكرار التكبير والوقوف عند الحجر لم يرد عن النبي ﷺ"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 69 بحواشيها ومواضع علاماتها: علامتان وحاشيتان، ارتستا على فقرتي tawaf-touching وtawaf-between-corners. لا علامة تخص هذا السجل."
     },
     {
       "recordId": "moia-1446-hijr-not-valid",
@@ -667,7 +730,9 @@
         "النص مطابق للمطبوع ص71، ويبدأ بواو عاطفة كما نُقل",
         "حكم فقهي مقرَّر بتعليله، لا نص يُتلىٰ",
         "ليس حديثًا، فلا يأخذ عنوان «توجيه نبوي»"
-      ]
+      ],
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "قُرئت صفحة 71 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة."
     },
     {
       "recordId": "moia-1446-maqam-rakatayn",
@@ -699,7 +764,9 @@
         "وصفٌ لما يفعله الحاج بصيغة الغائب، لا نص يقوله",
         "المقطعان القرآنيان داخل ﴿﴾ يطابقان لفظ المصحف؛ ورسمهما إملائي كما طبعته الوزارة"
       ],
-      "embeddedQuranNote": "يحوي مقطعين قرآنيين (الكافرون 1، الإخلاص 1) داخل ﴿﴾. طوبقا مع بيانات مجمع الملك فهد: اللفظ مطابق، والفرق في الرسم وحده (سكون U+0652 بدل U+06E1). لم يُعدَّل نص الوزارة — تعديل رسم مقطع داخل جملتها تحريرٌ لجملتها لا تصحيحُ اقتباس. المراجع مسجّلة في sourceReferences."
+      "embeddedQuranNote": "يحوي مقطعين قرآنيين (الكافرون 1، الإخلاص 1) داخل ﴿﴾. طوبقا مع بيانات مجمع الملك فهد: اللفظ مطابق، والفرق في الرسم وحده (سكون U+0652 بدل U+06E1). لم يُعدَّل نص الوزارة — تعديل رسم مقطع داخل جملتها تحريرٌ لجملتها لا تصحيحُ اقتباس. المراجع مسجّلة في sourceReferences.",
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "قُرئت صفحة 71 كاملة: لا خطَّ حواشٍ فيها ولا حاشية واحدة. وعزوا سورتي الكافرون والإخلاص مطبوعان داخل المتن لا في حاشية، وهما محفوظان في sourceReferences ومطابقان للمطبوع، فحالتهما reviewed_present لا reviewed_none."
     },
     {
       "recordId": "moia-1446-return-hajar",
@@ -778,7 +845,8 @@
         "liftedAt": null,
         "liftedBy": null
       },
-      "sourceReferencesReviewStatus": "reviewed_present"
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "تخريج مطبوع: صحيح مسلم 1218. وثمة اشتراك لفظي يجب تسجيله لا تجاوزه: يشترك هذا السجل مع سورة التغابن: 1 في 34 حرفًا من الرسم المجرَّد — «لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ». وتسجيلُ الاشتراك ليس نسبةً للنص إلى القرآن: المصدر يطبعه ذكرًا نبويًا، بلا علامة آية ولا عزو إلى التغابن، فلم يُضَف quranRef. والسجل الآخر الذي يشترك في العبارة نفسها من الآية نفسها هو moia-1446-safa-dhikr، وحكمه في الحزمة هو الحكم نفسه — وهذا اتساق مسجَّل، لا استثناء."
     },
     {
       "recordId": "moia-1446-marwah-same",
@@ -839,8 +907,8 @@
       "reviewedTextHash": "29f4b7b78e0f998d6e4990706a0b9a558f8657c4b909832adb4383b3220fc9ce",
       "reviewedAt": "2026-08-22T03:00:00Z",
       "reviewedFromFullSourcePdf": true,
-      "agentRenderedPage": false,
-      "reviewEvidenceNote": "المراجعة البصرية لص74 أجراها المراجع البشري من ملف المصدر الكامل (136 صفحة). ملفات الصفحات المرفوعة للوكيل تنتهي عند ص73، فلم يُعِد الوكيل رسم الصفحة ولا يدّعي مقابلةً حرفية أجراها بنفسه عليها.",
+      "agentRenderedPage": true,
+      "reviewEvidenceNote": "المراجعة البصرية الأولى لص74 أجراها المراجع البشري من ملف المصدر الكامل (136 صفحة). ولاحقًا تبيّن أن الصفحة المطبوعة 74 متاحة في ملف الصفحات المختارة المرفوع (صفحة PDF رقم 4)، فأعاد الوكيل رسمها من البكسلات الأصلية وقابل الحواشي بنفسه، وعلى هذه المقابلة بُني تصحيح التخريج المذكور أعلاه.",
       "firestoreVerificationPerformed": false,
       "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
       "deploymentBlocked": false,
@@ -850,7 +918,8 @@
       "transcriptionNote": "لا تصحيح: لم تثبت مراجعةُ الصفحة أيَّ خطأ نقل. والاقتباس القرآني المطبوع يستعمل السكون العادي (U+0652) حيث يستعمل مصحف المجمع السكون العثماني (U+06E1)؛ نصُّ الوزارة محفوظٌ كما طُبع ولا يُقوَّم على المصحف.",
       "embeddedQuranEquivalence": "same_lexical_text_different_rasm",
       "sourceReferencesReviewStatus": "reviewed_present",
-      "embeddedQuranEquivalenceNote": "نفس الكلمات ونفس ترتيبها، ويختلف حرفُ الضبط: المطبوع يستعمل السكون العادي (U+0652) والمصحف يستعمل السكون العثماني (U+06E1). ليسا متطابقين بالنقاط البرمجية، ولا يتكافآن تكافؤًا قانونيًّا في يونيكود: التطبيع NFC/NFD لا يحوّل أحدهما إلى الآخر."
+      "embeddedQuranEquivalenceNote": "نفس الكلمات ونفس ترتيبها، ويختلف حرفُ الضبط: المطبوع يستعمل السكون العادي (U+0652) والمصحف يستعمل السكون العثماني (U+06E1). ليسا متطابقين بالنقاط البرمجية، ولا يتكافآن تكافؤًا قانونيًّا في يونيكود: التطبيع NFC/NFD لا يحوّل أحدهما إلى الآخر.",
+      "sourceReferencesNote": "تصحيح بيانات لا نص. كان السجل يحمل «صحيح البخاري 1540»، وهو منسوب خطأً من وجهين: الصفحة تطبع في الحاشية (1) رقم 1545 لا 1540، وعلامة تلك الحاشية موضوعة على الفقرة السابقة المنتهية عند «قَلَّدَهَا» (حديث ابن عباس رضي الله عنهما، ممتدة من ص73)، لا على هذا السجل. أما الحاشية الموضوعة داخل هذا السجل فهي (2) عند «شقه الأيسر» = مسلم 1305. فحُذف مرجع البخاري ولم يُستبدل برقم آخر، ولم يُنقل إلى سجل غيره: الفقرة صاحبة الحاشية (1) غير ممثَّلة في الحزمة أصلًا، فأُدرج المرجع في تقرير الفجوات لا في سجل. وبقي مرجع ﴿الفتح: 27﴾ لأنه مطبوع داخل نص السجل نفسه بين معقوفتين، لا في حاشية. نص السجل (text.ar) لم يتغير، وهاش النص كما هو."
     },
     {
       "recordId": "moia-mukhtasar-1446-tawaf-touching",
@@ -1138,12 +1207,639 @@
       "excludedFromImport": false,
       "transcriptionCorrected": false,
       "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-023",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 97,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "27be045d943f743742d020e1abd69a910e7ecf031c57fe0986b9aadf661f6712",
+      "reviewedAt": "2026-08-22T10:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً. الكتاب يطبع «اللَّهُمَ» بميمٍ بلا شدّة (م + فتحة U+064E)، بخلاف 024 و025 («اللَّهُمَّ»: م + فتحة + شدّة U+0651) وبخلاف 026 في ص98 («اللهمَّ»: لام بلا شدّة وميم بشدّة). ثلاث صيغ في صفحتين، تُنقل كما طُبعت ولا تُسوّى. و«مِنَ الرَّاشِدِينَ» بفتحة كما هي مخزَّنة. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-024",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 97,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "c998fcddcbaa2af67881fad4948e533091d4d964f2965ec7ed26a8f6725e6b74",
+      "reviewedAt": "2026-08-22T10:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": true,
+      "transcriptionNote": "صُحّحت ثلاثة مواضع كانت تخزّن «مِنَ» بفتحة (U+064E) بينما يطبع الكتاب «مِنْ» بسكون (U+0652): (1) «مِنَ الْخَطَايَا» ← «مِنْ الْخَطَايَا»؛ (2) «مِنَ الدَّنَسِ» ← «مِنْ الدَّنَسِ»؛ (3) «مِنَ الْكَسَلِ» ← «مِنْ الْكَسَلِ». أما «مِنْ فِتْنَةِ» و«مِنْ شَرِّ» فكانا مطابقين ولم يُمسّا. الطول لم يتغيّر (553 محرفًا). حُسمت الحركات بفحص آلي على البكسلات الأصلية للصفحة (صورة JPEG مقاسها 1302×1912، فالرسم بدقة أعلى تكبيرٌ لا يضيف معلومة). فُصلت الفتحة عن السكون بالشكل لا بعدّ الثقوب: الفتحة شرطة مائلة استطالتها 5.6–7.3 ونسبة ملئها 0.23–0.28، والسكون حلقة استطالتها 1.27–1.60 ونسبة ملئها 0.45–0.56، بلا منطقة رمادية. وقُصر الفحص على العلامات الواقعة داخل نطاق النون أفقيًا حتى لا تُنسب إليها حلقةُ سكونِ لام «الْـ» في الكلمة التالية. وحدة مطبوعة واحدة لا تُقسّم: قوس مفتوح واحد وقوس مغلق واحد، والنقطة بعد «وَالْمَغْرِبِ» مطبوعة داخل الوحدة فهي جزء من الجملة. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-025",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 97,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "ced5ee217007d540aaa6140218f481c572a2f6c2b727124b03e53d46cb901b99",
+      "reviewedAt": "2026-08-22T10:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع بلا تصحيح. «مِنَ الْعَجْزِ» بفتحة كما هي مخزَّنة — وقد ثبت ذلك بالفحص الآلي وبشاهد مستقل: اللفظ نفسه في general-029 بالصفحة 98 مطبوع بفتحة أيضًا. و«مِنْ عَذَابِ» و«وَمِنْ فِتْنَةِ» بسكون كما هما مخزَّنان. وحدة مطبوعة مستقلة عن 024 ولا تكرر شيئًا من ألفاظه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-taqsir-shamil",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 74,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "0ca402d9c192009863a2ab87dc03f2cdbf01e7455de52b0191c8c030d43c5d92",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "procedural_guidance",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "وحدة مطبوعة واحدة مسبوقة بعلامة ✱، مطابقة حرفًا وحركةً وتنتهي بنقطة الكتاب نفسها. العلامة ✱ زخرفة فقرة لا نص. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-taqsir-mara",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 74,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "174c58d0013a3b4dad1bf64f543eda4abce2689d5d1d25dcf1ac32bf96eb77e1",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "procedural_guidance",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": true,
+      "transcriptionNote": "صُحّح موضع واحد: «فتُقصر» ← «فتُقَصر» بإضافة فتحة (U+064E) على القاف، وهي مطبوعة في الكتاب وساقطة من النقل. الطول 207 ← 208. أُثبتت الفتحة بضابطين من الكلمة نفسها بالخط والحجم نفسيهما: الضمة فوق التاء (ذات عروة، ثقوب=342، استطالة 2.0) والفتحة فوق القاف (بلا ثقب، استطالة 5.0، ملء 0.34) — شكلان متمايزان بلا منطقة رمادية. وحُدّدت الكلمة بحدودها من تقسيم السطر إلى كتل كلمات قبل أي قصّ، فلم تدخل علامة كلمة مجاورة في الحكم. ولم يُمسّ «فتقصر من كل قَرْنٍ» اللاحق في السجل نفسه لأنه بلا ضمة ولا فتحة مطبوعة. وبقيت «(ضفيرة)» بقوسيها لأنهما تفسير من الوزارة داخل الجملة، لا جهاز اقتباس. والشرطتان الاعتراضيتان لم تُمسّا: نوع الشرطة لا يُحسم من صورة بلا قاعدة تطبيع معلنة. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-026",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "4e1b5d082560ee2401a4f2231052666a7fe8d348eb76c3eb4108c6e8e91107f2",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. الكتاب يطبع «اللهمَّ» بلام بلا شدّة وميم بشدّة — صيغة ثالثة تخالف 023 («اللَّهُمَ») و024/025 («اللَّهُمَّ») في ص97. تُنقل كما طُبعت ولا تُسوّى. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-027",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "6a01d4abc0356ed647e8be39dbaf07800c9537d5f4950b305dee6e848291d0a9",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-028",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "37db53589194178c90cb05db0bc47a6d764737a2c6ff55829b2784edd880824e",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-029",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "a36a5bedccf6e722bee26f3941a6514b9392734fd47a3bf0ef3ac593eb6c48c0",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. وحدة مستقلة عن general-025 في ص97 ولا تكررها: ترتيب المستعاذ منه مختلف (هنا البخل قبل الهرم، وهناك الهرم قبل البخل)، وهذا السجل يزيد «اللَّهُمَّ آتِ نَفْسِي تَقْوَاهَا…» كاملًا. و«مِنَ الْعَجْزِ» بفتحة كما في ص97. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-030",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "cc403b059e452971a6b6d78e03c9d1ab2bc8523108a3bab14fabd700572063bc",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-031",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "7f7f29cb05b7d75ed1bb0c0f6326543cfdf4e21591d72ba05fe0c4b07bed19dc",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-032",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "79e5a70d83845459d0bfbc3c9753b7f4af2f70e4593fe3a9dc606eb9c9afe74c",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-033",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 98,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "f37d61ed9930b9b1a60004b9e1d0b76bf273c2e50f4445a12d072cd332a879b3",
+      "reviewedAt": "2026-08-22T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dhikr",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. ذِكر لا دعاء بسبب دلالي لا موضعي: النص كله جُمَل خبرية تقرّر التوحيد والعظمة والحلم والربوبية، ولا يحوي طلبًا واحدًا — لا فعل أمر موجَّهًا إلى الله، ولا «اللهم»، ولا سؤالًا ولا استعاذة. الدعاء يسأل وهذا يُثبت. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-tamam-umrah",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 74,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "406da1bc6300bc40dedac79854fb3fd875fa566379ff5ce0b58a30cc9a0a678d",
+      "reviewedAt": "2026-08-22T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "procedural_guidance",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": true,
+      "transcriptionNote": "صُحّح موضعان، والطول لم يتغيّر (80 محرفًا). (1) «حِلًّا» ← «حِلًا» بحذف الشدّة (U+0651) وحدها. الأساس هو القراءة المباشرة للمطبوع من البكسلات الأصلية لص74: فوق الموضع شرطتان متوازيتان متطابقتان (ارتفاع 37، عرض 62، استطالة 5.4 و5.7) هما التنوين، وكسرة أسفل، ولا وجود لأي مكوّن بتوقيع الشدّة. وضابط الشدّة مأخوذ من الصفحة والخط والحجم نفسها: شدّة «يعمُّ» في السطر المجاور، وشكلها متمايز تمامًا (ارتفاع 50، عرض 56، استطالة 2.1). ولم تندمج علامتان هنا: الشرطتان منفصلتان ومتساويتان، وهو ما لا يحدث عند الاندماج. وكلمة «جدًا» في ص103 استُعملت قرينةً مساندة فقط — الكتاب يطبعها كذلك بلا شدّة — ولم تكن بديلًا عن قراءة الصفحة نفسها. (2) «جميع» ← «جميعَ» بإضافة فتحة (U+064E) على العين، وهي مطبوعة وساقطة من النقل (شرطة بلا ثقب، استطالة 4.6، ملء 0.37). ولم يُمسّ موضع التنوين في «حِلًا» و«كاملًا»، ولا نوع الشرطتين الاعتراضيتين: الصفحة صورة بلا ربط Unicode، وموضع رسم العلامة وحده لا يثبت الترميز، ولا توجد قاعدة تطبيع معلنة للشرطات. القوسان الهلاليان والنقطة الواقعة بعد القوس المغلق جهاز طباعي لا يدخل text.ar.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-034",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "b677ae9f3fcbd451e84e905fca4b866efbc12b5628fc2c21966311bba8c79294",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-035",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "39b66ee11c5db88b260676480611d4a24b015bace7506c5b46bb214645b3658e",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. الألف الخنجرية في «عَلَىٰ» (U+0670) منقولة كما طُبعت. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-036",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "de7dc187effd00af0405620e89b4e9b28e0b501347e11d4a0c5a40ab59a1609f",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. الألف الخنجرية في «عَلَىٰ» (U+0670) منقولة كما طُبعت. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-037",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "f43926809e4a2767d02dbf0745ffe5f975bdf4fd37f0a038b5c0139e44674369",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. ملاحظة على مسار المراجعة: قرأ الوكيل أولًا «عَفُوٌّ» بفتحة على العين، والمخزَّن «عُفُوٌّ» بضمّة. فُحص الموضع بالعزل مع ضابطين من السطر نفسه — «تُحِبُّ» (ضمّة) و«كَرِيمٌ» (فتحة، استطالة 6.2) — فتبيّن أن فوق العين ضمّةً بعروتها، وأن المخزَّن صحيح وقراءة الوكيل الأولى خاطئة. لا تصحيح على السجل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-038",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "ce575dd2aede6473c5f2bf4d2799df955cf648ff21588448abbc0f8de7b50b63",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. الألف الخنجرية في «إِلَىٰ» (U+0670) منقولة كما طُبعت. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-050",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 99,
+      "reviewedPages": [
+        99,
+        100
+      ],
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "b19bcd1994d85bce927e04212b16ef89896b5421f9ee203f9c62428935321314",
+      "reviewedAt": "2026-08-22T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية؛ التطابق raw وNFC معًا وبالطول نفسه. لا حاشية ولا تخريج في الصفحة — أُثبت آليًا بكاشف خط الحاشية، مع ضابط موجب على ص103 التي فيها حاشية فعلًا. الوحدة المطبوعة تبدأ في ص99 ولا تُغلق فيها: آخر سطر ينتهي عند «اللَّهُمَّ إِنِّي أَسْأَلُكَ» بلا قوس إغلاق، وتكملتها في أعلى ص100 حتى «قَضَيْتَهُ لِي خَيْرًا)»، ثم تبدأ وحدة general-039. فشملت المقابلة الصفحتين، وسُجِّل reviewedPages: [99, 100] مع بقاء printedPage: 99 لأنه موضع البداية. وهذا يفسّر ما بدا شذوذًا في ترتيب السجل بين 038 و039: الترتيب صحيح. والنقطتان الداخليتان («وَمَا لَمْ أَعْلَمْ.» و«عَبْدُكَ وَنَبِيُّكَ.») مطبوعتان داخل الوحدة المقوَّسة نفسها، فهما ترقيم جملة لا حدُّ سجل، ولا يُقسَّم السجل عندهما. ولا حاشية في أيٍّ من الصفحتين. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none"
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-039",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 100,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "0d738c334fe6ed09f0eb594d77538e89a0c71fc98715d749f8642f75abfa106b",
+      "reviewedAt": "2026-08-26T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 100؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. قُسِّمت الصفحة إلى 16 سطر نص (عدا الترويسة وصندوق الرقم «١٠٠»): سطران تكملةً لـgeneral-050، ثم general-039 في ستة أسطر، وgeneral-040 في ثلاثة، وgeneral-041 في ثلاثة، وgeneral-042 في سطرين. وعُزل كل موضع من مواضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة: آخر صف حبر عند 10756 من 11950 بكسلًا، ولا خط أفقي منفصل يعلوه بياض تحت النص — وهو الكاشف نفسه الذي أثبت وجود حاشية في ص103. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع. وفي هذا السجل موضعان متجاوران يصلحان ضابطًا داخليًا: «وَمِنْ طَاعَتِكَ» بحلقة سكون و«وَمِنَ الْيَقِينِ» بشرطة فتحة، بالخط نفسه وبالحجم نفسه؛ والشكلان متمايزان تمامًا عند هذه الدقة. وكذلك «مَنْ» الموصولة الثلاث: الفتحة على الميم والسكون على النون، لا كسرة تحت الميم.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-040",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 100,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "50e3afc51f13810a5f1328859bb9165cab77a958ba4daa0bba0f553a06226e47",
+      "reviewedAt": "2026-08-26T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 100؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. قُسِّمت الصفحة إلى 16 سطر نص (عدا الترويسة وصندوق الرقم «١٠٠»): سطران تكملةً لـgeneral-050، ثم general-039 في ستة أسطر، وgeneral-040 في ثلاثة، وgeneral-041 في ثلاثة، وgeneral-042 في سطرين. وعُزل كل موضع من مواضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة: آخر صف حبر عند 10756 من 11950 بكسلًا، ولا خط أفقي منفصل يعلوه بياض تحت النص — وهو الكاشف نفسه الذي أثبت وجود حاشية في ص103. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-041",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 100,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "600ef7a6bb1277778f5a50e3eb38ce2c81d73b30e708566f12507d4fc6986ee1",
+      "reviewedAt": "2026-08-26T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 100؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. قُسِّمت الصفحة إلى 16 سطر نص (عدا الترويسة وصندوق الرقم «١٠٠»): سطران تكملةً لـgeneral-050، ثم general-039 في ستة أسطر، وgeneral-040 في ثلاثة، وgeneral-041 في ثلاثة، وgeneral-042 في سطرين. وعُزل كل موضع من مواضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة: آخر صف حبر عند 10756 من 11950 بكسلًا، ولا خط أفقي منفصل يعلوه بياض تحت النص — وهو الكاشف نفسه الذي أثبت وجود حاشية في ص103. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-042",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 100,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "50ca348cc7ab756f7f845146afc309a514575038ca8c73d370353d54fc1f0976",
+      "reviewedAt": "2026-08-26T12:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 100؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. قُسِّمت الصفحة إلى 16 سطر نص (عدا الترويسة وصندوق الرقم «١٠٠»): سطران تكملةً لـgeneral-050، ثم general-039 في ستة أسطر، وgeneral-040 في ثلاثة، وgeneral-041 في ثلاثة، وgeneral-042 في سطرين. وعُزل كل موضع من مواضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة: آخر صف حبر عند 10756 من 11950 بكسلًا، ولا خط أفقي منفصل يعلوه بياض تحت النص — وهو الكاشف نفسه الذي أثبت وجود حاشية في ص103. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع. النقطة الواقعة داخل القوسين («وَلَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ. فَاغْفِرْ لِي») مطبوعة فعلًا في الأصل، وهي ترقيم جملة داخل الوحدة الواحدة لا حدُّ سجل، فلم يُقسَّم السجل عندها — وهو القرار نفسه المتخذ في general-024 وgeneral-050.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-043",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "267fc5ff1d522ec820f6fdbb554f4690e50dc4db524432dd63f5c30b760bac26",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع. النقطة الواقعة داخل القوسين («وَبِكَ خَاصَمْتُ. اللَّهُمَّ إِنِّي») مطبوعة فعلًا في الأصل، وهي ترقيم جملة داخل الوحدة الواحدة لا حدُّ سجل، فلم يُقسَّم السجل عندها.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-044",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "e51d08ad972ab2626587195425989c30483ff3411309d04963336fdf6c220a55",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-045",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "f5cbcaecc18eaf60085def6bd5be11b30a3f7d929be66cdce767124a2c8ebb7f",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-046",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "9693fc697abb160e3e5572cd75b0443bab3e9d4bd8924b3a1d66f25d31b67128",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-047",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "f8ad639bdf7f114d5f2df359dd62101b661d998e34dd6405a4830acfd52e4014",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع. ويحمل السطر الرابع عشر ضابطًا داخليًا: «مِنَ الْفِتَنِ» بشرطة فتحة و«مِنْ فِتْنَةِ» بحلقة سكون، على السطر نفسه وبالحجم نفسه؛ والشكلان متمايزان تمامًا عند هذه الدقة. وصُحِّح sourceSection في الحزمة: كان يحمل نصَّ سجل general-048 حرفيًا — «دعاء القنوت المأثور — صفحتا 101-102» — وهو خطأ نسخٍ قديم يعود إلى أول تفريغ للحزمة. والمطبوع يقطع بأن هذا السجل وحدة مستقلة تشغل الأسطر 13-15 من ص101 وتُغلق فيها عند «الدَّجَّالِ)»، ولا تمتد إلى ص102؛ وأنّ دعاء القنوت هو general-048 لا هذا. فصار الوصف «دعاء مأثور — صفحة 101» على غرار إخوته في الصفحة نفسها. تصحيح بيانات وصفية فقط: text.ar وtext.en وreviewedTextHash لم تُمسّ.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في الصفحة أصلًا. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-048",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 101,
+      "reviewedPages": [
+        101,
+        102
+      ],
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "71e9b492d1dd7a285fe7da547781cc958972fbeacbc5ca4bca5a07592388e5ef",
+      "reviewedAt": "2026-08-26T13:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dua",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وفاصلةً بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 101؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الصفحة 16 سطر نص تحت الترويسة وصندوق الرقم «١٠١»: general-043 في ثلاثة أسطر، وgeneral-044 في ستة، وgeneral-045 في سطر واحد، وgeneral-046 في سطرين، وgeneral-047 في ثلاثة، ثم general-048 يبدأ في السطر السادس عشر ولا يُغلق فيه. وعُزل كل موضع «من» في هذا السجل عند حدود كلمته وحدها قبل الحكم على حركته، لا بقصٍّ واسع يلتقط علامة الكلمة المجاورة. لا حاشية في الصفحة 101: آخر صف حبر عند 10874 من 11950 بكسلًا، وكل الصفوف الكثيفة أسفل منتصف الصفحة تقع داخل نطاقات أسطر النص نفسها، فلا خط حاشية منفصل. القوسان الهلاليان المحيطان بالدعاء والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الدعاء، فلم يُدرجا في text.ar بقرار المراجع. والوحدة المطبوعة تمتد عبر صفحتين: تبدأ في السطر السادس عشر من ص101 وتنتهي هناك عند «وَتَوَلَّنِي فِيمَنْ» بلا قوس إغلاق، ثم تكمل في السطر الأول من ص102 وتُغلق في سطرها الثاني عند «تَبَارَكْتَ رَبَّنَا وَتَعَالَيْتَ)». فشملت المقابلة الصفحتين حتى القوس المغلق، وسُجِّل reviewedPages: [101, 102] مع بقاء printedPage: 101 لأنه موضع البداية — الشكل نفسه المستعمل في general-050 وtawaf-direction. وفي ص102 خط حاشية فعلي عند y=9844 يعلوه بياض، لكنه غير مرتبط بهذا السجل: فُحص طرف السطر الثاني بعد «وَتَعَالَيْتَ)» فلم توجد بعده إلا النقطة، بلا رقم إحالة مرفوع، وص101 كلها بلا حاشية أصلًا، فلا شيء يمكن أن يتعلق ببداية الوحدة. وملاحظة على المظهر المطبوع: «شَرَّمَا قَضَيْتَ» تُطبع بلا مسافة بين «شَرَّ» و«مَا»، وهذا قياس لا انطباع: فجوات الكلمات على ذلك السطر بين 87 و112 بكسلًا، والفجوة داخل «شَرَّمَا» 18 بكسلًا فقط، أي فجوة حروف لا فجوة كلمة. أُبقي النص كما هو لأنه ينقل المطبوع؛ ولا يعني ذلك منع تصحيح لاحق — reviewedTextHash وحده هو ما يحمي النص الحالي. وقُيِّدت الكلمة في docs/AUDIO_INVENTORY.md ضمن ملاحظات النطق، لأن أي تلاوة أو TTS يجب أن ينطقها كلمتين: «شَرَّ مَا». وصُحِّح sourceSection في الحزمة من «صفحة 101» إلى «صفحتا 101-102» ليطابق ما ثبت بالقراءة؛ وهو تصحيح بيانات وصفية لا يمسّ text.ar ولا text.en ولا reviewedTextHash، ونظيره ما هو مسجَّل في general-050 وtawaf-direction. وبدونه كان الدفتر سيضطر إلى تسجيل صفحة واحدة فقط، وهو ما يخالف شرطه الخاص: reviewedPages يجب أن تساوي الصفحات التي يسمّيها سجل الحزمة نفسه.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع أيٍّ من وحدات الصفحة 101، ولا حاشية في ص101 أصلًا؛ وحاشية ص102 غير مرتبطة بهذا السجل — لا رقم إحالة مرفوعًا بعد القوس المغلق في تكملته. وفحص كوربوس KFGQPC (6236 آية) لم يجد تطابقًا في أي نافذة 25 حرفًا من الرسم المجرَّد؛ ونافذة الـ25 حرفًا **كاشفُ مرشَّحين** لا أكثر، وضمن حدودها وحدها: لا تكشف مقطعًا أقصر منها، ولا اختلاف رسم أو إملاء، و**لا تحكم أصلًا على مصدر النص** — خلوّها ليس شهادةً بأن النص غير قرآني، ووقوعها ليس شهادةً بأنه اقتباس. الحكم مصدره المقابلة الكاملة مع الصفحة وسياق الوحدة كما طبعها المصدر."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-general-049",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 102,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "184f7ac9e269e9e76ef786ca68f89b8c20c99d2f52f65d5c244eac503fc0d5e9",
+      "reviewedAt": "2026-08-26T14:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "general_dhikr",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "transcriptionCorrected": false,
+      "transcriptionNote": "مطابق للمطبوع حرفًا وحركةً وترقيمًا بعد مقابلة سطرية كاملة بالدقة الأصلية للصفحة 102؛ التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. الوحدة تشغل السطرين الثالث والرابع من الصفحة: السطران الأولان تكملةُ general-048 المسجَّل مع ص101 ولم يُعَد تسجيله هنا، ومن السطر الخامس يبدأ عنوان «المبيت بمزدلفة» ونثرُ قسم الحج غير المشكول، وهو خارج نطاق هذه الحزمة. ومما ثُبِّت بالقراءة: «إِلَهَ» بلا ألف خنجرية، و«الله» بلا شدة مرسومة، و«عَلَىٰ» بألف خنجرية، وفاصلة واحدة بعد «لَهُ» بلا نقطة داخلية. ولا موضع «من» واحد في هذا السجل. القوسان الهلاليان والنقطة الواقعة بعد القوس المغلق جهاز طباعي لتمييز المتن المنقول، لا جزء من نص الذكر، فلم يُدرجا في text.ar بقرار المراجع.",
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج مطبوعًا مع الوحدة. وفي ص102 خط حاشية فعلي، لكنه ليس لهذا السجل: نصُّ الحاشية «(١) منتصف الليل: هو منتصف الوقت… الثانية عشرة دائمًا» يشرح مصطلحًا في فقرة المبيت بمزدلفة أسفل الصفحة، ولا رقم إحالة مرفوعًا بعد «قَدِيرٌ)». وفحص كوربوس KFGQPC (6236 آية) رفع هنا مرشَّحًا حقيقيًا، بخلاف بقية صفحات هذه الدفعة: يشترك الشطر الثاني من الذكر مع سورة التغابن: 1 في 34 حرفًا من الرسم المجرَّد — «لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ». ومع ذلك لم يُضَف quranRef، لأن المصدر يطبع النص ذكرًا نبويًا داخل قوسي المتن المنقول بلا علامة آية ولا عزوٍ إلى التغابن، والصيغة مشتركة لا اقتباس معلَن. وهذا هو الحكم نفسه المستقر في الحزمة لـmoia-1446-safa-dhikr، وهو السجل الآخر الوحيد الذي يشترك في العبارة نفسها من الآية نفسها وليس له quranRef؛ وكل سجل آخر في الحزمة يشترك مع المصحف في 25 حرفًا فأكثر يحمل quranRef فعلًا. فالتصنيف هنا متسق مع ما سبق اعتماده، لا استثناء له. وتنبيه على حدود الفحص: نافذة الـ25 حرفًا كاشفُ مرشَّحين ضمن حدودها وحدها — تكشف المقاطع بهذا الطول فأكثر، ولا تكشف ما دونها ولا اختلاف الرسم والإملاء، ولا تحكم على مصدر النص. فوقوعُها هنا اشتراكٌ لفظي مسجَّل، لا نسبةٌ للذكر إلى القرآن."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-entering-masjid",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 64,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "6daed90342adb2b18ff3493cdc06a4a1556d7af16b13d75da98be9b5ff9ecd30",
+      "reviewedAt": "2026-08-26T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "mosque_entry",
+      "transcriptionCorrected": false,
+      "transcriptionNote": "الصفحة 14 سطر نص وحاشية واحدة، ورقمها «٦٤» مقروء في صندوقه. السطور 1-5 نثر متصل من ص63، والسطر السادس عنوان مربّع، والسطور 7-9 الجملة الإرشادية التي تضم نص الدخول، والسطور 10-12 الحديث بإسناده، والسطر 13 قول المؤلف «وهذا عام في المسجد الحرام وسائر المساجد»، ثم الحاشية. هذا السجل مطابق للمطبوع حرفًا وحركةً وترقيمًا: التطابق raw وNFC معًا وبالطول نفسه، بلا اختلاف Unicode واحد. والنص مُدرَج داخل جملة المؤلف الإرشادية بلا قوسين ولا مزدوجتين، مقدَّمًا بـ«وقول:» معطوفًا على «تقديم الرِّجل اليمنىٰ» — أي أنه مما سُنَّ فعله، فهو صيغة تُقال لا رواية تُساق. وهو غير مشكول إلا في موضع واحد: ضمة على ذال «وأعوذُ»، وقد عُزلت الكلمة عند حدودها وتأكدت الضمة؛ وبقية النص خالٍ من الحركات كما في المطبوع تمامًا. و«علىٰ» بألف خنجرية ظاهرة. وينتهي السجل عند «أبواب رحمتك» ثم نقطة مطبوعة، بلا أي رقم إحالة مرفوع — فعلامة الحاشية (١) ليست له.",
+      "deploymentBlocked": false,
+      "excludedFromImport": false,
+      "sourceReferencesReviewStatus": "reviewed_none",
+      "sourceReferencesNote": "لا تخريج ولا حاشية لهذا السجل. وفي الصفحة حاشية واحدة «(١) أخرجه مسلم رقم (٧١٣)»، لكن علامتها مطبوعة بعد المزدوجة المغلقة للحديث في السطر الثاني عشر، لا بعد هذا النص الذي ينتهي في السطر التاسع بنقطة مجردة. فلم يُنقل إليه مرجع مسلم 713."
+    },
+    {
+      "recordId": "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
+      "reviewer": "whyKaiser",
+      "reviewStatus": "passed",
+      "textReviewStatus": "passed",
+      "reviewedPage": 64,
+      "reviewedEdition": "المختصر في صفة الحج والعمرة والزيارة — الطبعة الأولى، 1446هـ / 2025م",
+      "reviewedTextHash": "793e020ad3e2ab1750ee423af12219ab46a825285b4901c859a9df594e0872c1",
+      "reviewedAt": "2026-08-26T15:00:00Z",
+      "firestoreVerificationPerformed": false,
+      "verificationNote": "لم يتم الاعتماد في Firestore بعد. السجل ما يزال verificationStatus='unverified'.",
+      "contentKindConfirmed": "contextual_evidence",
+      "transcriptionCorrected": true,
+      "transcriptionNote": "الصفحة 14 سطر نص وحاشية واحدة، ورقمها «٦٤» مقروء في صندوقه. السطور 1-5 نثر متصل من ص63، والسطر السادس عنوان مربّع، والسطور 7-9 الجملة الإرشادية التي تضم نص الدخول، والسطور 10-12 الحديث بإسناده، والسطر 13 قول المؤلف «وهذا عام في المسجد الحرام وسائر المساجد»، ثم الحاشية. صُحِّح موضع واحد: «افتَحْ» → «افْتَحْ» بإضافة U+0652 على الفاء. وهذا يحسم ما كان مسجَّلًا في visuallyUncertain («دون سكون ظاهر على الفاء»): السكون ظاهر. عُزلت الكلمة عند حدودها وكُبِّرت، فبانت ثلاث علامات: حلقة سكون فوق الفاء — متمايزة تمامًا عن نقطة الفاء المصمتة تحتها — وفتحة فوق التاء، وحلقة سكون فوق الحاء. ولم يُغيَّر أي حرف أو حركة أو علامة ترقيم غير هذه. الطول 159 → 160. وما عدا ذلك مطابق: «اللهُمَّ» مرتين بألف ولامين بلا شدة على اللام وضمة على الهاء وشدة وفتحة على الميم — وهو رسم ثالث يغاير «اللَّهُمَّ» في ص97-101 و«اللَّهُمَ» في general-023، وقد أُبقي كما طبعه المصدر. و«أَحَدُكُمُ» بثلاث ضمات، منها ضمة الميم صيغةَ وصل. وحدود الاقتباس محقَّقة: الحديث داخل مزدوجتين «»، والإسناد «عَنْ أَبِي حُمَيْدٍ، أَوْ عَنْ أَبِي أُسَيْدٍ، قَالَ: قَالَ رَسُولُ اللهِ ﷺ:» خارجهما، والسجل يبدأ عند «إِذَا دَخَلَ» وينتهي عند «فَضْلِكَ» كما هو.",
+      "deploymentBlocked": true,
+      "excludedFromImport": true,
+      "sourceReferencesReviewStatus": "reviewed_present",
+      "sourceReferencesNote": "أُضيف مرجع واحد، منقولًا من الحاشية المطبوعة لا من reviewNotes: «(١) أخرجه مسلم رقم (٧١٣)». وعلامة الإحالة (١) مطبوعة بعد المزدوجة المغلقة للحديث مباشرة وقبل النقطة، فهي لهذا السجل وحده؛ والسجل الآخر في الصفحة ينتهي بنقطة مجردة بلا علامة. وهي الحاشية الوحيدة في الصفحة.",
+      "contentKindChangedFrom": "mosque_entry",
+      "contentKindNote": "أُعيد تصنيفه من mosque_entry إلى contextual_evidence. والسبب وظيفةُ الرواية في الصفحة لا مجردُ وجود إسناد لها: المصدر أفرد الصيغة القابلة للترديد في السطر التاسع ضمن جملته الإرشادية («وقول: بسم الله … أبواب رحمتك»)، ثم ساق هذا الحديث بعدها دليلًا عليها ومخرَّجًا في الحاشية. فالأول نص الترديد، وهذا دليله. ولا يُفهم من الاختيار أن procedural_guidance يمتنع لكون النص حديثًا — ففي الحزمة توجيه نبوي مصنَّف إرشادًا فعلًا؛ المعيار هنا هو الوظيفة لا نوع القائل. وأثر التصنيف تشغيليًا هو المقصود: contextual_evidence يجعل isRecitable=false، فـcanPlayManually=false، فالحارس في _playDua يمنع النطق حتى في البحث الصوتي الذي يشغّل النتيجة الوحيدة دون زر — ولولا ذلك لسمع الحاج تعليمات الراوي «إذا دخل أحدكم … وإذا خرج فليقل …» كأنها الدعاء الذي يردده. وعُدِّل عنوان البطاقة إلى «حديث نبوي: دخول المسجد والخروج منه» لأن شارة هذا النوع «أثر موثّق» وحدها تترك احتمال أن يكون قول صحابي. تعديل بيانات فقط، بلا أي تغيير في الواجهة.",
+      "deploymentBlockReason": "content_kind_not_yet_deployed",
+      "deploymentBlockDetail": "بطاقة «أثر موثّق» بعزوها لم تُطلَق بعد للحاج، وهذا السجل يحتاجها ليُعرض دليلًا بلا زرِّ تشغيل ولا نطقٍ عبر البحث الصوتي. فحتى يصدر إصدارٌ يعرضه كذلك ويُتحقَّق منه على جهاز فعلي، لا يدخل الاستيراد. والحظر لا يُرفع بنجاح الاختبارات ولا بدمج الكود؛ الشروط أدناه تراكمية.",
+      "deploymentBlockLiftConditions": {
+        "//": "الحظر لا يُرفع بدمج الكود ولا بنجاح الاختبارات. الشروط تراكمية.",
+        "codeMerged": false,
+        "appAndWorkerReleased": false,
+        "badgeAndNoAutoPlayVerifiedOnDevice": false,
+        "liftedAt": null,
+        "liftedBy": null
+      }
     }
   ],
   "summary": {
     "//": "محسوب من مصفوفة reviews، ويعاد حسابه في الاختبارات.",
-    "totalReviews": 52,
-    "passed": 51,
+    "totalReviews": 85,
+    "passed": 84,
     "pending": 0,
     "blocked": 1,
     "failed": 0,
@@ -1166,6 +1862,7 @@
       "moia-1446-safa-dhikr",
       "moia-mukhtasar-1446-general-009",
       "moia-mukhtasar-1446-tawaf-touching",
+      "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
       "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
     "deploymentBlockedRecordIds": [
@@ -1178,18 +1875,28 @@
       "moia-1446-safa-ayah",
       "moia-1446-safa-dhikr",
       "moia-mukhtasar-1446-tawaf-touching",
+      "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
       "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
     ],
     "sourceReferencesReviewed": {
       "reviewed_present": [
+        "moia-1446-hajar-crowding",
+        "moia-1446-hajar-umar",
+        "moia-1446-maqam-rakatayn",
         "moia-1446-safa-dhikr",
         "moia-1446-tawaf-free-dhikr",
         "moia-mukhtasar-1446-tawaf-between-corners",
         "moia-mukhtasar-1446-tawaf-touching",
-        "moia-mukhtasar-1446-umrah-halq-shamil"
+        "moia-mukhtasar-1446-umrah-entering-masjid-hadith",
+        "moia-mukhtasar-1446-umrah-halq-shamil",
+        "moia-mukhtasar-1446-umrah-talbiyah",
+        "moia-mukhtasar-1446-umrah-talbiyah-ziyadah"
       ],
       "reviewed_none": [
+        "moia-1446-hajar-tasmiya",
+        "moia-1446-hijr-not-valid",
         "moia-1446-idtiba",
+        "moia-1446-maqam-ayah",
         "moia-1446-maqam-crowding",
         "moia-1446-maqam-no-tamassuh",
         "moia-1446-marwah-same",
@@ -1204,9 +1911,64 @@
         "moia-1446-tawaf-no-per-circuit",
         "moia-1446-tawaf-no-verbal-niyyah",
         "moia-1446-tawaf-seven",
-        "moia-1446-tawaf-women-crowding"
+        "moia-1446-tawaf-women-crowding",
+        "moia-mukhtasar-1446-general-001",
+        "moia-mukhtasar-1446-general-002",
+        "moia-mukhtasar-1446-general-003",
+        "moia-mukhtasar-1446-general-004",
+        "moia-mukhtasar-1446-general-005",
+        "moia-mukhtasar-1446-general-006",
+        "moia-mukhtasar-1446-general-007",
+        "moia-mukhtasar-1446-general-008",
+        "moia-mukhtasar-1446-general-009",
+        "moia-mukhtasar-1446-general-010",
+        "moia-mukhtasar-1446-general-011",
+        "moia-mukhtasar-1446-general-012",
+        "moia-mukhtasar-1446-general-013",
+        "moia-mukhtasar-1446-general-014",
+        "moia-mukhtasar-1446-general-015",
+        "moia-mukhtasar-1446-general-016",
+        "moia-mukhtasar-1446-general-017",
+        "moia-mukhtasar-1446-general-018",
+        "moia-mukhtasar-1446-general-019",
+        "moia-mukhtasar-1446-general-020",
+        "moia-mukhtasar-1446-general-021",
+        "moia-mukhtasar-1446-general-022",
+        "moia-mukhtasar-1446-general-023",
+        "moia-mukhtasar-1446-general-024",
+        "moia-mukhtasar-1446-general-025",
+        "moia-mukhtasar-1446-general-026",
+        "moia-mukhtasar-1446-general-027",
+        "moia-mukhtasar-1446-general-028",
+        "moia-mukhtasar-1446-general-029",
+        "moia-mukhtasar-1446-general-030",
+        "moia-mukhtasar-1446-general-031",
+        "moia-mukhtasar-1446-general-032",
+        "moia-mukhtasar-1446-general-033",
+        "moia-mukhtasar-1446-general-034",
+        "moia-mukhtasar-1446-general-035",
+        "moia-mukhtasar-1446-general-036",
+        "moia-mukhtasar-1446-general-037",
+        "moia-mukhtasar-1446-general-038",
+        "moia-mukhtasar-1446-general-039",
+        "moia-mukhtasar-1446-general-040",
+        "moia-mukhtasar-1446-general-041",
+        "moia-mukhtasar-1446-general-042",
+        "moia-mukhtasar-1446-general-043",
+        "moia-mukhtasar-1446-general-044",
+        "moia-mukhtasar-1446-general-045",
+        "moia-mukhtasar-1446-general-046",
+        "moia-mukhtasar-1446-general-047",
+        "moia-mukhtasar-1446-general-048",
+        "moia-mukhtasar-1446-general-049",
+        "moia-mukhtasar-1446-general-050",
+        "moia-mukhtasar-1446-tawaf-takbir-hajar",
+        "moia-mukhtasar-1446-umrah-entering-masjid",
+        "moia-mukhtasar-1446-umrah-tamam-umrah",
+        "moia-mukhtasar-1446-umrah-taqsir-mara",
+        "moia-mukhtasar-1446-umrah-taqsir-shamil"
       ],
-      "not_reviewed_count": 31
+      "not_reviewed_count": 0
     },
     "firestoreVerificationPerformed": false,
     "verifiedRecords": 0
