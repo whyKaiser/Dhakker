@@ -1,11 +1,49 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/supplication_model.dart';
 
 class DuaPlaybackService {
-  final FlutterTts _tts = FlutterTts();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // Lazily built. Both plugin objects wire platform channels the moment they
+  // are constructed, so creating them eagerly would make this service
+  // impossible to exercise off-device even when every call it makes is
+  // replaced. `late final` defers that to first real use — on a device that
+  // is init(), which is unchanged; in a test that overrides the seams below,
+  // it never happens at all.
+  late final FlutterTts _tts = FlutterTts();
+  late final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // ── platform seams ──────────────────────────────────────────────────────
+  //
+  // The five calls below are the only places this service touches a plugin.
+  // They are separated out so a test can subclass and drive the fallback
+  // without a device, a network, or a method channel — every other line of
+  // logic then runs for real. Nothing else about them is special: each is a
+  // one-line forward to the engine it wraps.
+
+  @protected
+  @visibleForTesting
+  Future<void> playFile(String url) => _audioPlayer.play(UrlSource(url));
+
+  @protected
+  @visibleForTesting
+  Future<void> speakText(String text) => _tts.speak(text);
+
+  @protected
+  @visibleForTesting
+  Future<void> setTtsLanguage(String language) => _tts.setLanguage(language);
+
+  @protected
+  @visibleForTesting
+  Future<void> setTtsVoice(Map<String, String> voice) => _tts.setVoice(voice);
+
+  @protected
+  @visibleForTesting
+  Future<void> stopEngines() async {
+    await _audioPlayer.stop();
+    await _tts.stop();
+  }
 
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
@@ -81,7 +119,9 @@ class DuaPlaybackService {
         final loc = v['locale']!.toLowerCase();
         int s = 0;
         if (n.contains('network')) s += 4;
-        if (n.contains('enhanced') || n.contains('neural') || n.contains('premium')) s += 4;
+        if (n.contains('enhanced') ||
+            n.contains('neural') ||
+            n.contains('premium')) s += 4;
         if (loc.contains('sa')) s += 2; // العربية السعودية مفضّلة
         if (loc.contains('xa')) s += 1; // صوت قوقل العربي
         return s;
@@ -95,8 +135,7 @@ class DuaPlaybackService {
   }
 
   Future<void> stop() async {
-    await _audioPlayer.stop();
-    await _tts.stop();
+    await stopEngines();
     _updatePlayingState(false);
   }
 
@@ -125,13 +164,22 @@ class DuaPlaybackService {
     if (hasFile) {
       _updatePlayingState(true);
       try {
-        await _audioPlayer.play(UrlSource(dua.audioUrl.trim()));
-      } catch (e) {
-        // فشل تحميل/تشغيل الرابط (شبكة ضعيفة أو ملف تالف) — نعيد الحالة
-        // حتى لا يعلق الزر على "يشغّل" للأبد.
+        await playFile(dua.audioUrl.trim());
+        return;
+      } catch (_) {
+        // فشل تحميل/تشغيل الرابط: شبكة ضعيفة، أو ملف تالف، أو كائن محذوف.
+        //
+        // كان هذا الموضع يكتفي بإعادة الحالة ثم `return`، فيصمت التطبيق
+        // صمتًا تامًّا: لا صوت، ولا رسالة، ولا نصّ منطوق. والحاجّ يضغط زر
+        // التشغيل وهو في الطواف. والصمت هنا أسوأ من غياب الملف أصلًا، لأن
+        // غياب الملف يسقط إلى TTS منذ البداية.
+        //
+        // فبدل الخروج، نُعيد ضبط حالة مشغّل الملف ثم نتابع إلى مسار TTS
+        // أدناه — بالسقوط خلال الدالة نفسها، لا باستدعائها من جديد: العودة
+        // إلى play() هنا تعيد تنفيذ stop() وتفتح باب حلقة لا تنتهي إن ظلّ
+        // الملف يفشل.
         _updatePlayingState(false);
       }
-      return;
     }
 
     final text = dua.textByLanguage(langCode).trim();
@@ -142,24 +190,24 @@ class DuaPlaybackService {
 
     if (langCode == 'ar') {
       if (_currentLangCode != 'ar') {
-        await _tts.setLanguage('ar-SA');
+        await setTtsLanguage('ar-SA');
         _currentLangCode = 'ar';
       }
       if (_bestArabicVoice != null && _currentVoice != _bestArabicVoice) {
         try {
-          await _tts.setVoice(_bestArabicVoice!);
+          await setTtsVoice(_bestArabicVoice!);
           _currentVoice = _bestArabicVoice;
         } catch (_) {}
       }
     } else {
       if (_currentLangCode != langCode) {
-        await _tts.setLanguage('en-US');
+        await setTtsLanguage('en-US');
         _currentLangCode = langCode;
         _currentVoice = null;
       }
     }
 
-    await _tts.speak(text);
+    await speakText(text);
   }
 
   Future<void> dispose() async {
