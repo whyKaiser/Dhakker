@@ -92,6 +92,8 @@ jobs:
             "test/page_102_test.dart"
             "test/page_64_test.dart"
             "test/takhrij_review_test.dart"
+            "lib/Screens/Piligram/Home/services/dua_playback_service.dart"
+            "test/dua_playback_fallback_test.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
