@@ -618,77 +618,99 @@ export const KNOWN_PACK_FIELDS = new Set([
 
 // ── Field ownership ─────────────────────────────────────────────────────
 //
-// Who owns each of the 47 fields decides what an import may overwrite. The
-// question only became urgent once there were live documents: a PATCH with
-// no updateMask REPLACES the document, so every field absent from the
-// payload is deleted. That silently reset `usage_count`, wiped a hand-set
-// `audioUrl`, and removed any admin field this script has never heard of.
+// Who owns each field decides what an import may overwrite. Four classes,
+// exhaustive over the payload and asserted to be so at module load, so a new
+// schema field cannot be added without someone deciding who owns it.
 //
-// The four classes below are exhaustive over the payload and are asserted to
-// be so at module load. D is the class that cannot be enumerated — which is
-// exactly why it needs an updateMask rather than a list.
+// The classes exist because an import is not the only writer. The admin
+// console deactivates records, revokes them, uploads audio and stamps
+// `updatedAt`; the pilgrim's own client increments `usage_count`. A pack
+// knows none of that, so a pack may not overwrite any of it.
 
 /**
- * A — owned by the source pack. The pack is the authority; an import may
- * freely overwrite these, because that is the whole point of importing.
+ * A — owned by the source pack. The pack is the authority and an import may
+ * freely overwrite these; that is what importing is for. A change to ANY of
+ * them is what drops verification.
  */
 export const PACK_OWNED_FIELDS = Object.freeze([
   ...REQUIRED_FIELDS,
-  ...Object.keys(OPTIONAL_FIELDS),
+  ...Object.keys(OPTIONAL_FIELDS).filter((f) => f !== "isActive"),
 ]);
 
 /**
- * B — operational. Owned by the running app and its admins, never by the
- * pack. On a NEW document the importer seeds them; on an EXISTING one it
- * must leave whatever is there alone.
+ * Seeded on a NEW document, never touched on an existing one — not in the
+ * body, not in the updateMask. Each of these is a live decision the pack
+ * cannot know:
  *
- *   audioMode / audioUrl  a recording an admin uploaded by hand. Re-importing
- *                         the text is not a reason to unpublish the audio.
- *   usage_count           live analytics the pilgrim's own client increments
- *                         (firestore.rules allows exactly this one field).
+ *   audioMode/audioUrl  a recording an admin uploaded by hand.
+ *   usage_count         analytics the pilgrim's client increments
+ *                       (firestore.rules permits exactly this field).
+ *   isActive            an admin's show/hide switch. Re-importing the text
+ *                       must not silently republish a record they hid.
+ *   revokedAt           an admin's retraction. The importer drops
+ *                       verification out of respect for the human who
+ *                       granted it; un-revoking would override the human who
+ *                       withdrew it, which is the same disrespect inverted.
+ *   createdAt/updatedAt the admin console orders its list by `updatedAt`,
+ *                       and Firestore's orderBy EXCLUDES documents that lack
+ *                       the field. Without these an imported record is
+ *                       invisible in the one screen where it can be
+ *                       verified. On update the console owns `updatedAt`.
  */
-export const OPERATIONAL_FIELDS = Object.freeze([
+export const CREATE_ONLY_DEFAULT_FIELDS = Object.freeze([
   "audioMode",
   "audioUrl",
   "usage_count",
+  "isActive",
+  "revokedAt",
+  "createdAt",
+  "updatedAt",
 ]);
 
+/** The literal values seeded on create. Timestamps are filled in per run. */
+export function createOnlyDefaults(now = new Date()) {
+  const iso = now.toISOString();
+  return {
+    audioMode: "tts",
+    audioUrl: "",
+    usage_count: 0,
+    isActive: true,
+    revokedAt: null,
+    createdAt: { timestampValue: iso },
+    updatedAt: { timestampValue: iso },
+  };
+}
+
 /**
- * C — verification. Always written, on create AND on update, always to the
- * unverified state. Re-importing content invalidates any prior approval: the
- * bytes a human approved are not necessarily the bytes now being written, so
- * the record must fall out of the pilgrim's view until someone re-approves
- * it. This is a fail-closed reset, not a preservation.
+ * Written ONLY when a pack-owned field actually changed. Re-importing bytes
+ * a human already approved is not a reason to withdraw the approval, so an
+ * identical import performs no write at all and the record stays verified.
+ * `revokedAt` is deliberately NOT here — see above.
  */
-export const VERIFICATION_FIELDS = Object.freeze([
+export const VERIFICATION_RESET_FIELDS = Object.freeze([
   "verificationStatus",
   "verifiedAt",
   "verifiedBy",
-  "revokedAt",
 ]);
 
 /**
- * D — unknown administrative fields. Not listed, because they cannot be:
- * anything the admin console or a future migration adds lives here. They are
- * protected structurally — by never appearing in the updateMask — rather
- * than by enumeration. A list would be wrong the moment someone adds a field.
+ * D — unknown administrative fields. Not listed, because they cannot be.
+ * Protected structurally by never appearing in the updateMask; a list would
+ * be wrong the moment someone adds a field.
  */
 export const UNKNOWN_ADMIN_FIELDS_ARE_PRESERVED = true;
 
-/** The mask used when a document already exists: A ∪ C, never B, never D. */
+/** The mask used when content changed: A ∪ verification-reset. */
 export const UPDATE_MASK_FIELDS = Object.freeze([
   ...PACK_OWNED_FIELDS,
-  ...VERIFICATION_FIELDS,
+  ...VERIFICATION_RESET_FIELDS,
 ]);
 
-// The classification must cover the payload exactly — no field unclassified,
-// none claimed twice. Checked here so a new field cannot be added to the
-// schema without someone deciding who owns it.
 {
   const classified = [
     ...PACK_OWNED_FIELDS,
-    ...OPERATIONAL_FIELDS,
-    ...VERIFICATION_FIELDS,
+    ...CREATE_ONLY_DEFAULT_FIELDS,
+    ...VERIFICATION_RESET_FIELDS,
   ];
   const dupes = classified.filter((f, i) => classified.indexOf(f) !== i);
   if (dupes.length) {
@@ -700,7 +722,11 @@ export const UPDATE_MASK_FIELDS = Object.freeze([
     ...Object.keys(FORCED_FIELDS),
   ]);
   const missing = [...payload].filter((f) => !classified.includes(f));
-  const extra = classified.filter((f) => !payload.has(f));
+  // createdAt/updatedAt are produced at write time, not by buildRecords, so
+  // they are legitimately outside the record's own key set.
+  const extra = classified.filter(
+    (f) => !payload.has(f) && !["createdAt", "updatedAt"].includes(f),
+  );
   if (missing.length || extra.length) {
     throw new Error(
       `Field ownership does not cover the payload. Unclassified: ` +
@@ -840,7 +866,6 @@ export function buildRecords(pack) {
     return record;
   });
 }
-
 // ── The wire ────────────────────────────────────────────────────────────
 //
 // Every request goes through these three helpers so a test can hand in a
@@ -879,47 +904,125 @@ export async function readExisting(duaId, plan, deps = {}) {
 }
 
 /**
+ * Canonical comparison of two pack-owned values.
+ *
+ * Representation is normalised, meaning is not: map key ORDER is irrelevant
+ * (Firestore returns fields unordered), numbers compare numerically whatever
+ * the wire type, null and absent are the same thing, and strings compare
+ * NFC-normalised so a pure Unicode normalisation difference does not read as
+ * an edit. Array ORDER stays significant — `sourceReferences` and `ayat` are
+ * sequences the page prints in an order, not sets.
+ */
+export function canonical(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value.normalize("NFC");
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.map(canonical);
+  if (typeof value === "object") {
+    const out = {};
+    for (const k of Object.keys(value).sort()) out[k] = canonical(value[k]);
+    return out;
+  }
+  return value;
+}
+
+export function sameValue(a, b) {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+/**
+ * Which pack-owned fields differ between the payload and the live document.
+ * An empty list means the import has nothing to say about this record.
+ */
+export function changedPackFields(record, existing) {
+  return PACK_OWNED_FIELDS.filter(
+    (f) => !sameValue(record[f], existing?.[f]),
+  );
+}
+
+/**
  * The request for one record, given whether the document already exists.
  *
- *   create  every field, including the operational seeds.
- *   update  updateMask = A ∪ C. B is absent from mask AND body, so the live
- *           values survive; D is absent from the mask, so unknown admin
- *           fields survive too.
+ *   create   every pack field, the seven create-only defaults, and the
+ *            verification fields in their unverified state.
+ *   update   ONLY when a pack-owned field changed: mask = A ∪ the three
+ *            verification-reset fields. Create-only defaults appear in
+ *            neither mask nor body, so audio, usage_count, isActive,
+ *            revokedAt and both timestamps survive; unknown admin fields
+ *            survive for the same reason.
+ *   no-op    an identical re-import writes nothing at all, so a record a
+ *            human approved stays approved.
  *
- * The verification fields are in the mask on BOTH paths and are serialised
- * as nullValue rather than omitted: a masked field missing from the body is
- * DELETED by Firestore, which would leave the document with no verifiedAt at
- * all. Writing null keeps the field present and explicitly empty, which is
- * what the schema and the security rules expect.
+ * The verification fields are serialised as nullValue rather than omitted: a
+ * masked field missing from the body is DELETED by Firestore, which would
+ * leave the document with no verifiedAt key rather than one explicitly null.
  */
-export function buildWriteRequest(record, existing, plan) {
+export function buildWriteRequest(record, existing, plan, now = new Date()) {
   const isCreate = existing === null || existing === undefined;
-  const bodyFields = isCreate
-    ? Object.keys(record)
-    : UPDATE_MASK_FIELDS.filter((f) => f in record);
 
-  const fields = {};
-  for (const k of bodyFields) fields[k] = toFirestoreValue(record[k]);
-
-  let url = documentUrl(plan, record.duaId);
-  if (!isCreate) {
-    const mask = bodyFields
-      .map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`)
-      .join("&");
-    url = `${url}?${mask}`;
+  if (isCreate) {
+    const fields = {};
+    for (const [k, v] of Object.entries(record)) fields[k] = toFirestoreValue(v);
+    const defaults = createOnlyDefaults(now);
+    for (const [k, v] of Object.entries(defaults)) {
+      // The timestamps arrive pre-wrapped as timestampValue; the rest are
+      // plain values that still need serialising.
+      fields[k] = v && typeof v === "object" && "timestampValue" in v
+        ? v
+        : toFirestoreValue(v);
+    }
+    return {
+      url: documentUrl(plan, record.duaId),
+      isCreate: true,
+      maskFields: null,
+      changed: null,
+      fields,
+    };
   }
-  return { url, isCreate, maskFields: isCreate ? null : bodyFields, fields };
+
+  const changed = changedPackFields(record, existing);
+  if (changed.length === 0) {
+    return { url: null, isCreate: false, maskFields: [], changed: [], fields: null };
+  }
+
+  const bodyFields = UPDATE_MASK_FIELDS.filter(
+    (f) => f in record || VERIFICATION_RESET_FIELDS.includes(f),
+  );
+  const fields = {};
+  for (const k of bodyFields) fields[k] = toFirestoreValue(record[k] ?? null);
+
+  const mask = bodyFields
+    .map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`)
+    .join("&");
+  return {
+    url: `${documentUrl(plan, record.duaId)}?${mask}`,
+    isCreate: false,
+    maskFields: bodyFields,
+    changed,
+    fields,
+  };
 }
 
 export async function writeRecords(records, plan, deps = {}) {
   const doFetch = deps.fetch ?? globalThis.fetch;
   let created = 0;
   let updated = 0;
+  let unchanged = 0;
   let writes = 0;
+  const outcomes = [];
 
   for (const record of records) {
     const existing = await readExisting(record.duaId, plan, deps);
-    const req = buildWriteRequest(record, existing, plan);
+    const req = buildWriteRequest(record, existing, plan, deps.now ?? new Date());
+
+    if (!req.isCreate && req.changed.length === 0) {
+      unchanged += 1;
+      outcomes.push({ duaId: record.duaId, outcome: "unchanged", before: existing, changed: [] });
+      console.log(
+        `unchanged ${record.duaId} (identical; no write, verification kept)`,
+      );
+      continue;
+    }
 
     const res = await doFetch(req.url, {
       method: "PATCH",
@@ -932,66 +1035,121 @@ export async function writeRecords(records, plan, deps = {}) {
     writes += 1;
 
     if (!res.ok) {
-      throw new Error(
-        `write of ${record.duaId} failed: HTTP ${res.status}`,
-      );
+      throw new Error(`write of ${record.duaId} failed: HTTP ${res.status}`);
     }
     if (req.isCreate) {
       created += 1;
+      outcomes.push({ duaId: record.duaId, outcome: "created", before: null, changed: null });
       console.log(`created ${record.duaId}`);
     } else {
       updated += 1;
+      outcomes.push({ duaId: record.duaId, outcome: "updated", before: existing, changed: req.changed });
       console.log(
-        `updated ${record.duaId} (${req.maskFields.length} field(s); ` +
-          `kept ${OPERATIONAL_FIELDS.join(", ")} and any admin fields)`,
+        `updated ${record.duaId} (${req.changed.length} pack field(s) changed; ` +
+          `verification reset; kept ${CREATE_ONLY_DEFAULT_FIELDS.join(", ")} ` +
+          `and any admin fields)`,
       );
     }
   }
-  return { created, updated, writes };
+  return { created, updated, unchanged, writes, outcomes };
 }
 
-/** Fields whose value must match the payload exactly after a write. */
-export const VERIFIED_AFTER_WRITE = Object.freeze([
-  "duaId",
-  "contentKind",
-  "verificationStatus",
-  "verifiedAt",
-  "verifiedBy",
-  "revokedAt",
-]);
+/** Pack fields compared verbatim after any write. */
+export const VERIFIED_AFTER_WRITE = Object.freeze(["duaId", "contentKind"]);
+
+/** What a freshly created document must hold, exactly. */
+export const CREATE_DEFAULT_EXPECTATIONS = Object.freeze({
+  audioMode: "tts",
+  audioUrl: "",
+  usage_count: 0,
+  isActive: true,
+  revokedAt: null,
+  verificationStatus: "unverified",
+  verifiedAt: null,
+  verifiedBy: null,
+});
+
+/** sha256 over NFC-normalised ar + NUL + en. */
+export function normalisedTextHash(doc) {
+  const ar = (doc?.text?.ar ?? "").normalize("NFC");
+  const en = (doc?.text?.en ?? "").normalize("NFC");
+  return createHash("sha256").update(`${ar}\u0000${en}`, "utf8").digest("hex");
+}
 
 /**
- * Read one document back and prove it holds what was sent. Compares the
- * text by hash rather than by printing it, and never prints audioUrl or any
- * other value — a mismatch names the field, not its contents.
+ * Read one document back and prove it holds what was meant. A 200 proves the
+ * request was accepted, not that the document is right.
+ *
+ * `before` is the document as it stood prior to the write (null on create),
+ * so an update can be checked for what it must have PRESERVED as well as for
+ * what it changed. Text is compared by NFC-normalised hash; no value is ever
+ * printed, so a mismatch names the field and nothing else.
  */
-export async function verifyWritten(record, plan, deps = {}) {
+export async function verifyWritten(record, plan, deps = {}, opts = {}) {
+  const { isCreate = true, before = null, changed = null } = opts;
   const doc = await readExisting(record.duaId, plan, deps);
-  if (doc === null) {
-    throw new Error(`${record.duaId}: not found after write`);
-  }
+  if (doc === null) throw new Error(`${record.duaId}: not found after write`);
+
   for (const f of VERIFIED_AFTER_WRITE) {
-    const want = record[f] ?? null;
-    const got = doc[f] ?? null;
-    if (want !== got) {
-      throw new Error(
-        `${record.duaId}: field "${f}" does not match what was sent`,
-      );
+    if (!sameValue(record[f], doc[f])) {
+      throw new Error(`${record.duaId}: field "${f}" does not match the payload`);
     }
   }
-  if (doc.verificationStatus !== "unverified") {
-    throw new Error(
-      `${record.duaId}: verificationStatus is "${doc.verificationStatus}", ` +
-        `not "unverified"`,
-    );
+  if (normalisedTextHash(record) !== normalisedTextHash(doc)) {
+    throw new Error(`${record.duaId}: stored text does not match the payload`);
   }
-  const wantHash = contentHashOf(record);
-  const gotHash = contentHashOf(doc);
-  if (wantHash !== gotHash) {
-    throw new Error(
-      `${record.duaId}: stored text hash ${gotHash.slice(0, 12)} does not ` +
-        `match the payload hash ${wantHash.slice(0, 12)}`,
-    );
+
+  if (isCreate) {
+    for (const [f, want] of Object.entries(CREATE_DEFAULT_EXPECTATIONS)) {
+      if (!sameValue(doc[f], want)) {
+        throw new Error(
+          `${record.duaId}: created document has the wrong "${f}"`,
+        );
+      }
+    }
+    for (const f of ["createdAt", "updatedAt"]) {
+      const v = doc[f];
+      if (v === null || v === undefined || v === "") {
+        throw new Error(
+          `${record.duaId}: created document has no "${f}" — it would be ` +
+            `invisible in the admin console, which orders by updatedAt`,
+        );
+      }
+      if (Number.isNaN(Date.parse(String(v)))) {
+        throw new Error(`${record.duaId}: "${f}" is not a timestamp`);
+      }
+    }
+    return true;
+  }
+
+  // Update: everything the importer does not own must be untouched.
+  for (const f of CREATE_ONLY_DEFAULT_FIELDS) {
+    if (before && f in before && !sameValue(doc[f], before[f])) {
+      throw new Error(`${record.duaId}: "${f}" was modified by an update`);
+    }
+  }
+  for (const f of Object.keys(before ?? {})) {
+    if (f === "documentId") continue;
+    const known =
+      PACK_OWNED_FIELDS.includes(f) ||
+      CREATE_ONLY_DEFAULT_FIELDS.includes(f) ||
+      VERIFICATION_RESET_FIELDS.includes(f);
+    if (!known && !sameValue(doc[f], before[f])) {
+      throw new Error(`${record.duaId}: admin field "${f}" was modified`);
+    }
+  }
+  if (changed && changed.length > 0) {
+    if (doc.verificationStatus !== "unverified") {
+      throw new Error(
+        `${record.duaId}: content changed but verificationStatus is ` +
+          `"${doc.verificationStatus}"`,
+      );
+    }
+    for (const f of ["verifiedAt", "verifiedBy"]) {
+      if (doc[f] !== null) {
+        throw new Error(`${record.duaId}: content changed but "${f}" survived`);
+      }
+    }
   }
   return true;
 }
@@ -1024,6 +1182,23 @@ export const PRODUCTION_BLOCKING_CASES = Object.freeze([
   "present_but_removed_from_pack",
 ]);
 
+/**
+ * The document id from a resource name. Percent-decoded, because the write
+ * path percent-ENCODES the id into the URL and the two must agree. Today
+ * every duaId is [a-z0-9-] so both are the identity, but an id that ever
+ * needed encoding would otherwise reconcile against a name that never
+ * matches. A malformed escape is returned raw rather than throwing: a
+ * reconciliation must not die on one odd document.
+ */
+export function safeDecodeId(resourceName) {
+  const last = String(resourceName).split("/").pop() ?? "";
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    return last;
+  }
+}
+
 export async function listCollection(plan, deps = {}) {
   const doFetch = deps.fetch ?? globalThis.fetch;
   const base =
@@ -1045,7 +1220,7 @@ export async function listCollection(plan, deps = {}) {
       for (const [k, v] of Object.entries(d.fields ?? {})) {
         fields[k] = fromFirestoreValue(v);
       }
-      docs.push({ documentId: (d.name ?? "").split("/").pop(), ...fields });
+      docs.push({ documentId: safeDecodeId(d.name ?? ""), ...fields });
     }
     pageToken = body.nextPageToken;
   } while (pageToken);
@@ -1145,6 +1320,10 @@ export function fromFirestoreValue(v) {
   if ("integerValue" in v) return Number(v.integerValue);
   if ("doubleValue" in v) return v.doubleValue;
   if ("stringValue" in v) return v.stringValue;
+  // Timestamps come back as RFC3339 strings. Without this they decoded to
+  // null, so a preserved createdAt/updatedAt read as absent and the update
+  // path could not tell that it had been kept.
+  if ("timestampValue" in v) return v.timestampValue;
   if ("arrayValue" in v) {
     return (v.arrayValue.values ?? []).map(fromFirestoreValue);
   }
@@ -1729,12 +1908,14 @@ async function main() {
   const summary = await writeRecords(records, plan);
   console.log(
     `\ncreated: ${summary.created}  updated: ${summary.updated}  ` +
-      `writes: ${summary.writes}`,
+      `unchanged: ${summary.unchanged}  writes: ${summary.writes}`,
   );
-  if (summary.writes !== records.length) {
+  const accounted =
+    summary.created + summary.updated + summary.unchanged;
+  if (accounted !== records.length || summary.writes !== summary.created + summary.updated) {
     console.error(
-      `::error::expected exactly ${records.length} write(s), performed ` +
-        `${summary.writes}.`,
+      `::error::${records.length} record(s) planned but ${accounted} ` +
+        `accounted for and ${summary.writes} write(s) performed.`,
     );
     process.exit(1);
   }
@@ -1743,10 +1924,15 @@ async function main() {
   // accepted, not that the document holds what we meant. Read each one back
   // through the same credential and compare.
   console.log("\nVerifying what was written...");
-  for (const record of records) {
+  const byId = new Map(records.map((r) => [r.duaId, r]));
+  for (const o of summary.outcomes) {
     try {
-      await verifyWritten(record, plan);
-      console.log(`verified ${record.duaId}`);
+      await verifyWritten(byId.get(o.duaId), plan, {}, {
+        isCreate: o.outcome === "created",
+        before: o.before,
+        changed: o.changed,
+      });
+      console.log(`verified ${o.duaId} (${o.outcome})`);
     } catch (err) {
       console.error(`::error::${err.message}`);
       process.exit(1);

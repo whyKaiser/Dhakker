@@ -259,11 +259,14 @@ jobs:
           # the text hash; a mismatch exits non-zero. These greps prove that
           # verification actually ran and that exactly one write happened —
           # a silent skip would otherwise look identical to a pass.
-          grep -qE "^(created|updated) moia-mukhtasar-1446-umrah-talbiyah$" write.log
-          grep -q "^verified moia-mukhtasar-1446-umrah-talbiyah$" write.log
-          grep -qE "^created: [01]  updated: [01]  writes: 1$" write.log
-          test "$(grep -cE '^(created|updated) ' write.log)" = "1"
-          echo "One write, read back and verified."
+          grep -qE "^(created|updated|unchanged) moia-mukhtasar-1446-umrah-talbiyah" write.log
+          grep -qE "^verified moia-mukhtasar-1446-umrah-talbiyah \((created|updated|unchanged)\)$" write.log
+          # An identical re-import is a legitimate no-op: 0 writes, and the
+          # record keeps whatever approval it already had. What must never
+          # happen is MORE than one write.
+          grep -qE "^created: [01]  updated: [01]  unchanged: [01]  writes: [01]$" write.log
+          test "$(grep -cE '^(created|updated) ' write.log)" -le 1
+          echo "At most one write, read back and verified."
 
       - name: Summary
         if: always()

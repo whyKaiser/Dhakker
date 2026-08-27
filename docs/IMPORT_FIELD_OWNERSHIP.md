@@ -21,75 +21,94 @@ the schema without an owner throws before anything runs.
 
 ## The four classes
 
-All 47 payload fields, classified exhaustively and without overlap.
+All fields the importer produces, classified exhaustively and without
+overlap. Asserted at module load, so a schema field added without an owner
+throws before anything runs.
 
-### A — pack-owned (40 fields)
+### A — pack-owned (39)
 
-The source pack is the authority. An import may overwrite these freely;
-doing so is the point of importing.
+The pack is the authority; an import may overwrite these freely. **A change
+to any of them is what drops verification.**
 
-`duaId`, `contentKind`, `zoneKey`, `title`, `text`, `zoneId`, `zoneNameAr`,
-`tagsAr`, `tagsEn`, `languageCodes`, `isActive`, `authority`, `sourceUrl`,
-`sourceVersion`, `sourceLanguage`, `sourceSection`, `printedPage`,
-`contentHash`, `contextAuthority`, `contextSourceUrl`, `ritualKey`,
-`appliesToZoneKeys`, `usageQualifier`, `sourceReferences`,
-`recitationPolicy`, `relatedRecordIds`, `relatedRecordRole`, `usageNoteAr`,
-`sourceReferencesCompleteness`, `quranRef`, `isPortionOfAyah`,
-`textAuthority`, `textAuthoritySourceUrl`, `textRiwayah`, `textRasm`,
-`textEdition`, `textEditionDate`, `isGeneralSupplication`, `reviewNotes`,
-`visuallyUncertain`
+`duaId`, `contentKind`, `zoneKey`, `title`, `text`, `zoneId`, `zoneNameAr`, `tagsAr`, `tagsEn`, `languageCodes`, `authority`, `sourceUrl`, `sourceVersion`, `sourceLanguage`, `sourceSection`, `printedPage`, `contentHash`, `contextAuthority`, `contextSourceUrl`, `ritualKey`, `appliesToZoneKeys`, `usageQualifier`, `sourceReferences`, `recitationPolicy`, `relatedRecordIds`, `relatedRecordRole`, `usageNoteAr`, `sourceReferencesCompleteness`, `quranRef`, `isPortionOfAyah`, `textAuthority`, `textAuthoritySourceUrl`, `textRiwayah`, `textRasm`, `textEdition`, `textEditionDate`, `isGeneralSupplication`, `reviewNotes`, `visuallyUncertain`
 
-### B — operational (3 fields)
+### Create-only defaults (7)
 
-Owned by the running app and its admins, never by the pack. Seeded on a
-**new** document; on an **existing** one they are left exactly as they are.
+Seeded on a **new** document; on an existing one they appear in neither the
+body nor the `updateMask`, so whatever is there survives. Each is a live
+decision the pack cannot know.
 
-| field | why it must survive an import |
-|---|---|
-| `audioMode` | an admin chose `file` deliberately |
-| `audioUrl` | a recording uploaded by hand; re-importing the text is not a reason to unpublish it |
-| `usage_count` | live analytics; `firestore.rules` permits a signed-in pilgrim to increment exactly this field |
+| field | seeded | why the pack may not overwrite it |
+|---|---|---|
+| `audioMode` | `"tts"` | an admin chose `file` deliberately |
+| `audioUrl` | `""` | a recording uploaded by hand; re-importing text is no reason to unpublish it |
+| `usage_count` | `0` | analytics the pilgrim's client increments — `firestore.rules` permits exactly this field |
+| `isActive` | `true` | the admin's show/hide switch. An import must not republish a record they hid |
+| `revokedAt` | `null` | the admin's retraction. The importer drops verification out of respect for the human who granted it; un-revoking would override the human who withdrew it |
+| `createdAt` | now, `timestampValue` | — |
+| `updatedAt` | now, `timestampValue` | the admin console orders its list by `updatedAt`, and Firestore's `orderBy` **excludes documents lacking the field**. Without it an imported record is invisible in the one screen where it can be verified. On update the console owns it |
 
-### C — verification (4 fields)
+`isActive` moved here out of A, and `revokedAt` out of the verification
+class. Both were being overwritten by an import — the same class of fault as
+`usage_count`, and for `revokedAt` a safety decision silently undone.
 
-Always written, on create **and** on update, always to the unverified state:
-`verificationStatus`, `verifiedAt`, `verifiedBy`, `revokedAt`.
+### Verification-reset (3)
 
-This is a reset, not a preservation, and it is deliberate. Re-importing
-content means the bytes a human approved may no longer be the bytes stored,
-so the record must drop out of the pilgrim's view until someone approves it
-again. Both `firestore.rules` and the app's own queries require
-`verificationStatus == 'verified'`, so the record becomes invisible the
-instant the import lands — which is the safe direction to fail.
+`verificationStatus`, `verifiedAt`, `verifiedBy`.
+
+Written **only when a pack-owned field actually changed**, always to the
+unverified state. `revokedAt` is deliberately not among them.
 
 ### D — unknown administrative fields
 
-Not listed, because they cannot be. Anything the admin console or a future
-migration adds lives here. They are protected **structurally**, by never
-appearing in the `updateMask`, rather than by enumeration — a list would be
-wrong the moment someone adds a field.
+Not listed, because they cannot be. Protected structurally by never
+appearing in the `updateMask`; a list would be wrong the moment someone adds
+a field.
+
+## When verification drops, and when it is kept
+
+| situation | write | verification |
+|---|---|---|
+| document absent | create, all fields + the 7 defaults | starts `unverified` |
+| every pack field identical | **no PATCH at all** | **kept** — a record a human approved stays approved |
+| any pack field changed | PATCH, mask = A ∪ the 3 reset fields (42 paths) | dropped to `unverified`, stamps nulled |
+
+Comparison is canonical, not `contentHash` alone: map key order is
+irrelevant (Firestore returns fields unordered), numbers compare numerically
+whatever the wire type, null and absent are the same, and strings compare
+NFC-normalised so a pure normalisation difference is not read as an edit.
+**Array order stays significant** — `sourceReferences` and `ayat` are
+sequences the page prints in an order, not sets.
+
+### First import versus an identical re-import
+
+- **First import**: 73 documents created, every one `unverified`. All 73 need
+  a human approval, one at a time — there is no batch path, and this change
+  does not add one.
+- **Identical re-import**: zero writes, zero approvals withdrawn. Before this
+  change every re-import reset all 73 and left the app with no supplications
+  in front of pilgrims until each was re-approved.
+- **Re-import after editing one record**: one write, one approval withdrawn.
 
 ## What the importer sends
 
-| | create (document absent) | update (document exists) |
-|---|---|---|
-| body | all 47 fields | A ∪ C only (44) |
-| `updateMask.fieldPaths` | absent | A ∪ C (44) |
-| B | seeded (`tts`, `""`, `0`) | absent from body and mask → **preserved** |
-| D | n/a | absent from mask → **preserved** |
+| | create | update (content changed) | update (identical) |
+|---|---|---|---|
+| body | all pack fields + 7 defaults | A ∪ reset (42) | — |
+| `updateMask.fieldPaths` | absent | the same 42 paths | — |
+| create-only defaults | seeded | absent → preserved | — |
+| unknown admin fields | n/a | absent → preserved | — |
 
-Existence is **read, not guessed**: a `GET` precedes every `PATCH`, and only
-a real 404 licenses a create. Any other failure aborts rather than writing
+Existence is **read, not guessed**: a `GET` precedes every `PATCH`, only a
+real 404 licenses a create, and 401/403/429/5xx abort rather than write
 blind.
 
 ### The null trap
 
 A field named in the mask but **missing from the body** is *deleted* by
-Firestore. That would leave a document with no `verifiedAt` key at all —
-different from `verifiedAt: null`, and enough to make `hasCompleteProvenance`
-behave unpredictably. So the verification fields are serialised as
-`nullValue` and included in the mask, which sets them to null while keeping
-them present. A test asserts both the value and the key's existence.
+Firestore — leaving a document with no `verifiedAt` key at all, rather than
+one explicitly null. So the reset fields are serialised as `nullValue` and
+included in the mask. A test asserts the value **and** the key's existence.
 
 ## Reconciliation (`--reconcile`)
 
@@ -118,12 +137,23 @@ reason — never a field value, so a signed `audioUrl` cannot reach a log.
 ## Post-write verification
 
 A `200` proves the request was accepted, not that the document holds what was
-meant. After writing, each record is read back through the same credential
-and compared: `duaId`, `contentKind`, the four verification fields, and the
-text by **hash** rather than by printing it. A mismatch names the field and
-fails the run.
+meant. Each record is read back through the same credential.
 
-This happens server-side, through the importer's credential.
+**On create** — `duaId`, `contentKind`, the text by NFC-normalised hash, and
+every one of `audioMode: "tts"`, `audioUrl: ""`, `usage_count: 0`,
+`isActive: true`, `revokedAt: null`, `verificationStatus: "unverified"`,
+`verifiedAt: null`, `verifiedBy: null`, plus `createdAt` and `updatedAt`
+present and parseable as timestamps.
+
+**On update** — the new pack values; that every create-only default and every
+unknown admin field still equals what it was *before* the write; and, only if
+content changed, that verification really did drop.
+
+No value is ever printed. Text is compared by hash, and a mismatch names the
+field and nothing else, so neither a signed `audioUrl` nor a full record text
+can reach a log.
+
+Verification happens server-side through the importer's credential.
 `supplications_staging` stays closed to every client
 (`allow read, write: if false`), and the app has not been taught to read it.
 
