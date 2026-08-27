@@ -42,6 +42,40 @@ and still needs its own file.
 All 59 are `ar` only; **no record has `text.en`**, so no English audio is
 implied by the current pack.
 
+## How many are eligible to record today
+
+The 58 above is the **whole** canonical set. It is not the number of files
+that can be produced now: four recitable records are held back, and a held
+record must not be voiced while it is held — an audio file is a second
+playback path around the hold.
+
+| | count |
+|---|---|
+| unique canonical recitable texts (total) | **58** |
+| unique texts **eligible for audio today** | **54** |
+
+The four held recitable records, with the reason on each:
+
+| record | why it is held |
+|---|---|
+| `moia-mukhtasar-1446-general-009` | `reviewStatus: blocked` — ministry_source_omits_end_of_quranic_phrase; also excludedFromImport |
+| `moia-mukhtasar-1446-umrah-talbiyah-ziyadah` | `deploymentBlocked` — optionality_not_yet_supported; excludedFromImport |
+| `moia-1446-safa-ayah` | `deploymentBlocked` — recitation_policy_not_yet_deployed; excludedFromImport |
+| `moia-1446-safa-dhikr` | `deploymentBlocked` — recitation_policy_not_yet_deployed; excludedFromImport |
+
+58 − 4 = 54 here only because none of the four shares its text with another
+record. The one shared text in the pack —
+`moia-mukhtasar-1446-tawaf-between-corners` and
+`moia-mukhtasar-1446-general-001`, both البقرة 201 — is intact on the
+eligible side: two records, one file, counted once in both numbers. Had a
+held record shared a text with a free one, the text would still be needed and
+subtracting per record would have undercounted; the eligible figure is
+therefore counted over distinct texts, not by subtraction.
+
+Both numbers move whenever a hold lifts or a classification changes, and both
+are recomputed from the pack and the ledger — there is a test that recounts
+them rather than trusting this table.
+
 ## Matching key
 
 Use the same content hash the ledger and the admin screen already use:

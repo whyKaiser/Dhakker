@@ -378,5 +378,72 @@ void main() {
           isTrue,
           reason: 'no English audio is implied by this pack');
     });
+
+    test('the eligible audio set is smaller than the canonical one', () {
+      // Two different numbers, and conflating them would be a real mistake:
+      // 58 is every canonical recitable text; 54 is what may be voiced now.
+      // A held record must not get an audio file — a file is a second
+      // playback path around the hold — so held records are excluded here.
+      //
+      // Counted over distinct TEXTS, never by subtracting records: if a held
+      // record ever shares its text with a free one, the text is still needed
+      // and subtraction would undercount. That does not happen today, and
+      // this is written so it stays correct when it does.
+      const recitable = {
+        'specific_text',
+        'general_dua',
+        'general_dhikr',
+        'mosque_entry',
+      };
+      final reviews = _reviews();
+      bool held(String id) {
+        final r = reviews[id];
+        if (r == null) return true;
+        return r['reviewStatus'] == 'blocked' ||
+            r['deploymentBlocked'] == true ||
+            r['excludedFromImport'] == true;
+      }
+
+      String text(Map<String, dynamic> e) => sha256
+          .convert(utf8.encode('${e['text']['ar']}\u0000${e['text']['en']}'))
+          .toString();
+
+      final rec = _entries()
+          .where((e) => recitable.contains(e['contentKind']))
+          .toList();
+      final eligible = rec.where((e) => !held(e['duaId'] as String)).toList();
+
+      expect(rec.map(text).toSet(), hasLength(58));
+      expect(eligible, hasLength(55));
+      expect(eligible.map(text).toSet(), hasLength(54));
+
+      // exactly these four recitable records are held, each with a reason
+      final heldIds = rec.map((e) => e['duaId'] as String).where(held).toList()
+        ..sort();
+      expect(heldIds, [
+        'moia-1446-safa-ayah',
+        'moia-1446-safa-dhikr',
+        'moia-mukhtasar-1446-general-009',
+        'moia-mukhtasar-1446-umrah-talbiyah-ziyadah',
+      ]);
+      for (final id in heldIds) {
+        final r = reviews[id]!;
+        final reason = r['reviewStatus'] == 'blocked'
+            ? (r['reviewBlockReason'] ?? r['blockReason'])
+            : r['deploymentBlockReason'];
+        expect(reason, isNotNull, reason: '$id is held with no reason');
+      }
+
+      // the one shared text survives on both sides: two records, one file
+      final shared = rec
+          .where((e) => const [
+                'moia-mukhtasar-1446-tawaf-between-corners',
+                'moia-mukhtasar-1446-general-001',
+              ].contains(e['duaId']))
+          .toList();
+      expect(shared, hasLength(2));
+      expect(shared.map(text).toSet(), hasLength(1));
+      expect(shared.every((e) => !held(e['duaId'] as String)), isTrue);
+    });
   });
 }
