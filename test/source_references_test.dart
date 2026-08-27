@@ -120,7 +120,7 @@ void main() {
       // are that set. A footnote may run past them, though: hajar-crowding's
       // footnote (٤) opens at the foot of 67 and finishes at the head of 68,
       // and the two works named on 68 belong to that footnote. Where the
-      // ledger records `sourceReferencesPages`, those are the pages actually
+      // ledger records `sourceReferencesReviewedPages`, those are the pages actually
       // read for the citations, and they govern instead — sourceSection keeps
       // pointing at where the TEXT is, which is also what the pilgrim sees on
       // the card.
@@ -145,14 +145,15 @@ void main() {
             .toList();
         var lo = nums.first;
         var hi = nums.length > 1 ? nums.last : nums.first;
-        final read = reviews[id]?['sourceReferencesPages'];
+        final read = reviews[id]?['sourceReferencesReviewedPages'];
         if (read != null) {
           final pages = (read as List).cast<int>();
           expect(pages, isNotEmpty, reason: id);
           // It may only EXTEND the text's pages, never replace or shrink
           // them, so it cannot be used to smuggle in an unrelated page.
           expect(pages.first <= lo && pages.last >= hi, isTrue,
-              reason: '$id: sourceReferencesPages $pages does not cover the '
+              reason:
+                  '$id: sourceReferencesReviewedPages $pages does not cover the '
                   'text pages $lo-$hi');
           lo = pages.first;
           hi = pages.last;
@@ -165,7 +166,8 @@ void main() {
       }
     });
 
-    test('sourceReferencesPages is only spelled out where a footnote runs on',
+    test(
+        'sourceReferencesReviewedPages is only spelled out where a footnote runs on',
         () {
       // One record needs it. If a second ever appears it should be a
       // deliberate reading of a continued footnote, not a way around the
@@ -174,11 +176,12 @@ void main() {
         File('review/human_review_ledger.json').readAsStringSync(),
       ) as Map<String, dynamic>)['reviews'] as List)
           .cast<Map<String, dynamic>>();
-      final withIt =
-          reviews.where((r) => r['sourceReferencesPages'] != null).toList();
+      final withIt = reviews
+          .where((r) => r['sourceReferencesReviewedPages'] != null)
+          .toList();
       expect(withIt.map((r) => r['recordId']), ['moia-1446-hajar-crowding']);
       for (final r in withIt) {
-        final pages = (r['sourceReferencesPages'] as List).cast<int>();
+        final pages = (r['sourceReferencesReviewedPages'] as List).cast<int>();
         expect(pages.length, greaterThan(1));
         for (var i = 1; i < pages.length; i++) {
           expect(pages[i], pages[i - 1] + 1,
@@ -187,6 +190,104 @@ void main() {
         expect(pages.first, r['reviewedPage']);
         expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
       }
+    });
+
+    test('the two page fields mean different things and stay separate', () {
+      // reviewedPages   — the pages the TEXT was compared on. It must equal
+      //                   what sourceSection names, and sourceSection is what
+      //                   the pilgrim reads on the card.
+      // sourceReferencesReviewedPages
+      //                 — the pages read to check the TAKHRIJ. It may run one
+      //                   page further when a footnote continues, and it
+      //                   changes neither sourceSection nor anything shown.
+      final ledger = jsonDecode(
+        File('review/human_review_ledger.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final reviews = (ledger['reviews'] as List).cast<Map<String, dynamic>>();
+      final pack = jsonDecode(
+        File('source_packs/moia_mukhtasar_1446_umrah.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final entries = {
+        for (final e in (pack['entries'] as List).cast<Map<String, dynamic>>())
+          e['duaId'] as String: e
+      };
+
+      // reviewedPages still answers to sourceSection: every page it lists is
+      // named there, and its span matches the span sourceSection gives. The
+      // full range-expansion rule («صفحات 65-67» means 65, 66 and 67) is
+      // owned by review_ledger_test and is deliberately not re-implemented
+      // here — a second copy of that parser would be a second thing to keep
+      // right. What this asserts is that the rename did not quietly move any
+      // review off the pages its sourceSection claims.
+      for (final r in reviews) {
+        final section = entries[r['recordId']]!['sourceSection'] as String;
+        final claimed = RegExp(r'\d+')
+            .allMatches(section.substring(section.lastIndexOf('صفح')))
+            .map((m) => int.parse(m.group(0)!))
+            .toList();
+        final reviewed = r['reviewedPages'] == null
+            ? [r['reviewedPage'] as int]
+            : (r['reviewedPages'] as List).cast<int>();
+        expect(reviewed.first, claimed.first, reason: '${r['recordId']}');
+        expect(reviewed.last, claimed.last, reason: '${r['recordId']}');
+      }
+
+      // The one record that needs the takhrij field, by value.
+      final crowding = reviews
+          .firstWhere((r) => r['recordId'] == 'moia-1446-hajar-crowding');
+      expect((crowding['sourceReferencesReviewedPages'] as List).cast<int>(),
+          [67, 68]);
+      expect(crowding['reviewedPages'], isNull,
+          reason: 'the TEXT is on one page; only the footnote runs on');
+      expect(entries['moia-1446-hajar-crowding']!['sourceSection'],
+          contains('صفحة 67'),
+          reason: 'the card must keep pointing at the page holding the text');
+
+      // The field's meaning is written down where the ledger documents its
+      // own fields, not only in a commit message.
+      final notes = (ledger['notes'] as List).cast<String>().join('\n');
+      expect(notes, contains('sourceReferencesReviewedPages'),
+          reason: 'a ledger field with no note is a field nobody can audit');
+
+      // Administrative only: it reaches neither the pack, the importer, the
+      // app, nor the rules — so it can never be exported to Firebase.
+      for (final path in [
+        'source_packs/moia_mukhtasar_1446_umrah.json',
+        'scripts/import_source_pack.mjs',
+        'lib/Screens/Piligram/Home/models/supplication_model.dart',
+        'lib/Screens/Piligram/Duas/duas_screen.dart',
+        'lib/services/assistant_service.dart',
+        'firestore.rules',
+      ]) {
+        expect(
+            File(path)
+                .readAsStringSync()
+                .contains('sourceReferencesReviewedPages'),
+            isFalse,
+            reason: '$path must not carry a review-desk field');
+      }
+    });
+
+    test('the pre-rename field name is gone from the repository', () {
+      // Built at runtime so this assertion does not match itself.
+      final old = ['sourceReferences', 'Pages'].join();
+      final offenders = <String>[];
+      for (final dir in ['lib', 'test', 'scripts', 'review', 'source_packs']) {
+        for (final f in Directory(dir)
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) =>
+                f.path.endsWith('.dart') ||
+                f.path.endsWith('.mjs') ||
+                f.path.endsWith('.json'))) {
+          final src = f.readAsStringSync();
+          // The new name is not a superstring of the old one, so a plain
+          // search cannot report a false positive here.
+          if (src.contains(old)) offenders.add(f.path);
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'the old name survives in: ${offenders.join(', ')}');
     });
 
     test('records with nothing cited carry an explicit empty array', () {

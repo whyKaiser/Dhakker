@@ -8,7 +8,8 @@
     "A ledger entry pinned to a hash means: 'a human reviewed THESE bytes'. It says nothing about any other bytes.",
     "reviewStatus 'passed' means ready-for-verification, NOT verified.",
     "reviewedPages is present only when a record spans more than one printed page, and must list exactly the pages its own sourceSection names. A record that spans pages 96-97 may not be recorded as though only page 96 was read.",
-    "A record may pass its TEXT review and still be held back from import. That is recorded as deploymentBlocked with a deploymentBlockReason, never as reviewStatus \"blocked\" — blocked is reserved for a problem with the text itself, and using it for a product limitation would wrongly suggest the religious text is at fault."
+    "A record may pass its TEXT review and still be held back from import. That is recorded as deploymentBlocked with a deploymentBlockReason, never as reviewStatus \"blocked\" — blocked is reserved for a problem with the text itself, and using it for a product limitation would wrongly suggest the religious text is at fault.",
+    "sourceReferencesReviewedPages هي الصفحات التي قُرئت لفحص التخريج وحده، وهي غير reviewedPages: reviewedPages صفحات النص الذي قوبل، وتطابق ما يسمّيه sourceSection؛ أما هذه فقد تمتد إلى الصفحة التالية حين تستمر الحاشية أو مادة التخريج خارجها، ولا تغيّر sourceSection ولا شيئًا مما يراه المستخدم. وهي إدارية بحتة: لا يقرؤها التطبيق ولا الـWorker ولا المستورد، ولا تُرسل إلى Firebase. ويجب أن تبدأ من reviewedPage، وأن تكون صفحات متتالية بلا تكرار، وأن توسّع نطاق قراءة التخريج دون أن تستبدل صفحات النص. ولا تُكتب إلا حين تمتد الحاشية أو مادة التخريج خارج reviewedPages."
   ],
   "reviews": [
     {
@@ -675,7 +676,7 @@
       "sourceReferencesConfirmed": true,
       "sourceReferencesReviewStatus": "reviewed_present",
       "sourceReferencesNote": "قُرئت صفحة 67 كاملة بحواشيها ومواضع علاماتها: أربع علامات وأربع حواشٍ. العلامة (4) مرتسية على فقرة هذا السجل، وحاشيتها تبدأ في أسفل صفحة 67 وتنتهي بعلامة الاستمرار «=» ثم تُستكمل في أعلى صفحة 68؛ فالشافعي وأحمد جزء من الحاشية نفسها لا مرجعان مستقلان. صُحِّح المرجعان بهذه الجولة: سُمِّي الكتابان (السنن المأثورة للشافعي، ومسند أحمد)، وأُدخل الرقمان المطبوعان 510 و190، وضُبط citedOnPage على 68 حيث طُبعت التكملة فعلًا.",
-      "sourceReferencesPages": [
+      "sourceReferencesReviewedPages": [
         67,
         68
       ]
