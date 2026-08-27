@@ -83,11 +83,51 @@ test("the write is limited to one record and carries its confirmations", () => {
 });
 
 test("a dry run happens before authentication", () => {
-  const dryRun = code.indexOf("--staging --limit 1\n");
+  // Matched by the step's name rather than by the exact command line: the
+  // command now pipes through `tee` so the counts can be asserted, and
+  // pinning the literal text made this test fail for a change that did not
+  // touch the ordering it exists to protect.
+  const dryRun = code.indexOf("Dry run (no credentials, nothing written)");
   const auth = code.indexOf("google-github-actions/auth@");
   assert.ok(dryRun > -1, "a dry-run step is required");
   assert.ok(auth > -1, "an auth step is required");
   assert.ok(dryRun < auth, "the dry run must precede authentication");
+  assert.match(code, /--staging --limit 1/, "the dry run must be limited");
+});
+
+test("the dry-run log must state the count before AND after --limit", () => {
+  // The 2026-08-27 staging run logged only "Included: 1", which is true of
+  // the write and says nothing about how many records the ledger cleared.
+  // Both numbers now have to appear or the step fails.
+  assert.match(code, /grep -q "Cleared by ledger \(before --limit\): 73"/);
+  assert.match(code, /grep -q "\^Included:   1"/);
+  assert.match(code, /grep -q "\^Excluded:   12"/);
+});
+
+test("the written record is read back and verified before the run passes", () => {
+  // A 200 from Firestore proves the request was accepted, not that the
+  // document holds what was sent.
+  assert.match(code, /grep -qE "\^verified moia-mukhtasar-1446-umrah-talbiyah/);
+  assert.match(code, /writes: \[01\]\$/, "the write count must be asserted");
+  assert.match(
+    code,
+    /test "\$\(grep -cE '\^\(created\|updated\) ' write\.log\)" -le 1/,
+    "a second write must fail the run",
+  );
+  const write = code.indexOf("--staging --limit 1 --write");
+  const verify = code.indexOf("verified moia-mukhtasar-1446-umrah-talbiyah");
+  assert.ok(write > -1 && verify > write, "verification follows the write");
+});
+
+test("the staging workflow still cannot open or read supplications_staging", () => {
+  // Verification happens server-side through the importer's own credential.
+  // It must not have loosened the rules or taught the app to read staging.
+  const rules = readFileSync("firestore.rules", "utf8");
+  assert.match(
+    rules,
+    /match \/supplications_staging\/\{document=\*\*\} \{\s*allow read, write: if false;/,
+    "supplications_staging must stay closed to every client",
+  );
 });
 
 test("confirmations are checked before authentication", () => {

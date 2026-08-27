@@ -8,12 +8,30 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import childProcess from "node:child_process";
 
 import {
+  CREATE_ONLY_DEFAULT_FIELDS,
+  PACK_OWNED_FIELDS,
+  PRODUCTION_BLOCKING_CASES,
   PRODUCTION_COLLECTION,
   STAGING_COLLECTION,
+  UPDATE_MASK_FIELDS,
+  VERIFICATION_RESET_FIELDS,
+  buildWriteRequest,
+  canonical,
+  changedPackFields,
+  createOnlyDefaults,
+  normalisedTextHash,
+  safeDecodeId,
   assertConfirmations,
+  assertReconciledForProduction,
+  listCollection,
+  printReconcile,
+  reconcile,
   resolvePlan,
+  verifyWritten,
+  writeRecords,
 } from "./import_source_pack.mjs";
 
 const PACK = "source_packs/moia_mukhtasar_1446_umrah.json";
@@ -1426,4 +1444,598 @@ test("the new qualifiers change no import decision", () => {
   ).find((x) => x.duaId === "moia-1446-tawaf-free-dhikr");
   assert.equal(stripped.contentKind, r.contentKind);
   assert.equal(stripped.verificationStatus, r.verificationStatus);
+});
+
+
+// ── Safe write, ownership, and post-write verification ─────────────────
+//
+// Everything below drives the real write path with a fake `fetch`. No
+// network, no credential, no Firebase.
+//
+// Two faults these guard against were real. A PATCH with no updateMask
+// REPLACES the document, so the importer silently deleted usage_count, a
+// hand-set audioUrl and every admin field it had never heard of. And
+// rewriting the verification fields unconditionally meant an identical
+// re-import withdrew an approval nobody had reason to withdraw.
+
+const PLAN = {
+  projectId: "test-project",
+  database: "(default)",
+  collection: "supplications_staging",
+  token: "FAKE-TOKEN-NEVER-LOGGED",
+};
+
+function encodeValue(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") {
+    return Number.isInteger(v)
+      ? { integerValue: String(v) }
+      : { doubleValue: v };
+  }
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(encodeValue) } };
+  if (typeof v === "object") {
+    const f = {};
+    for (const [k, x] of Object.entries(v)) f[k] = encodeValue(x);
+    return { mapValue: { fields: f } };
+  }
+  return { stringValue: String(v) };
+}
+function decodeValue(v) {
+  if ("nullValue" in v) return null;
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return v.doubleValue;
+  if ("stringValue" in v) return v.stringValue;
+  if ("timestampValue" in v) return v.timestampValue;
+  if ("arrayValue" in v) return (v.arrayValue.values ?? []).map(decodeValue);
+  if ("mapValue" in v) {
+    const o = {};
+    for (const [k, x] of Object.entries(v.mapValue.fields ?? {})) {
+      o[k] = decodeValue(x);
+    }
+    return o;
+  }
+  return null;
+}
+
+/** A fake Firestore honouring real PATCH/updateMask semantics. */
+function fakeFirestore(docs = {}) {
+  const calls = [];
+  const store = { ...docs };
+  const encode = (o) => {
+    const f = {};
+    for (const [k, v] of Object.entries(o)) {
+      f[k] = typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v)
+        ? { timestampValue: v }
+        : encodeValue(v);
+    }
+    return f;
+  };
+
+  const doFetch = async (url, init = {}) => {
+    const method = init.method ?? "GET";
+    const [path, query] = url.split("?");
+    const id = decodeURIComponent(path.split("/").pop());
+    calls.push({ method, url, id });
+
+    if (method === "GET") {
+      if (path.endsWith("/documents/" + PLAN.collection)) {
+        return {
+          ok: true, status: 200,
+          json: async () => ({
+            documents: Object.entries(store).map(([k, v]) => ({
+              name: `projects/p/databases/(default)/documents/${PLAN.collection}/${k}`,
+              fields: encode(v),
+            })),
+          }),
+        };
+      }
+      if (!(id in store)) return { ok: false, status: 404 };
+      return { ok: true, status: 200, json: async () => ({ fields: encode(store[id]) }) };
+    }
+
+    if (method === "PATCH") {
+      const sent = JSON.parse(init.body);
+      const incoming = {};
+      for (const [k, v] of Object.entries(sent.fields)) incoming[k] = decodeValue(v);
+      const mask = new URLSearchParams(query ?? "").getAll("updateMask.fieldPaths");
+      if (mask.length === 0) {
+        store[id] = incoming; // no mask: Firestore REPLACES
+      } else {
+        const next = { ...(store[id] ?? {}) };
+        for (const f of mask) {
+          if (f in incoming) next[f] = incoming[f];
+          else delete next[f];
+        }
+        store[id] = next;
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    return { ok: false, status: 405 };
+  };
+  return { fetch: doFetch, calls, store };
+}
+
+const REC = () =>
+  new Map(buildRecords(realPack).map((r) => [r.duaId, r])).get(
+    "moia-mukhtasar-1446-umrah-talbiyah",
+  );
+const patches = (fs) => fs.calls.filter((c) => c.method === "PATCH");
+
+test("16) the ownership classes are disjoint and cover every field once", () => {
+  const all = [
+    ...PACK_OWNED_FIELDS,
+    ...CREATE_ONLY_DEFAULT_FIELDS,
+    ...VERIFICATION_RESET_FIELDS,
+  ];
+  assert.equal(new Set(all).size, all.length, "a field is claimed twice");
+  assert.equal(PACK_OWNED_FIELDS.length, 39);
+  assert.equal(CREATE_ONLY_DEFAULT_FIELDS.length, 7);
+  assert.equal(VERIFICATION_RESET_FIELDS.length, 3);
+  assert.equal(UPDATE_MASK_FIELDS.length, 42);
+
+  // Every field the importer produces is classified exactly once. The two
+  // timestamps are created at write time, so they are not record keys.
+  const rec = REC();
+  assert.equal(Object.keys(rec).length, 47);
+  for (const f of Object.keys(rec)) {
+    assert.ok(all.includes(f), `${f} belongs to no ownership class`);
+  }
+  assert.deepEqual(
+    all.filter((f) => !(f in rec)).sort(),
+    ["createdAt", "updatedAt"],
+  );
+  // isActive and revokedAt moved OUT of pack-owned/verification.
+  assert.ok(!PACK_OWNED_FIELDS.includes("isActive"));
+  assert.ok(!VERIFICATION_RESET_FIELDS.includes("revokedAt"));
+  assert.ok(CREATE_ONLY_DEFAULT_FIELDS.includes("isActive"));
+  assert.ok(CREATE_ONLY_DEFAULT_FIELDS.includes("revokedAt"));
+  // Nothing create-only is ever masked.
+  for (const f of CREATE_ONLY_DEFAULT_FIELDS) {
+    assert.ok(!UPDATE_MASK_FIELDS.includes(f), `${f} must not be masked`);
+  }
+});
+
+test("1) a new document carries createdAt and updatedAt as timestamps", async () => {
+  const fs = fakeFirestore();
+  const rec = REC();
+  const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(out.created, 1);
+  assert.equal(out.writes, 1);
+
+  const sent = JSON.parse(patches(fs)[0] && "{}" || "{}"); // placeholder
+  const doc = fs.store[rec.duaId];
+  for (const f of ["createdAt", "updatedAt"]) {
+    assert.ok(doc[f], `${f} missing — the record would be invisible in the ` +
+      `admin console, which orders by updatedAt`);
+    assert.ok(!Number.isNaN(Date.parse(doc[f])), `${f} is not a timestamp`);
+  }
+  // Firestore's orderBy excludes documents lacking the ordered field, so
+  // "has updatedAt" is exactly the condition for appearing in that list.
+  const wouldAppearInOrderBy = (d) => "updatedAt" in d && d.updatedAt != null;
+  assert.ok(wouldAppearInOrderBy(doc));
+
+  // It is a real timestampValue on the wire, not a plain string.
+  const body = JSON.parse(
+    fs.calls.find((c) => c.method === "PATCH").url ? "{}" : "{}",
+  );
+  const req = buildWriteRequest(rec, null, PLAN, new Date("2026-01-02T03:04:05Z"));
+  assert.deepEqual(req.fields.createdAt, { timestampValue: "2026-01-02T03:04:05.000Z" });
+  assert.deepEqual(req.fields.updatedAt, { timestampValue: "2026-01-02T03:04:05.000Z" });
+  assert.ok(!req.url.includes("updateMask"), "a create must carry no mask");
+});
+
+test("11) a created document starts unverified with the right defaults", async () => {
+  const fs = fakeFirestore();
+  const rec = REC();
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const d = fs.store[rec.duaId];
+  assert.equal(d.verificationStatus, "unverified");
+  assert.equal(d.verifiedAt, null);
+  assert.equal(d.verifiedBy, null);
+  assert.equal(d.audioMode, "tts");
+  assert.equal(d.audioUrl, "");
+  assert.equal(d.usage_count, 0);
+  assert.equal(d.isActive, true);
+  assert.equal(d.revokedAt, null);
+});
+
+test("2) isActive false on a live document stays false", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: { duaId: rec.duaId, isActive: false, text: { ar: "old", en: "" } },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(fs.store[rec.duaId].isActive, false,
+    "an import re-published a record an admin had hidden");
+});
+
+test("3) a non-null revokedAt survives an update", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      revokedAt: "2026-02-02T00:00:00.000Z",
+      isActive: false,
+      text: { ar: "old", en: "" },
+    },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(fs.store[rec.duaId].revokedAt, "2026-02-02T00:00:00.000Z",
+    "an import un-revoked a record an admin had withdrawn");
+  assert.equal(fs.store[rec.duaId].isActive, false);
+});
+
+test("4) audio and usage_count survive an update", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      audioMode: "file",
+      audioUrl: "https://storage.example/x.mp3?token=SECRET",
+      usage_count: 412,
+      text: { ar: "old", en: "" },
+    },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const d = fs.store[rec.duaId];
+  assert.equal(d.audioMode, "file");
+  assert.equal(d.audioUrl, "https://storage.example/x.mp3?token=SECRET");
+  assert.equal(d.usage_count, 412);
+  assert.equal(d.text.ar, rec.text.ar, "pack content really was refreshed");
+});
+
+test("5) createdAt and updatedAt are untouched by an update", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      createdAt: "2025-01-01T00:00:00.000Z",
+      updatedAt: "2025-06-06T00:00:00.000Z",
+      text: { ar: "old", en: "" },
+    },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const d = fs.store[rec.duaId];
+  assert.equal(d.createdAt, "2025-01-01T00:00:00.000Z");
+  assert.equal(d.updatedAt, "2025-06-06T00:00:00.000Z",
+    "the admin console owns updatedAt; an import must not bump it");
+});
+
+test("6) an unknown admin field survives an update", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId,
+      someFutureField: { nested: true },
+      anotherOne: [1, 2, 3],
+      text: { ar: "old", en: "" },
+    },
+  });
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.deepEqual(fs.store[rec.duaId].someFutureField, { nested: true });
+  assert.deepEqual(fs.store[rec.duaId].anotherOne, [1, 2, 3]);
+});
+
+test("7) an identical re-import of a VERIFIED record writes nothing", async () => {
+  const rec = REC();
+  const live = {
+    ...rec,
+    verificationStatus: "verified",
+    verifiedBy: "admin@example.com",
+    verifiedAt: "2026-01-01T00:00:00.000Z",
+    audioMode: "file",
+    audioUrl: "https://x/y.mp3",
+    usage_count: 77,
+    isActive: true,
+    revokedAt: null,
+    createdAt: "2025-01-01T00:00:00.000Z",
+    updatedAt: "2025-06-06T00:00:00.000Z",
+  };
+  const fs = fakeFirestore({ [rec.duaId]: live });
+  const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+
+  assert.equal(out.unchanged, 1);
+  assert.equal(out.writes, 0, "an identical import must not PATCH");
+  assert.equal(patches(fs).length, 0);
+  assert.equal(fs.store[rec.duaId].verificationStatus, "verified",
+    "an approval was withdrawn for no reason");
+  assert.equal(fs.store[rec.duaId].verifiedBy, "admin@example.com");
+  assert.equal(fs.store[rec.duaId].verifiedAt, "2026-01-01T00:00:00.000Z");
+});
+
+test("8) any pack-field change writes and drops verification", async () => {
+  const base = REC();
+  const cases = {
+    "text.ar": { ...base, text: { ...base.text, ar: base.text.ar + " ز" } },
+    contentKind: { ...base, contentKind: "general_dua" },
+    sourceReferences: {
+      ...base,
+      sourceReferences: [
+        ...base.sourceReferences,
+        { type: "hadith", collection: "x", reference: "1", referenceKind: "hadith_number", citedBy: "moia_1446", citedOnPage: 9 },
+      ],
+    },
+    reviewNotes: { ...base, reviewNotes: "changed" },
+  };
+  for (const [label, rec] of Object.entries(cases)) {
+    const fs = fakeFirestore({
+      [base.duaId]: {
+        ...base,
+        verificationStatus: "verified",
+        verifiedBy: "a@b",
+        verifiedAt: "2026-01-01T00:00:00.000Z",
+        usage_count: 5,
+        revokedAt: "2026-02-02T00:00:00.000Z",
+        isActive: false,
+      },
+    });
+    const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+    assert.equal(out.writes, 1, label);
+    const d = fs.store[base.duaId];
+    assert.equal(d.verificationStatus, "unverified", label);
+    assert.equal(d.verifiedBy, null, label);
+    assert.equal(d.verifiedAt, null, label);
+    assert.ok("verifiedAt" in d, `${label}: the key must exist, not vanish`);
+    // …and the human's own decisions still survive.
+    assert.equal(d.revokedAt, "2026-02-02T00:00:00.000Z", label);
+    assert.equal(d.isActive, false, label);
+    assert.equal(d.usage_count, 5, label);
+  }
+});
+
+test("9) map key order alone is not a change", () => {
+  const rec = REC();
+  const reordered = { ...rec, text: { en: rec.text.en, ar: rec.text.ar } };
+  assert.deepEqual(changedPackFields(reordered, rec), []);
+  assert.ok(sameCanonical({ a: 1, b: 2 }, { b: 2, a: 1 }));
+});
+
+function sameCanonical(a, b) {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+test("10) array order IS a change — these are sequences, not sets", () => {
+  const rec = REC();
+  const swapped = { ...rec, tagsAr: [...rec.tagsAr].reverse() };
+  if (rec.tagsAr.length > 1) {
+    assert.deepEqual(changedPackFields(swapped, rec), ["tagsAr"]);
+  }
+  assert.ok(!sameCanonical([1, 2], [2, 1]));
+});
+
+test("14) NFC normalisation prevents a false 'changed' and a false hash miss", () => {
+  const rec = REC();
+  // Same text, decomposed. Meaning identical; bytes are not.
+  const nfd = { ...rec, text: { ...rec.text, ar: rec.text.ar.normalize("NFD") } };
+  assert.deepEqual(changedPackFields(nfd, rec), [],
+    "a pure normalisation difference must not withdraw an approval");
+  assert.equal(normalisedTextHash(nfd), normalisedTextHash(rec));
+  // And a real edit still differs.
+  const edited = { ...rec, text: { ...rec.text, ar: rec.text.ar + "x" } };
+  assert.notEqual(normalisedTextHash(edited), normalisedTextHash(rec));
+});
+
+test("15) document ids are percent-decoded, and a bad escape fails safe", () => {
+  assert.equal(safeDecodeId("projects/p/documents/c/moia-1446-x"), "moia-1446-x");
+  assert.equal(safeDecodeId("projects/p/documents/c/a%20b"), "a b");
+  // A lone % is not a valid escape; it must be returned raw, not throw.
+  assert.equal(safeDecodeId("projects/p/documents/c/100%"), "100%");
+  assert.equal(safeDecodeId(""), "");
+});
+
+test("existence is read, never guessed, and a failed read aborts", async () => {
+  const fs = fakeFirestore();
+  await writeRecords([REC()], PLAN, { fetch: fs.fetch });
+  assert.deepEqual(fs.calls.map((c) => c.method), ["GET", "PATCH"]);
+
+  for (const status of [401, 403, 429, 500, 503]) {
+    await assert.rejects(
+      () => writeRecords([REC()], PLAN, { fetch: async () => ({ ok: false, status }) }),
+      new RegExp(`read of .* failed: HTTP ${status}`),
+    );
+  }
+});
+
+// ── Post-write verification ───────────────────────────────────────────
+
+test("12) verification checks every create default", async () => {
+  const rec = REC();
+  const fs = fakeFirestore();
+  await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  assert.equal(
+    await verifyWritten(rec, PLAN, { fetch: fs.fetch }, { isCreate: true }),
+    true,
+  );
+
+  for (const [field, bad] of Object.entries({
+    audioMode: "file", audioUrl: "https://x", usage_count: 3,
+    isActive: false, revokedAt: "2026-01-01", verificationStatus: "verified",
+  })) {
+    const broken = fakeFirestore({ [rec.duaId]: { ...fs.store[rec.duaId], [field]: bad } });
+    await assert.rejects(
+      () => verifyWritten(rec, PLAN, { fetch: broken.fetch }, { isCreate: true }),
+      new RegExp(`wrong "${field}"|verificationStatus`),
+      field,
+    );
+  }
+  // A create with no timestamps must fail: it would be invisible to admins.
+  const noStamp = { ...fs.store[rec.duaId] };
+  delete noStamp.updatedAt;
+  const missing = fakeFirestore({ [rec.duaId]: noStamp });
+  await assert.rejects(
+    () => verifyWritten(rec, PLAN, { fetch: missing.fetch }, { isCreate: true }),
+    /has no "updatedAt"/,
+  );
+});
+
+test("13) verification checks the preserved fields after an update", async () => {
+  const rec = REC();
+  const before = {
+    ...rec, text: { ar: "old", en: "" },
+    audioMode: "file", audioUrl: "https://x/y.mp3", usage_count: 9,
+    isActive: false, revokedAt: "2026-02-02T00:00:00.000Z",
+    createdAt: "2025-01-01T00:00:00.000Z", updatedAt: "2025-06-06T00:00:00.000Z",
+    adminNote: "keep me",
+    verificationStatus: "verified", verifiedBy: "a@b", verifiedAt: "2026-01-01",
+  };
+  const fs = fakeFirestore({ [rec.duaId]: { ...before } });
+  const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+  const o = out.outcomes[0];
+  assert.equal(o.outcome, "updated");
+  assert.equal(
+    await verifyWritten(rec, PLAN, { fetch: fs.fetch },
+      { isCreate: false, before, changed: o.changed }),
+    true,
+  );
+
+  // Tamper with a preserved field and verification must catch it.
+  for (const f of ["audioUrl", "usage_count", "isActive", "revokedAt",
+    "createdAt", "updatedAt", "adminNote"]) {
+    const tampered = fakeFirestore({
+      [rec.duaId]: { ...fs.store[rec.duaId], [f]: "TAMPERED" },
+    });
+    await assert.rejects(
+      () => verifyWritten(rec, PLAN, { fetch: tampered.fetch },
+        { isCreate: false, before, changed: o.changed }),
+      new RegExp(`"${f}" was modified|admin field "${f}"`),
+      f,
+    );
+  }
+  // And a content change that did NOT drop verification must fail.
+  const stillVerified = fakeFirestore({
+    [rec.duaId]: { ...fs.store[rec.duaId], verificationStatus: "verified" },
+  });
+  await assert.rejects(
+    () => verifyWritten(rec, PLAN, { fetch: stillVerified.fetch },
+      { isCreate: false, before, changed: o.changed }),
+    /content changed but verificationStatus/,
+  );
+});
+
+test("verification fails on a missing document or a text mismatch", async () => {
+  const rec = REC();
+  await assert.rejects(
+    () => verifyWritten(rec, PLAN, { fetch: fakeFirestore().fetch }, { isCreate: true }),
+    /not found after write/,
+  );
+  const wrongText = fakeFirestore({
+    [rec.duaId]: { ...rec, text: { ar: "tampered", en: "" },
+      audioMode: "tts", audioUrl: "", usage_count: 0, isActive: true,
+      revokedAt: null, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" },
+  });
+  await assert.rejects(
+    () => verifyWritten(rec, PLAN, { fetch: wrongText.fetch }, { isCreate: true }),
+    /stored text does not match/,
+  );
+});
+
+// ── Reconciliation ────────────────────────────────────────────────────
+
+function reconcileFixture() {
+  const all = buildRecords(realPack);
+  const r = applyLedger(all, loadLedger());
+  return { all, cleared: r.included, excluded: r.excluded };
+}
+
+test("17a) an excluded record that exists live blocks production", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const held = excluded[0].duaId;
+  const findings = reconcile({
+    live: [{ documentId: held, verificationStatus: "verified", text: { ar: "x", en: "" } }],
+    cleared, excluded, packIds: new Set(all.map((x) => x.duaId)),
+  });
+  const hit = findings.find((f) => f.documentId === held);
+  assert.equal(hit.case, "present_but_excluded");
+  assert.ok(hit.reason.length > 0);
+  assert.throws(() => assertReconciledForProduction(findings),
+    /Refusing to write to production/);
+});
+
+test("17b) a document no longer in the pack blocks production", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const findings = reconcile({
+    live: [{ documentId: "some-retired-record", verificationStatus: "verified" }],
+    cleared, excluded, packIds: new Set(all.map((x) => x.duaId)),
+  });
+  assert.equal(
+    findings.find((f) => f.documentId === "some-retired-record").case,
+    "present_but_removed_from_pack",
+  );
+  assert.throws(() => assertReconciledForProduction(findings));
+  assert.deepEqual([...PRODUCTION_BLOCKING_CASES].sort(),
+    ["present_but_excluded", "present_but_removed_from_pack"]);
+});
+
+test("17c) missing is not a blocker, and drift is reported", () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const packIds = new Set(all.map((x) => x.duaId));
+  const missing = reconcile({ live: [], cleared, excluded, packIds });
+  assert.ok(missing.every((f) => f.case === "expected_missing"));
+  assert.doesNotThrow(() => assertReconciledForProduction(missing));
+
+  const one = cleared[0];
+  assert.equal(
+    reconcile({ live: [{ documentId: one.duaId, text: one.text }],
+      cleared: [one], excluded, packIds })[0].case,
+    "expected_and_present",
+  );
+  assert.equal(
+    reconcile({ live: [{ documentId: one.duaId, text: { ar: "different", en: "" } }],
+      cleared: [one], excluded, packIds })[0].case,
+    "text_changed",
+  );
+});
+
+test("17d) reconcile issues no write of any kind", async () => {
+  const { all, cleared, excluded } = reconcileFixture();
+  const fs = fakeFirestore({ "some-retired-record": { duaId: "x" } });
+  const live = await listCollection(PLAN, { fetch: fs.fetch });
+  reconcile({ live, cleared, excluded, packIds: new Set(all.map((x) => x.duaId)) });
+  assert.ok(fs.calls.every((c) => c.method === "GET"),
+    `reconcile performed: ${fs.calls.map((c) => c.method)}`);
+});
+
+test("18) no token, signed url or full text reaches a log line", async () => {
+  const rec = REC();
+  const fs = fakeFirestore({
+    [rec.duaId]: {
+      duaId: rec.duaId, text: { ar: "old", en: "" },
+      audioUrl: "https://storage.example/x.mp3?token=SUPER-SECRET",
+      audioMode: "file",
+    },
+  });
+  const lines = [];
+  const realLog = console.log;
+  console.log = (...a) => lines.push(a.join(" "));
+  try {
+    const out = await writeRecords([rec], PLAN, { fetch: fs.fetch });
+    await verifyWritten(rec, PLAN, { fetch: fs.fetch },
+      { isCreate: false, before: fs.store[rec.duaId], changed: out.outcomes[0].changed });
+    printReconcile(
+      [{ documentId: rec.duaId, case: "present_but_excluded",
+         verificationStatus: "verified", reason: "deployment hold" }],
+      PLAN.collection,
+    );
+  } finally {
+    console.log = realLog;
+  }
+  const all = lines.join("\n");
+  assert.ok(!all.includes(PLAN.token), "the bearer token was logged");
+  assert.ok(!all.includes("SUPER-SECRET"), "a signed audioUrl was logged");
+  assert.ok(!all.includes("storage.example"), "an audio host was logged");
+  assert.ok(!all.includes(rec.text.ar), "a full record text was logged");
+});
+
+test("the dry-run plan prints the count before AND after --limit", () => {
+  const out = childProcess.execFileSync(
+    process.execPath,
+    ["scripts/import_source_pack.mjs", PACK, "--staging", "--limit", "1"],
+    { encoding: "utf8" },
+  );
+  assert.match(out, /Cleared by ledger \(before --limit\): 73/);
+  assert.match(out, /^Included:   1 /m);
+  assert.match(out, /^Excluded:   12 /m);
+  assert.match(out, /Limit:      1  \(73 cleared → 1 to write\)/);
 });
