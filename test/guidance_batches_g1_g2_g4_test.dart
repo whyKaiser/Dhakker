@@ -305,18 +305,43 @@ void main() {
     });
   });
 
-  group('G7 was NOT reviewed', () {
-    test('page 74 records have no review entry', () {
-      // The page is not available in this session. A review nobody performed
-      // must never appear in the ledger.
+  group('G7 is reviewed only as far as page 74 actually settles', () {
+    // This group once asserted all three were unreviewed, because page 74 was
+    // believed missing from the uploads. It was there after all — printed 74
+    // is PDF page 4 of the selected-pages file — so two of the three have now
+    // been compared against it. The rule the group protects is unchanged: no
+    // review appears without a page, and none appears while marks are open.
+    test('the two settled records are reviewed against page 74', () {
       final reviews = _reviews();
       for (final id in [
         'moia-mukhtasar-1446-umrah-taqsir-shamil',
         'moia-mukhtasar-1446-umrah-taqsir-mara',
+      ]) {
+        expect(reviews.containsKey(id), isTrue, reason: id);
+        expect(reviews[id]!['reviewedPage'], 74, reason: id);
+      }
+    });
+
+    test('tamam-umrah was reviewed once its marks were settled', () {
+      // It was held unreviewed while «حِلاً» was open — no word in the
+      // available pages combines a shadda with tanwin fath, so there was
+      // nothing to calibrate a merged reading against. It was settled on the
+      // negative reading of page 74 itself and recorded then, not before.
+      final r = _reviews()['moia-mukhtasar-1446-umrah-tamam-umrah'];
+      expect(r, isNotNull);
+      expect(r!['reviewedPage'], 74);
+    });
+
+    test('all four page-74 records are reviewed and none is held', () {
+      final r = _reviews();
+      for (final id in [
+        'moia-mukhtasar-1446-umrah-halq-shamil',
+        'moia-mukhtasar-1446-umrah-taqsir-shamil',
+        'moia-mukhtasar-1446-umrah-taqsir-mara',
         'moia-mukhtasar-1446-umrah-tamam-umrah',
       ]) {
-        expect(reviews.containsKey(id), isFalse,
-            reason: '$id has no page to have been reviewed against');
+        expect(r[id], isNotNull, reason: id);
+        expect(r[id]!['deploymentBlocked'], isFalse, reason: id);
       }
     });
   });

@@ -174,10 +174,18 @@ void main() {
       expect((e['textRasm'] ?? '').toString(), isEmpty);
     });
 
-    test('all three page-74 citations are recorded as structured refs', () {
+    test('the page-74 citations that are this record\'s are structured refs',
+        () {
+      // Was three. Page 74 was later re-rendered from the source file's own
+      // pixels, and footnote (1) — «صحيح البخاري» — turned out to be anchored
+      // on the paragraph before this one, ending at «قَلَّدَهَا». It was
+      // removed rather than renumbered; see halq_shamil_citation_test.dart.
       final refs = (_entry(kHalq)['sourceReferences'] as List)
           .cast<Map<String, dynamic>>();
-      expect(refs, hasLength(3));
+      expect(refs, hasLength(2));
+      expect(refs.any((r) => (r['collection'] as String).contains('البخاري')),
+          isFalse,
+          reason: 'footnote (1) belongs to a paragraph this record lacks');
       for (final r in refs) {
         expect(r['citedBy'], 'moia_1446',
             reason: 'these are what the MINISTRY cited, not our own research');
@@ -189,9 +197,7 @@ void main() {
       };
       expect(byCollection['القرآن الكريم']!['type'], 'quran');
       expect(byCollection['القرآن الكريم']!['referenceKind'], 'surah_ayah');
-      expect(byCollection['صحيح البخاري']!['type'], 'hadith');
-      expect(byCollection['صحيح البخاري']!['reference'], '1540');
-      expect(byCollection['صحيح البخاري']!['referenceKind'], 'hadith_number');
+      expect(byCollection.containsKey('صحيح البخاري'), isFalse);
       expect(byCollection['صحيح مسلم']!['type'], 'hadith');
       expect(byCollection['صحيح مسلم']!['reference'], '1305');
       expect(byCollection['صحيح مسلم']!['referenceKind'], 'hadith_number');
@@ -322,10 +328,13 @@ void main() {
       expect(r['transcriptionCorrected'], isFalse);
       expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
       expect(r['embeddedQuranEquivalence'], 'same_lexical_text_different_rasm');
-      // The agent could not render page 74 — the uploaded page files stop at
-      // 73 — so the ledger records who actually looked, rather than implying
-      // a machine comparison that never happened.
-      expect(r['agentRenderedPage'], isFalse);
+      // The human reviewer looked first, from the full 136-page source, at a
+      // time when the uploaded page files were thought to stop at 73. Page 74
+      // turned out to be in the selected-pages upload after all, so the agent
+      // did later render it — and that second look is what caught the
+      // misattributed Bukhari footnote. The ledger records both, so neither
+      // pass is mistaken for the other.
+      expect(r['agentRenderedPage'], isTrue);
       expect(r['reviewedFromFullSourcePdf'], isTrue);
       expect(_entry(kHalq)['verificationStatus'], 'unverified');
     });
@@ -434,14 +443,26 @@ void main() {
       }
     });
 
-    test('the status was NOT mass-applied to the unreviewed 50', () {
+    test('the status was NOT mass-applied', () {
+      // This test used to assert the complement — that some reviews still
+      // carried no status — to stop the field being stamped across records
+      // nobody had examined. The takhrij round read the last ten printed
+      // pages, so that remainder is now empty and the assertion would only
+      // pass vacuously. What replaces it is the thing the old test was
+      // really protecting: a status that was applied per record discriminates
+      // between records, so both values must actually occur, and neither may
+      // account for the whole ledger.
       final reviews = _reviews();
-      final withStatus = reviews.values
-          .where((r) => r['sourceReferencesReviewStatus'] != null)
+      final present = reviews.values
+          .where((r) => r['sourceReferencesReviewStatus'] == 'reviewed_present')
           .length;
-      expect(withStatus, lessThan(reviews.length),
-          reason: 'an absent status means not_reviewed, and most entries '
-              'have not had their citations examined');
+      final none = reviews.values
+          .where((r) => r['sourceReferencesReviewStatus'] == 'reviewed_none')
+          .length;
+      expect(present, greaterThan(0));
+      expect(none, greaterThan(0));
+      expect(present + none, reviews.length,
+          reason: 'every review must carry one of the two resolved values');
       // And nothing outside the ledger carries it: it is administrative.
       for (final e in _entries()) {
         expect(e.containsKey('sourceReferencesReviewStatus'), isFalse,
@@ -449,23 +470,77 @@ void main() {
       }
     });
 
-    test('an absent status is never proof that a page cites nothing', () {
-      // Every unreviewed record has an empty sourceReferences list. That
-      // emptiness must never be readable as "reviewed and none found".
+    test('every record now carries a citation status, and it was earned', () {
+      // This test used to guard the opposite state: while records were still
+      // unreviewed, an empty sourceReferences list must never read as
+      // "reviewed and none found", so unreviewed records had to carry no
+      // citation status at all. It asserted the remainder was non-empty and
+      // said in its own reason that when it emptied it should be retired
+      // deliberately rather than pass vacuously. Page 64 emptied it.
       //
-      // Derived, not hardcoded: the count moves with every batch, and a
-      // literal here has gone stale three times. The invariant being
-      // guarded is that unreviewed records carry no citation status at
-      // all — not that there are N of them.
-      final reviewed = _reviews().keys.toSet();
-      final unreviewed =
-          _entries().where((e) => !reviewed.contains(e['duaId'])).toList();
-      expect(unreviewed, isNotEmpty,
-          reason: 'if this ever empties, the batch flow is finished and this '
-              'test should be retired deliberately rather than passing '
-              'vacuously');
-      for (final e in unreviewed) {
-        expect(_reviews()[e['duaId']]?['sourceReferencesReviewStatus'], isNull);
+      // Retired as instructed, and replaced by the invariant that now holds:
+      // every record is reviewed, every one carries an explicit status, and
+      // «reviewed_none» is only ever claimed where the pack really holds no
+      // reference. The distinction the old test protected — silence is not a
+      // finding — is what the second half still enforces.
+      final reviewed = _reviews();
+      final entries = _entries();
+      expect(entries.where((e) => !reviewed.containsKey(e['duaId'])), isEmpty,
+          reason: 'the batch flow is finished; nothing is unreviewed');
+
+      // 31 reviews predated the field and were left visibly unset rather than
+      // backfilled from nothing. The takhrij round earned them: the ten
+      // remaining printed pages were read for footnote rules, marker
+      // positions and their anchors. So the remainder is now empty — and the
+      // ledger summary has to agree, computed rather than typed.
+      final withoutStatus = entries
+          .map((e) => e['duaId'] as String)
+          .where((id) => reviewed[id]?['sourceReferencesReviewStatus'] == null)
+          .toList();
+      final sr = ((_ledger()['summary']
+              as Map<String, dynamic>)['sourceReferencesReviewed'])
+          as Map<String, dynamic>;
+      expect(withoutStatus, isEmpty,
+          reason: 'every record must carry a resolved citation status');
+      expect(sr['not_reviewed_count'], 0);
+      expect(withoutStatus, hasLength(sr['not_reviewed_count']),
+          reason: 'the summary and the reviews disagree about how many '
+              'reviews still lack the citation-status field');
+      // The two summary lists are derived, not hand-maintained.
+      for (final status in const ['reviewed_present', 'reviewed_none']) {
+        final actual = entries
+            .map((e) => e['duaId'] as String)
+            .where(
+                (id) => reviewed[id]?['sourceReferencesReviewStatus'] == status)
+            .toList()
+          ..sort();
+        expect(List<String>.from(sr[status] as List), actual,
+            reason: 'summary.$status disagrees with the reviews array');
+      }
+      expect(
+          (sr['reviewed_present'] as List).length +
+              (sr['reviewed_none'] as List).length +
+              (sr['not_reviewed_count'] as int),
+          entries.length);
+
+      // Where a status IS claimed, it must be one of the two values and must
+      // match what the pack actually holds. This is the half that carries
+      // the original point: silence is not a finding, and a finding may not
+      // contradict the record it describes.
+      for (final e in entries) {
+        final id = e['duaId'] as String;
+        final status = reviewed[id]?['sourceReferencesReviewStatus'];
+        if (status == null) continue;
+        expect(const ['reviewed_none', 'reviewed_present'], contains(status),
+            reason: '$id has an unknown status: $status');
+        final refs = e['sourceReferences'] as List;
+        if (status == 'reviewed_none') {
+          expect(refs, isEmpty,
+              reason: '$id says the page cites nothing yet holds references');
+        } else {
+          expect(refs, isNotEmpty,
+              reason: '$id says the page cites something yet holds none');
+        }
       }
     });
 
@@ -650,10 +725,15 @@ void main() {
           entries.where((e) => recitable.contains(e['contentKind'])).toList();
       expect(rec.map((e) => e['duaId']), isNot(contains(kHalq)));
       expect(rec.map((e) => e['duaId']), isNot(contains(kReturnHajar)));
-      expect(rec, hasLength(60));
+      // 59, down from 60: the page-64 mosque-entry hadith is evidence for the
+      // wording above it on the page, not a wording to recite, so it is no
+      // longer counted toward an audio file either.
+      expect(rec.map((e) => e['duaId']),
+          isNot(contains('moia-mukhtasar-1446-umrah-entering-masjid-hadith')));
+      expect(rec, hasLength(59));
       final uniqueTexts =
           rec.map((e) => (e['text']['ar'] as String).trim()).toSet();
-      expect(uniqueTexts, hasLength(59),
+      expect(uniqueTexts, hasLength(58),
           reason: 'the one legitimate duplicate shares a single audio file');
       // And no guidance record carries an audio URL that would bypass this.
       for (final e in entries) {

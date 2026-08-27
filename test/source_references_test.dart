@@ -46,31 +46,51 @@ void main() {
       expect(refs.map((r) => r['reference']), containsAll(['1597', '1270']));
     });
 
-    test('hajar-crowding records two numbered and two unnumbered sources', () {
+    test(
+        'hajar-crowding records four sources across a footnote that spans '
+        'two pages', () {
+      // This test used to assert two numbered and two UNNUMBERED sources,
+      // recorded as referenceKind "unspecified" with the bare names
+      // «الشافعي» and «أحمد». That was right about what page 67 shows and
+      // wrong about what the ministry printed: footnote (٤) ends at the foot
+      // of 67 in the continuation mark «=» and finishes at the head of 68,
+      // where both works are named in full with their numbers. Reading 68
+      // turned the two unspecified entries into numbered ones. The rule the
+      // old test protected is untouched — a number nobody printed is still
+      // never invented — it just turns out the page did print them.
       final refs =
           (_entry('moia-1446-hajar-crowding')['sourceReferences'] as List)
               .cast<Map<String, dynamic>>();
       expect(refs, hasLength(4));
+      for (final r in refs) {
+        expect(r['type'], 'athar');
+        expect(r['citedBy'], 'moia_1446');
+        expect(r.containsKey('reference'), isTrue,
+            reason: 'all four are numbered once page 68 is read');
+        expect(r['referenceKind'], isNot('unspecified'));
+      }
 
-      final numbered = refs.where((r) => r.containsKey('reference'));
-      expect(numbered, hasLength(2));
-      expect(
-          numbered.map((r) => r['reference']), containsAll(['5/36', '3/171']));
-      for (final r in numbered) {
+      // The half printed on 67: volume/page, not a hadith number.
+      final onSixtySeven = refs.where((r) => r['citedOnPage'] == 67).toList();
+      expect(onSixtySeven, hasLength(2));
+      expect(onSixtySeven.map((r) => r['reference']),
+          containsAll(['5/36', '3/171']));
+      expect(onSixtySeven.map((r) => r['collection']),
+          containsAll(['مصنف عبد الرزاق', 'مصنف ابن أبي شيبة']));
+      for (final r in onSixtySeven) {
         expect(r['referenceKind'], 'volume_page');
       }
 
-      // al-Shafi'i and Ahmad are named on the page with no number at all.
-      final unnumbered = refs.where((r) => !r.containsKey('reference'));
-      expect(unnumbered, hasLength(2));
-      for (final r in unnumbered) {
-        expect(r['referenceKind'], 'unspecified');
-        expect(r.containsKey('reference'), isFalse,
-            reason: 'a number nobody printed must not be invented, and "" '
-                'would claim we looked and found none');
+      // The half printed on 68, as the continuation of the SAME footnote.
+      final onSixtyEight = refs.where((r) => r['citedOnPage'] == 68).toList();
+      expect(onSixtyEight, hasLength(2));
+      expect(
+          onSixtyEight.map((r) => r['reference']), containsAll(['510', '190']));
+      expect(onSixtyEight.map((r) => r['collection']),
+          containsAll(['السنن المأثورة للشافعي', 'مسند أحمد']));
+      for (final r in onSixtyEight) {
+        expect(r['referenceKind'], 'hadith_number');
       }
-      expect(unnumbered.map((r) => r['collection']),
-          containsAll(['الشافعي', 'أحمد']));
     });
 
     test('no reference anywhere in the pack is an empty string', () {
@@ -94,28 +114,180 @@ void main() {
       }
     });
 
-    test('the citedOnPage of a reference lies within the record\'s pages', () {
+    test('the citedOnPage of a reference lies on a page that was read', () {
       // A citation attributed to a page the reviewer never read would be
-      // provenance in name only.
+      // provenance in name only. Normally the pages of the record's own text
+      // are that set. A footnote may run past them, though: hajar-crowding's
+      // footnote (٤) opens at the foot of 67 and finishes at the head of 68,
+      // and the two works named on 68 belong to that footnote. Where the
+      // ledger records `sourceReferencesReviewedPages`, those are the pages actually
+      // read for the citations, and they govern instead — sourceSection keeps
+      // pointing at where the TEXT is, which is also what the pilgrim sees on
+      // the card.
       final pack = jsonDecode(
         File('source_packs/moia_mukhtasar_1446_umrah.json').readAsStringSync(),
       ) as Map<String, dynamic>;
+      final reviews = {
+        for (final r in ((jsonDecode(
+          File('review/human_review_ledger.json').readAsStringSync(),
+        ) as Map<String, dynamic>)['reviews'] as List)
+            .cast<Map<String, dynamic>>())
+          r['recordId'] as String: r
+      };
       for (final e in (pack['entries'] as List).cast<Map<String, dynamic>>()) {
         final refs = (e['sourceReferences'] as List? ?? []);
         if (refs.isEmpty) continue;
+        final id = e['duaId'] as String;
         final section = e['sourceSection'] as String;
         final nums = RegExp(r'\d+')
             .allMatches(section.substring(section.lastIndexOf('صفح')))
             .map((m) => int.parse(m.group(0)!))
             .toList();
-        final lo = nums.first;
-        final hi = nums.length > 1 ? nums.last : nums.first;
+        var lo = nums.first;
+        var hi = nums.length > 1 ? nums.last : nums.first;
+        final read = reviews[id]?['sourceReferencesReviewedPages'];
+        if (read != null) {
+          final pages = (read as List).cast<int>();
+          expect(pages, isNotEmpty, reason: id);
+          // It may only EXTEND the text's pages, never replace or shrink
+          // them, so it cannot be used to smuggle in an unrelated page.
+          expect(pages.first <= lo && pages.last >= hi, isTrue,
+              reason:
+                  '$id: sourceReferencesReviewedPages $pages does not cover the '
+                  'text pages $lo-$hi');
+          lo = pages.first;
+          hi = pages.last;
+        }
         for (final r in refs.cast<Map<String, dynamic>>()) {
           final page = r['citedOnPage'] as int;
           expect(page >= lo && page <= hi, isTrue,
-              reason: '${e['duaId']} cites page $page but covers $lo-$hi');
+              reason: '$id cites page $page but was read on $lo-$hi');
         }
       }
+    });
+
+    test(
+        'sourceReferencesReviewedPages is only spelled out where a footnote runs on',
+        () {
+      // One record needs it. If a second ever appears it should be a
+      // deliberate reading of a continued footnote, not a way around the
+      // page check above.
+      final reviews = ((jsonDecode(
+        File('review/human_review_ledger.json').readAsStringSync(),
+      ) as Map<String, dynamic>)['reviews'] as List)
+          .cast<Map<String, dynamic>>();
+      final withIt = reviews
+          .where((r) => r['sourceReferencesReviewedPages'] != null)
+          .toList();
+      expect(withIt.map((r) => r['recordId']), ['moia-1446-hajar-crowding']);
+      for (final r in withIt) {
+        final pages = (r['sourceReferencesReviewedPages'] as List).cast<int>();
+        expect(pages.length, greaterThan(1));
+        for (var i = 1; i < pages.length; i++) {
+          expect(pages[i], pages[i - 1] + 1,
+              reason: 'a continued footnote runs onto the NEXT page');
+        }
+        expect(pages.first, r['reviewedPage']);
+        expect(r['sourceReferencesReviewStatus'], 'reviewed_present');
+      }
+    });
+
+    test('the two page fields mean different things and stay separate', () {
+      // reviewedPages   — the pages the TEXT was compared on. It must equal
+      //                   what sourceSection names, and sourceSection is what
+      //                   the pilgrim reads on the card.
+      // sourceReferencesReviewedPages
+      //                 — the pages read to check the TAKHRIJ. It may run one
+      //                   page further when a footnote continues, and it
+      //                   changes neither sourceSection nor anything shown.
+      final ledger = jsonDecode(
+        File('review/human_review_ledger.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final reviews = (ledger['reviews'] as List).cast<Map<String, dynamic>>();
+      final pack = jsonDecode(
+        File('source_packs/moia_mukhtasar_1446_umrah.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      final entries = {
+        for (final e in (pack['entries'] as List).cast<Map<String, dynamic>>())
+          e['duaId'] as String: e
+      };
+
+      // reviewedPages still answers to sourceSection: every page it lists is
+      // named there, and its span matches the span sourceSection gives. The
+      // full range-expansion rule («صفحات 65-67» means 65, 66 and 67) is
+      // owned by review_ledger_test and is deliberately not re-implemented
+      // here — a second copy of that parser would be a second thing to keep
+      // right. What this asserts is that the rename did not quietly move any
+      // review off the pages its sourceSection claims.
+      for (final r in reviews) {
+        final section = entries[r['recordId']]!['sourceSection'] as String;
+        final claimed = RegExp(r'\d+')
+            .allMatches(section.substring(section.lastIndexOf('صفح')))
+            .map((m) => int.parse(m.group(0)!))
+            .toList();
+        final reviewed = r['reviewedPages'] == null
+            ? [r['reviewedPage'] as int]
+            : (r['reviewedPages'] as List).cast<int>();
+        expect(reviewed.first, claimed.first, reason: '${r['recordId']}');
+        expect(reviewed.last, claimed.last, reason: '${r['recordId']}');
+      }
+
+      // The one record that needs the takhrij field, by value.
+      final crowding = reviews
+          .firstWhere((r) => r['recordId'] == 'moia-1446-hajar-crowding');
+      expect((crowding['sourceReferencesReviewedPages'] as List).cast<int>(),
+          [67, 68]);
+      expect(crowding['reviewedPages'], isNull,
+          reason: 'the TEXT is on one page; only the footnote runs on');
+      expect(entries['moia-1446-hajar-crowding']!['sourceSection'],
+          contains('صفحة 67'),
+          reason: 'the card must keep pointing at the page holding the text');
+
+      // The field's meaning is written down where the ledger documents its
+      // own fields, not only in a commit message.
+      final notes = (ledger['notes'] as List).cast<String>().join('\n');
+      expect(notes, contains('sourceReferencesReviewedPages'),
+          reason: 'a ledger field with no note is a field nobody can audit');
+
+      // Administrative only: it reaches neither the pack, the importer, the
+      // app, nor the rules — so it can never be exported to Firebase.
+      for (final path in [
+        'source_packs/moia_mukhtasar_1446_umrah.json',
+        'scripts/import_source_pack.mjs',
+        'lib/Screens/Piligram/Home/models/supplication_model.dart',
+        'lib/Screens/Piligram/Duas/duas_screen.dart',
+        'lib/services/assistant_service.dart',
+        'firestore.rules',
+      ]) {
+        expect(
+            File(path)
+                .readAsStringSync()
+                .contains('sourceReferencesReviewedPages'),
+            isFalse,
+            reason: '$path must not carry a review-desk field');
+      }
+    });
+
+    test('the pre-rename field name is gone from the repository', () {
+      // Built at runtime so this assertion does not match itself.
+      final old = ['sourceReferences', 'Pages'].join();
+      final offenders = <String>[];
+      for (final dir in ['lib', 'test', 'scripts', 'review', 'source_packs']) {
+        for (final f in Directory(dir)
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) =>
+                f.path.endsWith('.dart') ||
+                f.path.endsWith('.mjs') ||
+                f.path.endsWith('.json'))) {
+          final src = f.readAsStringSync();
+          // The new name is not a superstring of the old one, so a plain
+          // search cannot report a false positive here.
+          if (src.contains(old)) offenders.add(f.path);
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'the old name survives in: ${offenders.join(', ')}');
     });
 
     test('records with nothing cited carry an explicit empty array', () {
