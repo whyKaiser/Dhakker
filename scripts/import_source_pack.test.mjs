@@ -2039,3 +2039,228 @@ test("the dry-run plan prints the count before AND after --limit", () => {
   assert.match(out, /^Excluded:   12 /m);
   assert.match(out, /Limit:      1  \(73 cleared → 1 to write\)/);
 });
+
+// ---------------------------------------------------------------------------
+// The stale-document inventory.
+//
+// `present_but_removed_from_pack` is the case a human has to act on: a live
+// document nothing in the current pack accounts for. The report therefore
+// carries enough to decide — is it still active, still verified, does it
+// still hold audio — and nothing more. These tests fix both halves: that the
+// facts are there, and that the text and the audio URL are not.
+
+import { INVENTORY_FIELDS, inventoryOf } from "./import_source_pack.mjs";
+
+const STALE_DOC = {
+  documentId: "legacy-001",
+  duaId: "legacy-001",
+  verificationStatus: "verified",
+  isActive: true,
+  revokedAt: null,
+  audioMode: "file",
+  audioUrl:
+    "https://firebasestorage.example/v0/b/x/o/a.mp3?token=SECRET-DOWNLOAD-TOKEN",
+  contentKind: "dua",
+  createdAt: "2025-01-01T00:00:00.000Z",
+  updatedAt: null,
+  text: { ar: "نص عربي لا يجوز طباعته", en: "text that must not be printed" },
+  reviewNotes: "internal reviewer note",
+};
+
+function reconcileStale(docs) {
+  return reconcile({
+    live: docs,
+    cleared: [],
+    excluded: [],
+    packIds: new Set(),
+  }).filter((f) => f.case === "present_but_removed_from_pack");
+}
+
+function captureReconcile(findings) {
+  const realLog = console.log;
+  const lines = [];
+  console.log = (...a) => lines.push(a.join(" "));
+  try {
+    printReconcile(findings, PLAN.collection);
+  } finally {
+    console.log = realLog;
+  }
+  return lines.join("\n");
+}
+
+test("an inventory row carries exactly the nine agreed keys, no more", () => {
+  const inv = inventoryOf(STALE_DOC);
+  assert.deepEqual(Object.keys(inv).sort(), [...INVENTORY_FIELDS].sort());
+  for (const banned of ["text", "audioUrl", "reviewNotes", "duaId"]) {
+    assert.ok(!(banned in inv), `${banned} leaked into the inventory object`);
+  }
+});
+
+test("presence-only fields are booleans, never the underlying value", () => {
+  const inv = inventoryOf(STALE_DOC);
+  assert.equal(inv.hasAudioUrl, true);
+  assert.equal(inv.hasCreatedAt, true);
+  assert.equal(inv.hasUpdatedAt, false, "an explicit null is not presence");
+  assert.equal(inv.hasRevokedAt, false);
+  for (const k of ["hasAudioUrl", "hasCreatedAt", "hasUpdatedAt", "hasRevokedAt"]) {
+    assert.equal(typeof inv[k], "boolean", `${k} is not a boolean`);
+  }
+});
+
+test("an empty string counts as absent, not as a held value", () => {
+  const inv = inventoryOf({ ...STALE_DOC, audioUrl: "   ", revokedAt: "" });
+  assert.equal(inv.hasAudioUrl, false);
+  assert.equal(inv.hasRevokedAt, false);
+});
+
+test("missing fields report as unset rather than crashing or inventing", () => {
+  const inv = inventoryOf({ documentId: "bare-001" });
+  assert.equal(inv.verificationStatus, null);
+  assert.equal(inv.isActive, null);
+  assert.equal(inv.audioMode, null);
+  assert.equal(inv.contentKind, null);
+  assert.equal(inv.hasAudioUrl, false);
+  assert.equal(inv.hasCreatedAt, false);
+  assert.equal(inv.hasUpdatedAt, false);
+});
+
+test("only present_but_removed_from_pack findings carry an inventory", () => {
+  const record = { duaId: "kept-001", text: { ar: "ا", en: "a" } };
+  const findings = reconcile({
+    live: [
+      { documentId: "kept-001", ...record, verificationStatus: "verified" },
+      { documentId: "held-001", verificationStatus: "unverified" },
+      STALE_DOC,
+    ],
+    cleared: [record],
+    excluded: [{ duaId: "held-001", reasons: ["blocked"] }],
+    packIds: new Set(["kept-001", "held-001"]),
+  });
+  for (const f of findings) {
+    const expected = f.case === "present_but_removed_from_pack";
+    assert.equal(
+      Boolean(f.inventory),
+      expected,
+      `${f.case} inventory presence is wrong`,
+    );
+  }
+});
+
+test("the inventory works for any number of stale records, not a fixed count", () => {
+  for (const n of [0, 1, 7, 16, 40]) {
+    const docs = Array.from({ length: n }, (_, i) => ({
+      ...STALE_DOC,
+      documentId: `legacy-${i}`,
+    }));
+    const findings = reconcileStale(docs);
+    assert.equal(findings.length, n);
+    assert.equal(captureReconcile(findings).includes(`: ${n}`), true);
+  }
+});
+
+test("the printed inventory never leaks text, audio URL or review notes", () => {
+  const out = captureReconcile(reconcileStale([STALE_DOC]));
+  for (const secret of [
+    STALE_DOC.text.ar,
+    STALE_DOC.text.en,
+    STALE_DOC.audioUrl,
+    "SECRET-DOWNLOAD-TOKEN",
+    "firebasestorage.example",
+    STALE_DOC.reviewNotes,
+    PLAN.token,
+  ]) {
+    assert.ok(!out.includes(secret), `the report printed: ${secret}`);
+  }
+});
+
+test("the printed inventory does report the facts a retraction decision needs", () => {
+  const out = captureReconcile(reconcileStale([STALE_DOC]));
+  assert.match(out, /legacy-001/);
+  assert.match(out, /verification=verified/);
+  assert.match(out, /isActive=true/);
+  assert.match(out, /revokedAt=absent/);
+  assert.match(out, /audioMode=file/);
+  assert.match(out, /audioUrl=present/);
+  assert.match(out, /contentKind=dua/);
+  assert.match(out, /createdAt=present/);
+  assert.match(out, /updatedAt=absent/);
+});
+
+test("every inventory line keeps the '  - ' prefix the job summary filters on", () => {
+  const out = captureReconcile(reconcileStale([STALE_DOC, { documentId: "x" }]));
+  const rows = out
+    .split("\n")
+    .filter((l) => l.includes("audioUrl=") || l.includes("contentKind="));
+  assert.equal(rows.length, 2);
+  for (const r of rows) assert.ok(r.startsWith("  - "), `unfiltered row: ${r}`);
+});
+
+test("the report still ends by stating that nothing was written", () => {
+  const out = captureReconcile(reconcileStale([STALE_DOC]));
+  assert.match(out, /READ ONLY, nothing is written\./);
+  assert.match(out, /No document was written, deleted or revoked\./);
+});
+
+test("building and printing the inventory issues no HTTP call at all", async () => {
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push(`${init?.method ?? "GET"} ${url}`);
+    throw new Error("the inventory must not reach a network");
+  };
+  try {
+    captureReconcile(reconcileStale([STALE_DOC]));
+    inventoryOf(STALE_DOC);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.deepEqual(calls, []);
+});
+
+test("listing the collection for the inventory uses GET only, with no body", async () => {
+  const calls = [];
+  const fakeFetch = async (url, init) => {
+    calls.push({ url, method: init?.method, body: init?.body });
+    return {
+      ok: true,
+      json: async () => ({
+        documents: [
+          {
+            name: `projects/p/databases/(default)/documents/c/legacy-001`,
+            fields: { verificationStatus: { stringValue: "verified" } },
+          },
+        ],
+      }),
+    };
+  };
+  const docs = await listCollection(PLAN, { fetch: fakeFetch });
+  assert.equal(docs.length, 1);
+  assert.equal(calls.length, 1);
+  // No method set at all is a GET; anything else would be a write.
+  assert.ok(
+    calls[0].method === undefined || calls[0].method === "GET",
+    `the list path used ${calls[0].method}`,
+  );
+  assert.equal(calls[0].body, undefined, "the list path sent a body");
+});
+
+test("a stale document that is inactive and revoked is reported as such", () => {
+  const out = captureReconcile(
+    reconcileStale([
+      {
+        ...STALE_DOC,
+        isActive: false,
+        revokedAt: "2025-06-01T00:00:00.000Z",
+        audioUrl: "",
+        audioMode: "tts",
+        updatedAt: "2025-06-01T00:00:00.000Z",
+      },
+    ]),
+  );
+  assert.match(out, /isActive=false/);
+  assert.match(out, /revokedAt=present/);
+  assert.match(out, /audioUrl=absent/);
+  assert.match(out, /updatedAt=present/);
+  // The timestamp value itself is operational detail the report withholds.
+  assert.ok(!out.includes("2025-06-01"), "a raw timestamp was printed");
+});
