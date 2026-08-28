@@ -1,0 +1,273 @@
+# Production reconciliation — READ ONLY, by hand only.
+#
+# What it answers: what is actually in `supplications` right now, and does it
+# agree with the source pack and the review ledger? Nothing else. It writes
+# nothing, deletes nothing, revokes nothing, and deploys nothing.
+#
+# The question matters because the importer only ever writes. A hold in the
+# review ledger stops the NEXT import; it does not retract the last one. A
+# record imported and verified months ago, since blocked or dropped from the
+# pack, stays live in front of pilgrims — and no dry-run, log or test says so,
+# because every one of them reasons about the pack and the ledger while the
+# live collection is never read. This workflow is how it gets read.
+#
+# ── Where the read-only guarantee actually comes from ───────────────────
+#
+# NOT from this file. A workflow is text; text can be edited. The guarantee
+# is IAM: the service account this job impersonates holds
+# `roles/datastore.viewer` and nothing else, and that role has no write
+# permission at all. A PATCH issued with its token is refused by Google.
+#
+# This file is the second layer, and `production_reconcile_workflow.test.mjs`
+# asserts its properties statically so an edit that adds `--write`, a delete,
+# a deploy or the staging service account turns a test red rather than
+# passing review on a skim. Read the IAM section of
+# docs/PRODUCTION_RECONCILE_SETUP.md before assuming this file protects
+# anything on its own.
+
+name: Production reconcile (read-only, manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_database:
+        description: "Type the database exactly: (default)"
+        required: true
+        type: string
+      confirm_collection:
+        description: "Type the collection to READ exactly: supplications"
+        required: true
+        type: string
+      confirm_mode:
+        description: "Type exactly: RECONCILE_READ_ONLY"
+        required: true
+        type: string
+
+# contents: read  — the job only needs to check the repo out.
+# id-token: write — required to mint the OIDC token WIF exchanges. It grants
+#                   nothing in Google Cloud by itself; what the exchanged
+#                   token may do is decided entirely by the service account's
+#                   IAM role.
+# Everything else is denied by omission: no packages, no deployments, no
+# write access to the repository, no issue or PR permissions.
+permissions:
+  contents: read
+  id-token: write
+
+# Its own group, separate from the staging import: a read must never queue
+# behind a write, and two reads must not interleave their output.
+# `cancel-in-progress: false` — cancelling a read gains nothing and loses the
+# report it was producing.
+concurrency:
+  group: production-reconcile
+  cancel-in-progress: false
+
+jobs:
+  production-reconcile:
+    name: Reconcile supplications against the pack and the ledger
+    runs-on: ubuntu-latest
+
+    # A protected GitHub Environment, separate from firebase-staging so its
+    # required reviewers and its service-account variable are configured
+    # independently. Approval is enforced by GitHub before this job starts —
+    # not by anything in this file, which a PR could change.
+    environment: firebase-production-readonly
+
+    steps:
+      # ── Gate 0: main only, before anything at all ─────────────────────
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
+      # ── Gate 1: all four confirmations, BEFORE any credential exists ──
+      #
+      # Runs before checkout and before authentication on purpose. If the
+      # operator mistyped, the run ends while it still holds nothing more
+      # sensitive than a repository name.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+          CONFIRM_COLLECTION: ${{ inputs.confirm_collection }}
+          CONFIRM_MODE: ${{ inputs.confirm_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            exit 1
+          fi
+          if [ "$CONFIRM_DATABASE" != "(default)" ]; then
+            echo "::error::confirm_database must be exactly '(default)'."
+            exit 1
+          fi
+          if [ "$CONFIRM_COLLECTION" != "supplications" ]; then
+            echo "::error::confirm_collection must be exactly 'supplications'."
+            exit 1
+          fi
+          if [ "$CONFIRM_MODE" != "RECONCILE_READ_ONLY" ]; then
+            echo "::error::confirm_mode must be exactly 'RECONCILE_READ_ONLY'."
+            exit 1
+          fi
+          echo "All four confirmations match."
+
+      # ── Gate 2: the configuration must match the confirmations ────────
+      #
+      # The confirmations prove the operator's intent; this proves the
+      # repository is configured for the same thing. Both must agree before a
+      # credential is minted.
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          READER_SERVICE_ACCOUNT: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          STAGING_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in PROJECT_ID DATABASE_ID WIF_PROVIDER READER_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. See docs/PRODUCTION_RECONCILE_SETUP.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ] || exit 1
+
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            echo "::error::FIREBASE_PROJECT_ID ($PROJECT_ID) does not match confirm_project ($CONFIRM_PROJECT)."
+            exit 1
+          fi
+          if [ "$DATABASE_ID" != "$CONFIRM_DATABASE" ]; then
+            echo "::error::FIREBASE_DATABASE_ID ($DATABASE_ID) does not match confirm_database ($CONFIRM_DATABASE)."
+            exit 1
+          fi
+
+          # The staging service account holds roles/datastore.user — read AND
+          # write, project-wide. Using it here would hand a write-capable
+          # token to a job that must not be able to write. The reader account
+          # must be a different principal.
+          if [ "$READER_SERVICE_ACCOUNT" = "$STAGING_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT must not be the staging account: that one can write."
+            exit 1
+          fi
+          echo "Configuration matches the confirmations, and the reader account is distinct."
+
+      # actions/checkout v4.2.2
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # ── Authentication: read-only identity, short-lived, no key file ──
+      #
+      # The account named by FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT holds
+      # `roles/datastore.viewer` and nothing else. No Cloud Storage role: a
+      # reconciliation compares Firestore documents against the pack and never
+      # touches audio.
+      #
+      # 300s is long enough for one listing and far too short to be useful if
+      # it ever leaked. `create_credentials_file: false` keeps nothing on disk;
+      # `export_environment_variables: false` keeps it out of the ambient env,
+      # so it reaches exactly one step through `env:`.
+      # google-github-actions/auth v3.0.0
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      # ── The read ──────────────────────────────────────────────────────
+      #
+      # `--reconcile` is refused by the importer in combination with
+      # `--write`, and there is no code path in it that deletes, revokes or
+      # prunes. `--write` appears nowhere in this file.
+      #
+      # A run that REPORTS stale documents still exits non-zero, because a
+      # live document the ledger holds back is a finding that needs a human.
+      # `continue-on-error` records that outcome without failing the job, so
+      # the report is always readable and the summary always prints.
+      - name: Reconcile (read-only)
+        id: reconcile
+        continue-on-error: true
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          FIREBASE_ADMIN_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -uo pipefail
+          node scripts/import_source_pack.mjs \
+            source_packs/moia_mukhtasar_1446_umrah.json \
+            --production --reconcile \
+            --database="$FIREBASE_DATABASE_ID" | tee reconcile.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+          # The report must state that it wrote nothing, and must never have
+          # reported a write of any kind.
+          grep -q "READ ONLY, nothing is written" reconcile.log
+          grep -q "No document was written, deleted or revoked." reconcile.log
+          if grep -qE '^(created|updated|upserted) ' reconcile.log; then
+            echo "::error::a read-only reconciliation reported a write."
+            exit 1
+          fi
+
+      - name: Report
+        if: always()
+        env:
+          RECONCILE_EXIT: ${{ steps.reconcile.outputs.exit }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Production reconciliation — read only"
+            echo
+            echo "Collection: \`supplications\` · Project: dhakker-160d0"
+            echo
+            if [ -f reconcile.log ]; then
+              echo '```'
+              # Counts and findings only. The reconciler prints document ids,
+              # cases and hold reasons — never a field value — so no text and
+              # no signed URL can appear here.
+              grep -E '^(Reconciling|expected_|present_but_|text_changed|  - |No document)' reconcile.log || true
+              echo '```'
+            else
+              echo "The reconciliation did not produce a report."
+            fi
+            echo
+            if [ "${RECONCILE_EXIT:-1}" = "0" ]; then
+              echo "**No stale documents.** The live collection agrees with the ledger."
+            else
+              echo "**Findings above need a human decision.**"
+              echo
+              echo "A \`present_but_excluded\` or \`present_but_removed_from_pack\`"
+              echo "document cannot be corrected by importing: writing more"
+              echo "records does not retract one already live. Retraction is a"
+              echo "deliberate human act — this workflow reports, and stops."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Nothing was written, deleted, revoked or deployed."
+          exit "${RECONCILE_EXIT:-1}"
