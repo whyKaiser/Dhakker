@@ -284,3 +284,47 @@ test("the importer itself refuses --reconcile together with --write", async () =
   assert.equal(plan.mode, "reconcile");
   assert.equal(plan.collection, "supplications");
 });
+
+// The stale-document inventory is only useful if it survives into the job
+// summary — and only safe if what survives is presence, not values.
+test("the job-summary filter passes an inventory row through unchanged", async () => {
+  const { reconcile, printReconcile } = await import(
+    "../../scripts/import_source_pack.mjs"
+  );
+  const findings = reconcile({
+    live: [
+      {
+        documentId: "legacy-001",
+        verificationStatus: "verified",
+        isActive: true,
+        audioMode: "file",
+        audioUrl: "https://storage.example/a.mp3?token=SECRET",
+        contentKind: "dua",
+        createdAt: "2025-01-01T00:00:00.000Z",
+        text: { ar: "نص", en: "text" },
+      },
+    ],
+    cleared: [],
+    excluded: [],
+    packIds: new Set(),
+  });
+
+  const realLog = console.log;
+  const lines = [];
+  console.log = (...a) => lines.push(a.join(" "));
+  try {
+    printReconcile(findings, "supplications");
+  } finally {
+    console.log = realLog;
+  }
+
+  // The exact filter the workflow applies to reconcile.log.
+  const filter =
+    /^(Reconciling|expected_|present_but_|text_changed|  - |No document)/;
+  const kept = lines.filter((l) => filter.test(l));
+  const row = kept.find((l) => l.includes("legacy-001"));
+  assert.ok(row, "the inventory row was filtered out of the job summary");
+  assert.match(row, /audioUrl=present/);
+  assert.ok(!row.includes("SECRET"), "the summary would carry a download token");
+  assert.ok(!row.includes("نص"), "the summary would carry record text");
+});

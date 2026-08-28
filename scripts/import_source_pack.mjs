@@ -1228,12 +1228,67 @@ export async function listCollection(plan, deps = {}) {
 }
 
 /**
+ * The only keys an inventory row may ever carry. Anything not on this list
+ * — `text`, `audioUrl`'s value, `reviewNotes`, tokens — must never reach a
+ * log. The list is asserted in the tests against the object this file
+ * actually builds, so adding a key here without thinking is not enough to
+ * leak one: the leak tests check the VALUES too.
+ */
+export const INVENTORY_FIELDS = Object.freeze([
+  "documentId",
+  "verificationStatus",
+  "isActive",
+  "hasRevokedAt",
+  "audioMode",
+  "hasAudioUrl",
+  "contentKind",
+  "hasCreatedAt",
+  "hasUpdatedAt",
+]);
+
+/** True when a field is actually carrying something. Firestore returns an
+ *  absent field as undefined and an explicitly-null one as null; a cleared
+ *  string field comes back as "". All three mean "no value held", which is
+ *  what the report is asking about. */
+function present(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  return true;
+}
+
+/**
+ * A presence-only description of a live document, for the stale inventory.
+ *
+ * Deliberately asymmetric: `verificationStatus`, `isActive`, `audioMode` and
+ * `contentKind` are short controlled vocabularies and are reported as
+ * values, because knowing a stale document is `verified` and `isActive` is
+ * the entire point of the report. `revokedAt`, `audioUrl`, `createdAt` and
+ * `updatedAt` are reported as presence ONLY — audioUrl in particular can
+ * carry a Storage download token, and a timestamp is operational detail the
+ * report does not need. `text` appears nowhere at all.
+ */
+export function inventoryOf(doc) {
+  return {
+    documentId: doc.documentId ?? doc.duaId ?? null,
+    verificationStatus: doc.verificationStatus ?? null,
+    isActive: doc.isActive ?? null,
+    hasRevokedAt: present(doc.revokedAt),
+    audioMode: doc.audioMode ?? null,
+    hasAudioUrl: present(doc.audioUrl),
+    contentKind: doc.contentKind ?? null,
+    hasCreatedAt: present(doc.createdAt),
+    hasUpdatedAt: present(doc.updatedAt),
+  };
+}
+
+/**
  * Compares the live collection against the pack and the ledger. Pure: it is
  * handed the live documents rather than fetching them, so the whole
  * classification is testable without a network.
  *
  * Reports `documentId` and a case. It deliberately prints no field VALUES —
- * not audioUrl (which can carry a download token), not text, not tokens.
+ * not audioUrl (which can carry a download token), not text, not tokens —
+ * beyond the controlled vocabularies named in INVENTORY_FIELDS.
  */
 export function reconcile({ live, cleared, excluded, packIds }) {
   const clearedById = new Map(cleared.map((r) => [r.duaId, r]));
@@ -1266,14 +1321,38 @@ export function reconcile({ live, cleared, excluded, packIds }) {
         reason: held.reasons.join("; "),
       });
     } else if (!packIds.has(id)) {
+      // These are the documents nothing in the current pack accounts for.
+      // Retraction is a human decision, so the report carries enough to
+      // make it: is this thing still live, still verified, does it still
+      // hold audio — without ever printing what it says or where that
+      // audio is.
       findings.push({
         documentId: id,
         case: "present_but_removed_from_pack",
         verificationStatus: doc.verificationStatus ?? null,
+        inventory: inventoryOf(doc),
       });
     }
   }
   return findings;
+}
+
+/** One inventory row, on one line. `present`/`absent` rather than a value
+ *  for everything reported by presence, so a token can never be printed
+ *  even if one is stored. */
+function formatInventory(inv) {
+  const mark = (b) => (b ? "present" : "absent");
+  return [
+    inv.documentId,
+    `verification=${inv.verificationStatus ?? "unset"}`,
+    `isActive=${inv.isActive === null ? "unset" : inv.isActive}`,
+    `revokedAt=${mark(inv.hasRevokedAt)}`,
+    `audioMode=${inv.audioMode ?? "unset"}`,
+    `audioUrl=${mark(inv.hasAudioUrl)}`,
+    `contentKind=${inv.contentKind ?? "unset"}`,
+    `createdAt=${mark(inv.hasCreatedAt)}`,
+    `updatedAt=${mark(inv.hasUpdatedAt)}`,
+  ].join("  |  ");
 }
 
 export function printReconcile(findings, collection) {
@@ -1285,6 +1364,10 @@ export function printReconcile(findings, collection) {
     console.log(`\n${c}: ${rows.length}`);
     if (c === "expected_and_present") continue;
     for (const r of rows) {
+      if (r.inventory) {
+        console.log(`  - ${formatInventory(r.inventory)}`);
+        continue;
+      }
       const bits = [r.documentId];
       if (r.verificationStatus) bits.push(`verification=${r.verificationStatus}`);
       if (r.reason) bits.push(r.reason);
