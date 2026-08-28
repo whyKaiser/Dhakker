@@ -328,3 +328,36 @@ test("the job-summary filter passes an inventory row through unchanged", async (
   assert.ok(!row.includes("SECRET"), "the summary would carry a download token");
   assert.ok(!row.includes("نص"), "the summary would carry record text");
 });
+
+// The setup doc is the only record of how the reader identity is actually
+// bound. An earlier draft named a principal that was never configured, so
+// these pin the real one.
+const SETUP_DOC = readFileSync("docs/PRODUCTION_RECONCILE_SETUP.md", "utf8");
+
+test("the reader binding is documented in the attribute.repository form", () => {
+  assert.match(
+    SETUP_DOC,
+    /principalSet:\/\/iam\.googleapis\.com\/projects\/435128982475\/locations\/global\/workloadIdentityPools\/github-pool\/attribute\.repository\/whyKaiser\/Dhakker/,
+  );
+});
+
+test("the never-configured /subject/repo: principal is not presented as the binding", () => {
+  // It may be MENTIONED, but only as the correction note saying it was wrong.
+  const asMember = /--member="principalSet:[^"]*\/subject\/repo:/;
+  assert.ok(
+    !asMember.test(SETUP_DOC),
+    "the doc still binds the subject/repo principal",
+  );
+  assert.match(SETUP_DOC, /never configured/);
+});
+
+test("the branch restriction is documented on the provider condition, not the binding", () => {
+  for (const clause of [
+    "assertion.repository_owner == 'whyKaiser'",
+    "assertion.repository == 'whyKaiser/Dhakker'",
+    "assertion.ref == 'refs/heads/main'",
+  ]) {
+    assert.ok(SETUP_DOC.includes(clause), `the doc omits: ${clause}`);
+  }
+  assert.match(SETUP_DOC, /The branch is not restricted by this binding/);
+});

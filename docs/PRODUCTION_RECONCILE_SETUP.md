@@ -81,8 +81,8 @@ anything.
 ## 3. Let the existing WIF provider impersonate it
 
 The provider from the staging setup is reused; only the binding is new. Bind
-the GitHub principal for **this repository and the `main` branch only**, so a
-run from a fork or a feature branch cannot obtain this identity:
+the GitHub principal for **this repository**, matching the staging setup's
+`attribute.repository` form:
 
 ```bash
 PROJECT_NUMBER=435128982475   # dhakker-160d0
@@ -90,18 +90,39 @@ PROJECT_NUMBER=435128982475   # dhakker-160d0
 gcloud iam service-accounts add-iam-policy-binding \
   dhakker-production-reader@dhakker-160d0.iam.gserviceaccount.com \
   --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/subject/repo:whyKaiser/Dhakker:ref:refs/heads/main"
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/attribute.repository/whyKaiser/Dhakker"
 ```
 
-Confirm the provider's own attribute condition still restricts the repository
-(it was set up for the staging import; if it names `whyKaiser/Dhakker`, this
-account inherits that restriction too):
+The exact principal actually configured is:
+
+```
+principalSet://iam.googleapis.com/projects/435128982475/locations/global/workloadIdentityPools/github-pool/attribute.repository/whyKaiser/Dhakker
+```
+
+**The branch is not restricted by this binding.** It is restricted by the
+provider's own attribute condition, which is where that check belongs — the
+provider refuses to mint a token at all for a ref other than `main`, so no
+service-account binding downstream can be reached from a PR branch, a tag or
+a fork:
+
+```
+assertion.repository_owner == 'whyKaiser' &&
+assertion.repository == 'whyKaiser/Dhakker' &&
+assertion.ref == 'refs/heads/main'
+```
+
+Confirm it is still in place before relying on it:
 
 ```bash
 gcloud iam workload-identity-pools providers describe github-provider \
   --location=global --workload-identity-pool=github-pool \
   --project=dhakker-160d0 --format="value(attributeCondition)"
 ```
+
+An earlier draft of this document bound a `/subject/repo:…:ref:refs/heads/main`
+principal instead. That form was never configured, and it would in any case
+have duplicated — in the weaker of the two places — a branch restriction the
+provider already enforces.
 
 ## 4. Create the protected GitHub environment
 
