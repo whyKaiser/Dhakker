@@ -130,6 +130,15 @@ jobs:
       - name: Validate staging-import workflow safety gates
         run: node --test .github/workflows/staging_import_workflow.test.mjs
 
+      # Static validation of the manual production-reconcile workflow. It
+      # points a credential at the PRODUCTION collection, so the gates matter
+      # more here than anywhere else: dispatch-only, main-only, its own
+      # protected environment, four confirmations before auth, the read-only
+      # service account rather than the write-capable staging one, and no
+      # --write, delete, deploy or Storage call anywhere in the file.
+      - name: Validate production-reconcile workflow safety gates
+        run: node --test .github/workflows/production_reconcile_workflow.test.mjs
+
   firestore-rules-tests:
     name: Firestore security rules tests (emulator)
     runs-on: ubuntu-latest
