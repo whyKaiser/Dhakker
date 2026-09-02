@@ -132,14 +132,41 @@ function captured() {
 
 // ── The manifest is the only allowlist ───────────────────────────────────
 
-test("the committed manifest refuses to run: its ids have not been transcribed", () => {
-  assert.throws(() => loadManifest(), /status "awaiting_ids", not "ready"/);
+test("a manifest still awaiting its ids refuses to run at all", () => {
+  // The state this file shipped in before the reconciliation report was
+  // transcribed. It must stay a hard refusal: if the ids are ever cleared
+  // out again, the tool goes back to doing nothing rather than to deleting
+  // an empty set quietly.
+  const read = () =>
+    JSON.stringify({
+      status: "awaiting_ids",
+      sourceCollection: SOURCE_COLLECTION,
+      archiveCollection: ARCHIVE_COLLECTION,
+      expectedCount: 16,
+      documentIds: [],
+    });
+  assert.throws(() => loadManifest("x", read), /status "awaiting_ids", not "ready"/);
 });
 
-test("the committed manifest declares the reported count and no ids", () => {
+test("only the literal status 'ready' unlocks the tool", () => {
+  for (const status of ["", "READY", " ready", "yes", "true", null, undefined]) {
+    const read = () =>
+      JSON.stringify({
+        status,
+        sourceCollection: SOURCE_COLLECTION,
+        archiveCollection: ARCHIVE_COLLECTION,
+        expectedCount: 1,
+        documentIds: ["a"],
+      });
+    assert.throws(() => loadManifest("x", read), /not "ready"/, `status ${JSON.stringify(status)} was accepted`);
+  }
+});
+
+test("the committed manifest declares the collections the tool is compiled with", () => {
   const raw = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
+  assert.equal(raw.status, "ready");
   assert.equal(raw.expectedCount, 16);
-  assert.deepEqual(raw.documentIds, []);
+  assert.equal(raw.documentIds.length, 16);
   assert.equal(raw.sourceCollection, SOURCE_COLLECTION);
   assert.equal(raw.archiveCollection, ARCHIVE_COLLECTION);
 });
@@ -519,4 +546,218 @@ test("a non-404 read error is not mistaken for an absent document", async () => 
     /HTTP 403/,
   );
   assert.equal(fs.calls.filter((c) => c.method === "POST").length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// The live manifest.
+//
+// From here the manifest is no longer a template: it names the 16 documents
+// the production reconciliation of 2026-08-28 found in `supplications` that
+// nothing in the source pack accounts for. These ids are the ONLY thing
+// standing between this tool and a production collection, so the list is
+// restated here independently and compared literally. If the two ever drift,
+// one of them was edited without the other being looked at.
+
+/** Transcribed independently of review/legacy_retirement_manifest.json, from
+ *  the same reconciliation report. Order and case are significant:
+ *  Firestore ids are case-sensitive. */
+const LIVE_IDS = [
+  "AdFPibtyp2hgUSiTGTlM",
+  "D_MAQAM_01",
+  "D_MARWAH_01",
+  "D_SAFA_01",
+  "D_TAWAF_01",
+  "KrtoO8fVJ7efRTfm4qEL",
+  "VJb72ru1SIxmT8HKRDMW",
+  "fXwYcLDK3jLELDWb7XFb",
+  "fah8Mp6J6iL0QpKKMQzB",
+  "i8MeSW37qmpxOOsQ6OKn",
+  "kry2IEcopLzT8Cqb2eYx",
+  "mtKhdmU0JtS4fQ0IxgPR",
+  "shQFcZYJ1FjvrSbCnqkp",
+  "tqYFWXC1CISbU4Ey1m7C",
+  "vCw2sYNEtILJkpp7ljti",
+  "wVAQ2mYygE0kDT4BH1rx",
+];
+
+const live = () => loadManifest();
+
+test("the manifest is ready and holds exactly 16 ids", () => {
+  const m = live();
+  assert.equal(m.ids.length, 16);
+  assert.equal(m.expectedCount, 16);
+  assert.equal(m.idSet.size, 16);
+});
+
+test("the manifest matches the reconciliation list literally, in order", () => {
+  // deepEqual on the arrays, not the sets: a reordering would still be the
+  // same documents, but it would also mean someone rewrote the file by hand,
+  // and that is worth failing on.
+  assert.deepEqual([...live().ids], LIVE_IDS);
+  // And byte-exact, so a homoglyph or a stray zero-width character cannot
+  // pass as a match.
+  assert.equal(JSON.stringify([...live().ids]), JSON.stringify(LIVE_IDS));
+});
+
+test("no id is duplicated, in any letter case", () => {
+  const ids = [...live().ids];
+  assert.equal(new Set(ids).size, 16, "a duplicate id is present");
+  // Firestore ids are case-sensitive, so two ids differing only in case are
+  // legal — but they would almost certainly be a transcription slip.
+  const lowered = ids.map((i) => i.toLowerCase());
+  assert.equal(new Set(lowered).size, 16, "two ids differ only by letter case");
+});
+
+test("no id is empty, blank, a wildcard, a prefix or a path", () => {
+  for (const id of live().ids) {
+    assert.equal(typeof id, "string");
+    assert.notEqual(id.trim(), "", "an empty or blank id");
+    assert.equal(id, id.trim(), `${id} has surrounding whitespace`);
+    for (const meta of ["*", "?", "**", "/", "\\", "..", "%", "[", "]", "{", "}"]) {
+      assert.ok(!id.includes(meta), `${id} contains the metacharacter ${meta}`);
+    }
+    // A plain, complete Firestore document id: letters, digits, - and _.
+    assert.match(id, /^[A-Za-z0-9_-]+$/, `${id} is not a plain document id`);
+    assert.ok(id.length >= 8, `${id} is short enough to look like a prefix`);
+  }
+});
+
+test("no id is a prefix of another, so none can stand in for a range", () => {
+  const ids = [...live().ids];
+  for (const a of ids) {
+    for (const b of ids) {
+      if (a === b) continue;
+      assert.ok(!b.startsWith(a), `${a} is a prefix of ${b}`);
+    }
+  }
+});
+
+test("the manifest's ids are disjoint from the source pack, as reconciled", () => {
+  // The reconciliation reported expected_and_present: 0 — production and the
+  // pack share nothing. If an id here also appeared in the pack, the two
+  // statements would contradict each other and the deletion would be
+  // removing a record the ledger cleared.
+  const pack = JSON.parse(
+    readFileSync("source_packs/moia_mukhtasar_1446_umrah.json", "utf8"),
+  );
+  const packIds = new Set((pack.records ?? []).map((r) => r.duaId));
+  for (const id of live().ids) {
+    assert.ok(!packIds.has(id), `${id} is in the source pack; it must not be deleted`);
+  }
+});
+
+// ── The CLI cannot add an id ─────────────────────────────────────────────
+
+test("no CLI argument can introduce an id", () => {
+  const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
+  const attempts = [
+    ["--phase=archive", "--id=intruder-01"],
+    ["--phase=delete", "--ids=intruder-01,intruder-02"],
+    ["--phase=delete", "intruder-01"],
+    ["--phase=archive", "--document=intruder-01"],
+    ["--phase=delete", "--manifest=/tmp/other.json"],
+    ["--phase=delete", "--all"],
+    ["--phase=delete", "--limit=999"],
+  ];
+  for (const args of attempts) {
+    const plan = resolvePlan(argv(...args), {});
+    // The plan carries no id-shaped field at all — there is nothing for an
+    // argument to land in.
+    assert.deepEqual(
+      Object.keys(plan).sort(),
+      ["database", "execute", "phase", "projectId", "token"],
+      `resolvePlan grew a field for: ${args.join(" ")}`,
+    );
+    for (const v of Object.values(plan)) {
+      assert.ok(
+        !String(v).includes("intruder"),
+        `an argument reached the plan: ${args.join(" ")}`,
+      );
+    }
+    // And the manifest is unchanged by any of it.
+    assert.deepEqual([...loadManifest().ids], LIVE_IDS);
+  }
+});
+
+test("the tool reads the manifest from a fixed path, not from an argument", () => {
+  assert.equal(MANIFEST_PATH, "review/legacy_retirement_manifest.json");
+  // main() calls loadManifest() with no argument, so the path cannot be
+  // redirected by anything the operator types.
+  assert.match(SCRIPT, /const manifest = loadManifest\(\);/);
+});
+
+// ── A dry-run archive against the live manifest ──────────────────────────
+
+test("a dry-run archive targets exactly these 16 and writes nothing", async () => {
+  const m = live();
+  // A collection holding the 16 plus plausible bystanders.
+  const source = new Map(m.ids.map((id) => [id, legacyFields(id)]));
+  for (const bystander of ["D_TAWAF_02", "umrah-talbiyah", "AdFPibtyp2hgUSiTGTlN"]) {
+    source.set(bystander, legacyFields(bystander));
+  }
+  const fs = fakeFirestore({ source });
+  const { log, output } = captured();
+
+  await runArchivePhase({ ...PLAN, execute: false }, m, { fetch: fs.fetch, log });
+
+  const contacted = [...new Set(fs.calls.map((c) => c.id))].sort();
+  assert.deepEqual(contacted, [...LIVE_IDS].sort(), "the dry run contacted the wrong set");
+  assert.equal(contacted.length, 16);
+
+  for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+    assert.equal(fs.calls.filter((c) => c.method === method).length, 0, `a dry run issued a ${method}`);
+  }
+  assert.equal(fs.store.archive.size, 0, "a dry run created an archive document");
+  assert.equal(fs.store.source.size, 19, "a dry run removed a document");
+
+  // Every one of the 16 is named in the report, and no bystander is.
+  for (const id of LIVE_IDS) assert.ok(output().includes(id), `${id} missing from the report`);
+  for (const b of ["D_TAWAF_02", "umrah-talbiyah", "AdFPibtyp2hgUSiTGTlN"]) {
+    assert.ok(!output().includes(b), `bystander ${b} appeared in the report`);
+  }
+});
+
+test("a dry-run archive against the live manifest contacts only Firestore", async () => {
+  const m = live();
+  const urls = [];
+  const inner = fakeFirestore({ source: new Map(m.ids.map((id) => [id, legacyFields(id)])) });
+  const spy = async (url, init) => {
+    urls.push(url);
+    return inner.fetch(url, init);
+  };
+  const { log } = captured();
+  await runArchivePhase({ ...PLAN, execute: false }, m, { fetch: spy, log });
+
+  assert.equal(urls.length, 32, "16 source reads + 16 archive pre-checks");
+  for (const url of urls) {
+    assert.ok(url.startsWith("https://firestore.googleapis.com/v1/projects/"), `left Firestore: ${url}`);
+    for (const host of FORBIDDEN_HOSTS) {
+      assert.ok(!url.includes(host), `a request reached ${host}`);
+    }
+  }
+});
+
+test("the live 16 archive, verify and delete without touching Storage", async () => {
+  const m = live();
+  const urls = [];
+  const inner = fakeFirestore({ source: new Map(m.ids.map((id) => [id, legacyFields(id)])) });
+  const spy = async (url, init) => {
+    urls.push(url);
+    return inner.fetch(url, init);
+  };
+  const { log } = captured();
+
+  await runArchivePhase(PLAN, m, { fetch: spy, log });
+  const result = await runDeletePhase({ ...PLAN, phase: "delete" }, m, { fetch: spy, log });
+
+  assert.equal(result.deleted, 16);
+  assert.equal(inner.store.source.size, 0);
+  assert.equal(inner.store.archive.size, 16);
+  for (const id of LIVE_IDS) {
+    assert.ok(fieldsMatch(inner.store.archive.get(id), legacyFields(id)), `${id} was altered`);
+  }
+  for (const url of urls) {
+    assert.ok(url.startsWith("https://firestore.googleapis.com/v1/projects/"), `left Firestore: ${url}`);
+    for (const host of FORBIDDEN_HOSTS) assert.ok(!url.includes(host));
+  }
 });

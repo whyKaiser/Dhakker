@@ -132,31 +132,37 @@ account are the same value.
 
 ---
 
-## C. Fill in the manifest — this is the blocking step
+## C. The manifest — already filled in
 
-`review/legacy_retirement_manifest.json` ships with `status: "awaiting_ids"`
-and an empty `documentIds`. **In that state the tool refuses to run in any
-phase, including dry-run.** It is the only source of ids: nothing in the
-repository can derive them, because the reconciliation proved production and
-the pack share nothing.
+`review/legacy_retirement_manifest.json` now holds the 16 ids transcribed
+from the `present_but_removed_from_pack` rows of the reconciliation report,
+with `status: "ready"`:
 
-Transcribe the 16 ids literally from the
-`present_but_removed_from_pack` rows of the reconciliation report, then set:
-
-```json
-"status": "ready",
-"reconciledAt": "2026-08-28T…",
-"reconciliationRunUrl": "https://github.com/whyKaiser/Dhakker/actions/runs/…",
-"expectedCount": 16,
-"documentIds": ["…", "…"]
+```
+AdFPibtyp2hgUSiTGTlM   KrtoO8fVJ7efRTfm4qEL   kry2IEcopLzT8Cqb2eYx
+D_MAQAM_01             VJb72ru1SIxmT8HKRDMW   mtKhdmU0JtS4fQ0IxgPR
+D_MARWAH_01            fXwYcLDK3jLELDWb7XFb   shQFcZYJ1FjvrSbCnqkp
+D_SAFA_01              fah8Mp6J6iL0QpKKMQzB   tqYFWXC1CISbU4Ey1m7C
+D_TAWAF_01             i8MeSW37qmpxOOsQ6OKn   vCw2sYNEtILJkpp7ljti
+                                              wVAQ2mYygE0kDT4BH1rx
 ```
 
-`expectedCount` and the length of `documentIds` must agree — the loader
-refuses a manifest whose own two counts disagree, which is what catches a
-half-finished paste.
+Five carry semantic names and eleven are Firestore auto-ids. Both shapes are
+stored verbatim including case — Firestore ids are case-sensitive.
 
-Commit that change to `main` in its own pull request, so the exact list is
-reviewable as a diff before anything runs.
+This list is the only thing standing between the tool and the production
+collection, so it is restated independently in
+`scripts/retire_legacy_records.test.mjs` and compared byte for byte. If the
+two ever drift, one of them was edited without the other being looked at,
+and the suite fails.
+
+**If the ids ever need changing**, edit them here in their own pull request
+so the exact list is reviewable as a diff, and update the copy in the test
+in the same change. `expectedCount` and the length of `documentIds` must
+agree; the loader refuses a manifest whose own two counts disagree, which is
+what catches a half-finished paste. Setting `status` back to anything other
+than the literal `"ready"` returns the tool to refusing every phase,
+dry-run included.
 
 ---
 
