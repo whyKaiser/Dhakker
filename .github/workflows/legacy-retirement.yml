@@ -1,0 +1,270 @@
+# Legacy retirement — archive first, delete second, by hand only.
+#
+# Retires the 16 documents the production reconciliation of 2026-08-28 found
+# in `supplications` that nothing in the source pack accounts for. It copies
+# each one in full to `supplications_legacy_archive`, verifies every copy,
+# and only in a SEPARATE run deletes the originals.
+#
+# ── What this workflow cannot do ────────────────────────────────────────
+#
+# It cannot touch Cloud Storage. The service account it impersonates holds
+# no `roles/storage.*` binding of any kind, so the audio objects behind the
+# archived audioUrl values are not merely un-referenced by the code — they
+# are unreachable by the credential. The URLs themselves are preserved in
+# the archive, so audio can be reattached if a record is ever restored.
+#
+# It cannot delete a document that is not in
+# review/legacy_retirement_manifest.json. The manifest is the only source of
+# ids; no input, variable or flag adds one, and the tool re-checks each id
+# against it in the instant before the DELETE.
+#
+# It cannot delete anything that has not first been copied and verified.
+# The delete phase re-reads both collections and compares them again, for
+# every id, before it issues a single delete.
+#
+# ── Where the guarantees come from ──────────────────────────────────────
+#
+# The ordering and allowlist guarantees come from the tool and are asserted
+# in scripts/retire_legacy_records.test.mjs. The Storage guarantee comes
+# from IAM. This file is the third layer, and
+# legacy_retirement_workflow.test.mjs asserts its properties statically.
+#
+# Read docs/LEGACY_RETIREMENT_SETUP.md before running either phase.
+
+name: Legacy retirement (archive then delete, manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "archive (copy only) or delete (remove originals)"
+        required: true
+        type: choice
+        options:
+          - archive
+          - delete
+      execute:
+        description: "Leave false for a dry run. true actually writes."
+        required: true
+        type: boolean
+        default: false
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_collection:
+        description: "Type the collection exactly: supplications"
+        required: true
+        type: string
+      confirm_count:
+        description: "Type the number of documents in the manifest: 16"
+        required: true
+        type: string
+      confirm_mode:
+        description: "Type exactly: RETIRE_LEGACY_RECORDS"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+# Its own group. An archive run and a delete run must never interleave, and
+# cancelling a run midway is the one thing worse than not starting it.
+concurrency:
+  group: legacy-retirement
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    name: Retire legacy supplications documents
+    runs-on: ubuntu-latest
+
+    # A protected environment of its own, with its own required reviewers.
+    # Neither the read-only reconcile environment nor the staging one grants
+    # anything here: approval to read production is not approval to delete
+    # from it.
+    environment: firebase-legacy-retirement
+
+    steps:
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+
+      # All confirmations are checked before checkout and before any
+      # credential exists. A mistyped run ends holding nothing.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_COLLECTION: ${{ inputs.confirm_collection }}
+          CONFIRM_COUNT: ${{ inputs.confirm_count }}
+          CONFIRM_MODE: ${{ inputs.confirm_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            exit 1
+          fi
+          if [ "$CONFIRM_COLLECTION" != "supplications" ]; then
+            echo "::error::confirm_collection must be exactly 'supplications'."
+            exit 1
+          fi
+          if [ "$CONFIRM_COUNT" != "16" ]; then
+            echo "::error::confirm_count must be exactly '16'."
+            exit 1
+          fi
+          if [ "$CONFIRM_MODE" != "RETIRE_LEGACY_RECORDS" ]; then
+            echo "::error::confirm_mode must be exactly 'RETIRE_LEGACY_RECORDS'."
+            exit 1
+          fi
+          echo "All four confirmations match."
+
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          RETIREMENT_SERVICE_ACCOUNT: ${{ vars.FIREBASE_RETIREMENT_SERVICE_ACCOUNT }}
+          READER_SERVICE_ACCOUNT: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in PROJECT_ID DATABASE_ID WIF_PROVIDER RETIREMENT_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. See docs/LEGACY_RETIREMENT_SETUP.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ] || exit 1
+
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            echo "::error::FIREBASE_PROJECT_ID does not match confirm_project."
+            exit 1
+          fi
+
+          # The read-only reconcile account holds roles/datastore.viewer and
+          # must stay that way. Reusing it here would either fail on the
+          # first write or, worse, mean someone widened it.
+          if [ -n "$READER_SERVICE_ACCOUNT" ] && [ "$RETIREMENT_SERVICE_ACCOUNT" = "$READER_SERVICE_ACCOUNT" ]; then
+            echo "::error::The retirement account must not be the read-only reconcile account."
+            exit 1
+          fi
+          echo "Configuration matches the confirmations."
+
+      # actions/checkout v4.2.2
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # The tool's own guard tests run against the exact commit being
+      # dispatched, immediately before it is pointed at production. A tool
+      # whose ordering and allowlist tests do not pass does not get a token.
+      - name: Re-run the retirement guard tests on this commit
+        run: node --test scripts/retire_legacy_records.test.mjs
+
+      # The manifest must be complete and self-consistent before a credential
+      # is minted. This fails while status is still "awaiting_ids".
+      - name: Verify the manifest is ready and matches the confirmed count
+        env:
+          CONFIRM_COUNT: ${{ inputs.confirm_count }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const { loadManifest } = await import("./scripts/retire_legacy_records.mjs");
+            const m = loadManifest();
+            if (String(m.ids.length) !== process.env.CONFIRM_COUNT) {
+              console.error(`::error::manifest has ${m.ids.length} ids, confirm_count says ${process.env.CONFIRM_COUNT}`);
+              process.exit(1);
+            }
+            console.log(`Manifest ready: ${m.ids.length} document(s).`);
+          ' --input-type=module
+
+      # ── Authentication ────────────────────────────────────────────────
+      #
+      # The account named by FIREBASE_RETIREMENT_SERVICE_ACCOUNT holds
+      # roles/datastore.user — the narrowest role that can create and delete
+      # Firestore documents; Firestore has no delete-only or per-collection
+      # role. It holds NO Cloud Storage role, which is what puts the audio
+      # objects out of reach. It is meant to exist only for this operation:
+      # the setup doc says to remove the binding afterwards.
+      #
+      # google-github-actions/auth v3.0.0
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_RETIREMENT_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      # ── The run ───────────────────────────────────────────────────────
+      #
+      # CONFIRM_RETIREMENT is required by the tool for --execute and is set
+      # only when the operator chose execute: true, so a dry run cannot
+      # become a real one by accident.
+      - name: Run the retirement phase
+        id: run
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          FIREBASE_ADMIN_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CONFIRM_RETIREMENT: ${{ inputs.execute && 'RETIRE_LEGACY_RECORDS' || '' }}
+          PHASE: ${{ inputs.phase }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          FLAGS=("--phase=$PHASE")
+          if [ "$EXECUTE" = "true" ]; then
+            FLAGS+=("--execute")
+          fi
+          node scripts/retire_legacy_records.mjs "${FLAGS[@]}" | tee retirement.log
+
+          grep -q "Storage:   NOT CONTACTED" retirement.log
+
+      - name: Report
+        if: always()
+        env:
+          PHASE: ${{ inputs.phase }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Legacy retirement — phase \`$PHASE\`"
+            echo
+            if [ "$EXECUTE" = "true" ]; then
+              echo "Mode: **EXECUTE**"
+            else
+              echo "Mode: **dry run** — nothing was written."
+            fi
+            echo
+            if [ -f retirement.log ]; then
+              echo '```'
+              # Ids, actions and field NAMES only. The tool never logs a
+              # field value, so no text and no signed audio URL can appear
+              # in a public job summary.
+              grep -E '^(Legacy|Mode:|Source:|Archive:|Manifest:|Storage:|Verifying|Re-verifying|  [a-z]|[0-9]+ document|No document|Every one|Dry run)' retirement.log || true
+              echo '```'
+            else
+              echo "The run produced no log."
+            fi
+            echo
+            echo "Cloud Storage was not contacted. Audio objects are untouched."
+          } >> "$GITHUB_STEP_SUMMARY"

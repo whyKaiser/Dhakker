@@ -1,0 +1,33 @@
+{
+  "$comment": [
+    "The allowlist for scripts/retire_legacy_records.mjs.",
+    "",
+    "It is the ONLY source of document ids that tool will ever archive or",
+    "delete. An id absent from this file cannot be touched by any flag,",
+    "environment variable or workflow input.",
+    "",
+    "status is 'awaiting_ids' until the ids below are transcribed literally",
+    "from a production reconciliation report. While it holds that value the",
+    "tool refuses to run in any phase, including dry-run. Nothing here was",
+    "guessed, derived or reconstructed: the ids must be copied from the",
+    "report's present_but_removed_from_pack rows by the operator who ran it."
+  ],
+  "status": "awaiting_ids",
+  "sourceCollection": "supplications",
+  "archiveCollection": "supplications_legacy_archive",
+  "reconciledAt": null,
+  "reconciliationRunUrl": null,
+  "expectedCount": 16,
+  "documentIds": [],
+  "notes": [
+    "The live reconciliation of 2026-08-28 reported: expected_and_present 0,",
+    "expected_missing 73, present_but_removed_from_pack 16. Production and the",
+    "source pack do not overlap at all — none of the 73 ledger-cleared records",
+    "has ever been imported, and all 16 live documents predate the pack.",
+    "",
+    "All 16 were reported verification=unset and contentKind=unset, and all 16",
+    "were audioMode=file with audioUrl=present. The audio files themselves are",
+    "deliberately out of scope: this path never contacts Cloud Storage, so the",
+    "objects those URLs point at survive the retirement untouched."
+  ]
+}

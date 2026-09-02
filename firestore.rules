@@ -171,6 +171,28 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── supplications_legacy_archive ─────────────────────────────────────
+    //
+    // Full copies of documents retired from `supplications`
+    // (see .github/workflows/legacy-retirement.yml). It exists so a deletion
+    // is reversible: the archive holds every field of every retired
+    // document, including its audioUrl, so a record can be reconstructed.
+    //
+    // No client may read it, and the admin least of all. Its contents are
+    // exactly what was judged unfit to show a pilgrim — unverified, with no
+    // contentKind and no provenance — so a screen that listed it would put
+    // that text back in front of the people the retirement removed it from.
+    // The archive is reached with a service-account credential, by hand,
+    // through the retirement workflow. Never from the app.
+    //
+    // The same caveat as the staging block applies: Firestore evaluates
+    // matching rules with OR semantics, so `if false` denies nothing that a
+    // future broader rule permits. The real guard is the emulator tests,
+    // which exercise the complete ruleset.
+    match /supplications_legacy_archive/{document=**} {
+      allow read, write: if false;
+    }
+
     // alerts: تنبيهات الإدارة للحجّاج. قراءة لأي مسجّل، كتابة/حذف للأدمن فقط.
     match /alerts/{alertId} {
       allow read: if isSignedIn();
