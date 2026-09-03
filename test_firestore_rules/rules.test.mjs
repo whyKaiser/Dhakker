@@ -775,3 +775,123 @@ test("an admin may list records awaiting review", async () => {
   );
   assert.ok(snap.docs.some((d) => d.id === "unverified-doc"));
 });
+
+// ── supplications_legacy_archive: unreachable by every client ───────────
+//
+// The archive holds full copies of documents retired from `supplications`.
+// It is written once, by hand, with a service-account credential that
+// bypasses rules entirely; no client has any business reading it.
+//
+// The stakes are the mirror image of the staging collection's. Staging holds
+// records not yet fit to publish; the archive holds records judged unfit and
+// withdrawn. A rule that leaked it would put exactly the text the retirement
+// removed back in front of a pilgrim — and it would do so with the original
+// audioUrl attached, since the archive copy is complete by design.
+//
+// As with staging, the `if false` block in firestore.rules cannot override a
+// future broader rule (Firestore combines matching rules with OR). These
+// behavioural tests over the complete ruleset are the actual guard.
+
+const ARCHIVE = "supplications_legacy_archive";
+
+async function seedArchive(id, data) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), ARCHIVE, id), data);
+  });
+}
+
+/** A retired legacy document: unverified, no contentKind, audio attached —
+ *  the shape the live reconciliation reported for all 16. */
+function retiredRecord(overrides = {}) {
+  return legacyRecord({
+    duaId: "legacy-archived-1",
+    audioMode: "file",
+    audioUrl: "https://firebasestorage.googleapis.com/v0/b/x/o/a.mp3?token=T",
+    ...overrides,
+  });
+}
+
+test("no client identity can READ supplications_legacy_archive", async () => {
+  await seedArchive("a1", retiredRecord());
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(getDoc(doc(db, ARCHIVE, "a1")), `${who} could read`);
+  }
+});
+
+test("no client identity can LIST supplications_legacy_archive", async () => {
+  await seedArchive("a1", retiredRecord());
+  await seedArchive("a2", retiredRecord({ duaId: "legacy-archived-2" }));
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(getDocs(collection(db, ARCHIVE)), `${who} could list`);
+  }
+});
+
+test("no client identity can CREATE, UPDATE or DELETE in the archive", async () => {
+  await seedArchive("a1", retiredRecord());
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      setDoc(doc(db, ARCHIVE, `new-${who.replace(/\s/g, "-")}`), retiredRecord()),
+      `${who} could create`,
+    );
+    await assertFails(
+      updateDoc(doc(db, ARCHIVE, "a1"), { usage_count: 99 }),
+      `${who} could update`,
+    );
+    await assertFails(deleteDoc(doc(db, ARCHIVE, "a1")), `${who} could delete`);
+  }
+});
+
+test("an admin cannot resurrect an archived record by marking it verified", async () => {
+  // The archive is not a back door around the provenance gate, and not a
+  // staging area for republishing. Restoring a record is a deliberate act
+  // that goes back through the normal write path, not an edit in place.
+  await seedArchive("a1", retiredRecord());
+  await assertFails(
+    updateDoc(doc(adminDb(), ARCHIVE, "a1"), {
+      verificationStatus: "verified",
+      verifiedBy: ADMIN_UID,
+    }),
+  );
+});
+
+test("the archive stays unreachable at every path shape", async () => {
+  const paths = [
+    [ARCHIVE, "plain-id"],
+    [ARCHIVE, "id.with.dots"],
+    [ARCHIVE, "id-with-dashes"],
+    [ARCHIVE, "doc", "nested", "child"],
+    [ARCHIVE, "doc", "nested", "child", "deeper", "grandchild"],
+  ];
+
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    for (const segments of paths) {
+      await setDoc(doc(ctx.firestore(), ...segments), { seeded: true });
+    }
+  });
+
+  for (const [who, db] of everyIdentity()) {
+    for (const segments of paths) {
+      const where = segments.join("/");
+      await assertFails(getDoc(doc(db, ...segments)), `${who} could read ${where}`);
+      await assertFails(
+        setDoc(doc(db, ...segments), { written: true }),
+        `${who} could write ${where}`,
+      );
+    }
+  }
+});
+
+test("the archive denial does not depend on the document existing", async () => {
+  for (const [who, db] of everyIdentity()) {
+    await assertFails(
+      getDoc(doc(db, ARCHIVE, "definitely-absent")),
+      `${who} could probe for an absent archive doc`,
+    );
+  }
+});
+
+test("adding the archive rule left supplications itself unchanged", async () => {
+  await seed("keep-1", { ...completeProvenance({ duaId: "keep-1" }), revokedAt: null });
+  await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "keep-1")));
+  await assertSucceeds(getDoc(doc(adminDb(), "supplications", "keep-1")));
+});

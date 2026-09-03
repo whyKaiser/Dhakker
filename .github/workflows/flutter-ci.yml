@@ -130,6 +130,16 @@ jobs:
       - name: Validate staging-import workflow safety gates
         run: node --test .github/workflows/staging_import_workflow.test.mjs
 
+      # The retirement tool is the only script here that can DELETE a
+      # production document. These assert the ordering (every copy made and
+      # verified before the first delete), the manifest allowlist, and that
+      # no request ever leaves Firestore for Cloud Storage.
+      - name: Run legacy-retirement guard tests
+        run: node --test scripts/retire_legacy_records.test.mjs
+
+      - name: Validate legacy-retirement workflow safety gates
+        run: node --test .github/workflows/legacy_retirement_workflow.test.mjs
+
       # Static validation of the manual production-reconcile workflow. It
       # points a credential at the PRODUCTION collection, so the gates matter
       # more here than anywhere else: dispatch-only, main-only, its own
