@@ -239,3 +239,21 @@ test("the archive collection is denied to every client in firestore.rules", () =
     /match \/supplications_legacy_archive\/\{document=\*\*\} \{\s*\n\s*allow read, write: if false;/,
   );
 });
+
+test("the workflow passes only arguments the tool accepts", async () => {
+  const { KNOWN_ARGUMENTS } = await import("../../scripts/retire_legacy_records.mjs");
+  // The tool now exits 1 on any unrecognised argument, so a workflow that
+  // built one would fail every run. Catch it here instead of at 3am.
+  const flagLines = code
+    .split("\n")
+    .filter((l) => l.includes('FLAGS+=("') || l.includes('FLAGS=("'));
+  assert.ok(flagLines.length > 0, "no flag construction found");
+  for (const line of flagLines) {
+    const flag = line.match(/FLAGS\+?=\("([^"]+)"\)/)?.[1];
+    assert.ok(flag, `could not read the flag from: ${line.trim()}`);
+    const accepted =
+      flag === "--execute" || /^--phase=\$?[A-Za-z_{}]+$/.test(flag);
+    assert.ok(accepted, `the workflow builds an argument the tool rejects: ${flag}`);
+  }
+  assert.deepEqual([...KNOWN_ARGUMENTS], ["--phase=<archive|delete>", "--execute"]);
+});

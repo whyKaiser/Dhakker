@@ -378,13 +378,63 @@ export async function runDeletePhase(plan, manifest, deps = {}) {
 
 // ── CLI ──────────────────────────────────────────────────────────────────
 
+/** Every argument this tool accepts. There are two. */
+export const KNOWN_ARGUMENTS = Object.freeze([
+  `--phase=<${PHASES.join("|")}>`,
+  "--execute",
+]);
+
+const USAGE =
+  `Usage: node scripts/retire_legacy_records.mjs --phase=<${PHASES.join("|")}> [--execute]\n\n` +
+  "There are no other arguments. The documents to retire come only from\n" +
+  `${MANIFEST_PATH}; nothing on the command line can name, add or filter one.`;
+
+/**
+ * Rejects anything that is not one of the two accepted arguments.
+ *
+ * Ignoring an unrecognised argument would be safe in the narrow sense —
+ * nothing on this command line can inject a document id, and a mistyped
+ * --execute degrades to a dry run. But it is safe by accident rather than
+ * by design, and it fails silently: an operator who typed --dry-run, or
+ * --phase=delete --only=D_SAFA_01, would get a run that does something
+ * other than what they asked for and says nothing about it. On the one tool
+ * here that can delete production documents, an argument the tool does not
+ * understand ends the run.
+ */
+function assertOnlyKnownArguments(args) {
+  const unknown = args.filter(
+    (a) => a !== "--execute" && !a.startsWith("--phase="),
+  );
+  if (unknown.length) {
+    throw new Error(
+      `Unrecognised argument(s): ${unknown.join(", ")}\n\n` +
+        `Accepted arguments: ${KNOWN_ARGUMENTS.join(", ")}\n\n${USAGE}`,
+    );
+  }
+  // A repeated argument means two different intentions were expressed, and
+  // silently honouring the first is the wrong way to resolve that.
+  for (const flag of ["--phase=", "--execute"]) {
+    const matches = args.filter((a) =>
+      flag.endsWith("=") ? a.startsWith(flag) : a === flag,
+    );
+    if (matches.length > 1) {
+      throw new Error(
+        `${flag.replace(/=$/, "")} was given ${matches.length} times: ` +
+          `${matches.join(", ")}\n\n${USAGE}`,
+      );
+    }
+  }
+}
+
 export function resolvePlan(argv, env = {}) {
   const args = argv.slice(2);
+  assertOnlyKnownArguments(args);
+
   const phaseArg = args.find((a) => a.startsWith("--phase="));
   const phase = phaseArg ? phaseArg.slice("--phase=".length) : null;
 
   if (!PHASES.includes(phase)) {
-    throw new Error(`--phase must be one of: ${PHASES.join(", ")}`);
+    throw new Error(`--phase must be one of: ${PHASES.join(", ")}\n\n${USAGE}`);
   }
 
   const execute = args.includes("--execute");

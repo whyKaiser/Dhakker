@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import {
   ARCHIVE_COLLECTION,
   FORBIDDEN_HOSTS,
+  KNOWN_ARGUMENTS,
   MANIFEST_PATH,
   PHASES,
   SOURCE_COLLECTION,
@@ -648,7 +649,7 @@ test("the manifest's ids are disjoint from the source pack, as reconciled", () =
 
 // ── The CLI cannot add an id ─────────────────────────────────────────────
 
-test("no CLI argument can introduce an id", () => {
+test("no CLI argument can introduce an id — each is refused outright", () => {
   const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
   const attempts = [
     ["--phase=archive", "--id=intruder-01"],
@@ -660,22 +661,105 @@ test("no CLI argument can introduce an id", () => {
     ["--phase=delete", "--limit=999"],
   ];
   for (const args of attempts) {
-    const plan = resolvePlan(argv(...args), {});
-    // The plan carries no id-shaped field at all — there is nothing for an
-    // argument to land in.
-    assert.deepEqual(
-      Object.keys(plan).sort(),
-      ["database", "execute", "phase", "projectId", "token"],
-      `resolvePlan grew a field for: ${args.join(" ")}`,
+    // Refused, not ignored: the run ends rather than quietly doing something
+    // other than what was typed.
+    assert.throws(
+      () => resolvePlan(argv(...args), {}),
+      /Unrecognised argument\(s\)/,
+      `not refused: ${args.join(" ")}`,
     );
-    for (const v of Object.values(plan)) {
-      assert.ok(
-        !String(v).includes("intruder"),
-        `an argument reached the plan: ${args.join(" ")}`,
-      );
-    }
     // And the manifest is unchanged by any of it.
     assert.deepEqual([...loadManifest().ids], LIVE_IDS);
+  }
+});
+
+test("the plan has no field an argument could put an id into", () => {
+  const plan = resolvePlan(["node", "retire_legacy_records.mjs", "--phase=archive"], {});
+  assert.deepEqual(
+    Object.keys(plan).sort(),
+    ["database", "execute", "phase", "projectId", "token"],
+  );
+});
+
+test("an unrecognised argument is refused with a message naming it", () => {
+  const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
+  for (const bad of [
+    "--dry-run",
+    "--force",
+    "--yes",
+    "--only=D_SAFA_01",
+    "--exclude=D_SAFA_01",
+    "--collection=users",
+    "--archive-collection=elsewhere",
+    "-e",
+    "--Execute",
+    "--EXECUTE",
+    "--execute=true",
+    "supplications",
+    "",
+  ]) {
+    let message = "";
+    assert.throws(
+      () => resolvePlan(argv("--phase=archive", bad), {}),
+      (err) => {
+        message = err.message;
+        return /Unrecognised argument\(s\)/.test(message);
+      },
+      `${JSON.stringify(bad)} was accepted`,
+    );
+    assert.ok(message.includes(bad), `the error does not name ${JSON.stringify(bad)}`);
+    // The message must tell the operator what IS accepted.
+    assert.match(message, /Accepted arguments: --phase=<archive\|delete>, --execute/);
+    assert.match(message, /come only from\s+review\/legacy_retirement_manifest\.json/);
+  }
+});
+
+test("--execute is matched exactly, so a near-miss cannot silently dry-run", () => {
+  const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
+  // Each of these once would have been ignored, leaving the operator with a
+  // dry run they believed was a real one.
+  for (const near of ["--execute=true", "--Execute", "--exec", "-x", "execute"]) {
+    assert.throws(() => resolvePlan(argv("--phase=delete", near), {}), /Unrecognised argument/);
+  }
+});
+
+test("a repeated argument is refused rather than resolved to the first", () => {
+  const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
+  // Two phases is two intentions. Honouring the first silently would run the
+  // archive when the operator's last word was delete, or the reverse.
+  assert.throws(
+    () => resolvePlan(argv("--phase=archive", "--phase=delete"), {}),
+    /--phase was given 2 times: --phase=archive, --phase=delete/,
+  );
+  assert.throws(
+    () => resolvePlan(argv("--phase=delete", "--execute", "--execute"), {}),
+    /--execute was given 2 times/,
+  );
+});
+
+test("the two accepted argument forms still work, in either order", () => {
+  const argv = (...a) => ["node", "retire_legacy_records.mjs", ...a];
+  const env = {
+    CONFIRM_RETIREMENT: "RETIRE_LEGACY_RECORDS",
+    FIREBASE_PROJECT_ID: "p",
+    FIREBASE_ADMIN_TOKEN: "t",
+  };
+  for (const args of [
+    ["--phase=archive"],
+    ["--phase=delete"],
+    ["--phase=archive", "--execute"],
+    ["--execute", "--phase=delete"],
+  ]) {
+    const plan = resolvePlan(argv(...args), env);
+    assert.ok(PHASES.includes(plan.phase));
+    assert.equal(plan.execute, args.includes("--execute"));
+  }
+});
+
+test("KNOWN_ARGUMENTS is the whole accepted surface, and matches the phases", () => {
+  assert.deepEqual([...KNOWN_ARGUMENTS], ["--phase=<archive|delete>", "--execute"]);
+  for (const p of PHASES) {
+    assert.ok(KNOWN_ARGUMENTS[0].includes(p), `phase ${p} is missing from the usage line`);
   }
 });
 

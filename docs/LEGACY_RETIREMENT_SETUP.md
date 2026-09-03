@@ -181,6 +181,13 @@ starting the next. Every one requires environment approval.
 Confirmations required each time: `dhakker-160d0`, `supplications`, `16`,
 `RETIRE_LEGACY_RECORDS`.
 
+The tool accepts exactly two arguments — `--phase=<archive|delete>` and
+`--execute` — and **exits 1 on anything else**, including a repeated one.
+There is no `--only`, no `--limit`, no `--force` and no `--dry-run` (a dry
+run is what you get by omitting `--execute`). A near-miss such as
+`--execute=true` is refused rather than ignored, so you can never believe
+you dispatched a real run and get a dry one.
+
 **If any run fails, stop.** Do not re-dispatch to "get past" it. Every
 failure mode in the tool aborts before deleting anything:
 
