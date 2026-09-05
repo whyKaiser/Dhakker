@@ -94,6 +94,9 @@ jobs:
             "test/takhrij_review_test.dart"
             "lib/Screens/Piligram/Home/services/dua_playback_service.dart"
             "test/dua_playback_fallback_test.dart"
+            "lib/boot_signal.dart"
+            "lib/boot_signal_stub.dart"
+            "lib/boot_signal_web.dart"
           )
           dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
 
@@ -176,3 +179,46 @@ jobs:
       - name: Run Firestore and Storage rules tests
         working-directory: test_firestore_rules
         run: npm test
+
+  web-boot-smoke:
+    name: Web boot smoke check (no blank page)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.2"
+          channel: "stable"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # --no-web-resources-cdn is what stops CanvasKit being fetched from
+      # gstatic at runtime. The smoke check asserts it took effect, so a
+      # release build that drops the flag fails here.
+      - name: Build web (CanvasKit self-hosted)
+        run: |
+          flutter build web --release --no-web-resources-cdn \
+            --dart-define=ASSISTANT_PROXY_URL=https://example.invalid/assistant
+
+      - name: Install smoke-check dependencies
+        working-directory: test_web_boot
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium for Playwright
+        working-directory: test_web_boot
+        run: npx --yes playwright@1.49.1 install --with-deps chromium
+
+      # Blocks gstatic and proves the page never sits silently blank: either
+      # the app reports a first frame, or a bilingual failure screen with a
+      # retry button is shown. Also proves CanvasKit came from our own origin.
+      - name: Run boot smoke check
+        working-directory: test_web_boot
+        run: npm run smoke
