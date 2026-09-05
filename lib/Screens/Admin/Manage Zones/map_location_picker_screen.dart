@@ -102,8 +102,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (!silent)
+        if (!silent) {
           _toast(_t('فعّل خدمة الموقع أولاً', 'Enable location service first'));
+        }
         return;
       }
       var permission = await Geolocator.checkPermission();
@@ -113,8 +114,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        if (!silent)
+        if (!silent) {
           _toast(_t('لا يوجد إذن للوصول للموقع', 'Location permission denied'));
+        }
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -124,8 +126,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
       if (!mounted) return;
       _mapController.move(LatLng(pos.latitude, pos.longitude), 17.5);
     } catch (_) {
-      if (!silent)
+      if (!silent) {
         _toast(_t('تعذّر تحديد موقعك', 'Could not get your location'));
+      }
     }
   }
 

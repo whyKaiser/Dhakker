@@ -108,8 +108,9 @@ class _MapScreenState extends State<MapScreen>
     });
 
     _subscribeMembers(gid);
-    if (mounted)
+    if (mounted) {
       AppCubit.get(context).setGroupSharing(groupId: gid, enabled: sharing);
+    }
   }
 
   void _subscribeMembers(String gid) {
@@ -168,8 +169,9 @@ class _MapScreenState extends State<MapScreen>
     if (ok != true) return;
     await _groupService.leaveGroup(gid);
     await CashHelper.saveCash(key: _kShareKey, value: false);
-    if (mounted)
+    if (mounted) {
       AppCubit.get(context).setGroupSharing(groupId: null, enabled: false);
+    }
     _membersSub?.cancel();
     if (mounted) {
       setState(() {

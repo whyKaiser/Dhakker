@@ -309,8 +309,9 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                     ..sort((a, b) {
                       final ta = a.data()['createdAt'];
                       final tb = b.data()['createdAt'];
-                      if (ta is Timestamp && tb is Timestamp)
+                      if (ta is Timestamp && tb is Timestamp) {
                         return tb.compareTo(ta);
+                      }
                       return 0;
                     });
                   if (docs.isEmpty) {
