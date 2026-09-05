@@ -85,11 +85,9 @@ class _QiblaScreenState extends State<QiblaScreen>
     final bg = isDark ? const Color(0xFF0B0D10) : const Color(0xFFF5F0E8);
     const gold = Color(0xFFD4AF37);
     final textPrimary = isDark ? Colors.white : const Color(0xFF1A1A2E);
-    final textSecondary =
-        isDark ? Colors.white60 : const Color(0xFF6B6B8A);
+    final textSecondary = isDark ? Colors.white60 : const Color(0xFF6B6B8A);
     final cardBg = isDark ? const Color(0xFF141720) : Colors.white;
-    final isAr =
-        Localizations.localeOf(context).languageCode == 'ar';
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return Scaffold(
       backgroundColor: bg,
@@ -114,7 +112,8 @@ class _QiblaScreenState extends State<QiblaScreen>
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: gold))
           : _error != null
-              ? _ErrorView(message: _error!, color: gold, textColor: textSecondary)
+              ? _ErrorView(
+                  message: _error!, color: gold, textColor: textSecondary)
               : _CompassView(
                   needleAnim: _needleAnim,
                   qiblaDirection: _qiblaDirection!,
@@ -157,8 +156,8 @@ class _CompassView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final needleDeg = qiblaDirection - deviceHeading;
-    final isAligned = (needleDeg.abs() % 360) < 8 ||
-        ((needleDeg.abs() % 360) > 352);
+    final isAligned =
+        (needleDeg.abs() % 360) < 8 || ((needleDeg.abs() % 360) > 352);
     final statusColor = isAligned ? const Color(0xFF38C793) : gold;
 
     return SingleChildScrollView(
@@ -240,7 +239,8 @@ class _CompassView extends StatelessWidget {
                         angle: needleAnim.value,
                         child: Transform.translate(
                           offset: const Offset(0, -75),
-                          child: const Text('🕋', style: TextStyle(fontSize: 26)),
+                          child:
+                              const Text('🕋', style: TextStyle(fontSize: 26)),
                         ),
                       ),
                     ],
@@ -282,7 +282,9 @@ class _CompassView extends StatelessWidget {
                     Text(
                       isAligned
                           ? (isAr ? 'أنت تواجه القبلة' : 'Facing the Qibla')
-                          : (isAr ? 'وجّه الجهاز نحو السهم' : 'Point device toward arrow'),
+                          : (isAr
+                              ? 'وجّه الجهاز نحو السهم'
+                              : 'Point device toward arrow'),
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 15,
@@ -306,7 +308,8 @@ class _CompassView extends StatelessWidget {
                       textSecondary: textSecondary,
                       textPrimary: textPrimary,
                     ),
-                    Container(width: 1, height: 36, color: gold.withOpacity(.15)),
+                    Container(
+                        width: 1, height: 36, color: gold.withOpacity(.15)),
                     _InfoChip(
                       label: isAr ? 'اتجاهك الحالي' : 'Your Heading',
                       value: '${deviceHeading.toStringAsFixed(0)}°',

@@ -22,7 +22,8 @@ class MapLocationPickerScreen extends StatefulWidget {
   });
 
   @override
-  State<MapLocationPickerScreen> createState() => _MapLocationPickerScreenState();
+  State<MapLocationPickerScreen> createState() =>
+      _MapLocationPickerScreenState();
 }
 
 class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
@@ -46,17 +47,21 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
     super.initState();
 
     _center = widget.initialPoint ??
-        (widget.initialPoints.isNotEmpty ? widget.initialPoints.first : _defaultCenter);
+        (widget.initialPoints.isNotEmpty
+            ? widget.initialPoints.first
+            : _defaultCenter);
 
     if (widget.multiPoint) _points.addAll(widget.initialPoints);
 
-    _pinAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _pinAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 200));
     _pinLift = Tween<double>(begin: 0, end: 14).animate(
       CurvedAnimation(parent: _pinAnim, curve: Curves.easeOut),
     );
 
     if (widget.initialPoint == null && widget.initialPoints.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _goToMyLocation(silent: true));
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _goToMyLocation(silent: true));
     }
   }
 
@@ -97,7 +102,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (!silent) _toast(_t('فعّل خدمة الموقع أولاً', 'Enable location service first'));
+        if (!silent)
+          _toast(_t('فعّل خدمة الموقع أولاً', 'Enable location service first'));
         return;
       }
       var permission = await Geolocator.checkPermission();
@@ -107,16 +113,19 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        if (!silent) _toast(_t('لا يوجد إذن للوصول للموقع', 'Location permission denied'));
+        if (!silent)
+          _toast(_t('لا يوجد إذن للوصول للموقع', 'Location permission denied'));
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
       _mapController.move(LatLng(pos.latitude, pos.longitude), 17.5);
     } catch (_) {
-      if (!silent) _toast(_t('تعذّر تحديد موقعك', 'Could not get your location'));
+      if (!silent)
+        _toast(_t('تعذّر تحديد موقعك', 'Could not get your location'));
     }
   }
 
@@ -139,8 +148,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
   }
 
   bool get _isAr => Localizations.localeOf(context).languageCode == 'ar';
@@ -182,7 +191,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
         foregroundColor: Colors.white,
         title: Text(
           _t('اختر الموقع', 'Pick Location'),
-          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white,
+          style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
               shadows: [Shadow(color: Colors.black54, blurRadius: 8)]),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -236,8 +247,12 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
                           ),
                         const SizedBox(height: 2),
                         // البين نفسه
-                        Icon(Icons.location_pin, color: accent, size: 48,
-                            shadows: const [Shadow(color: Colors.black54, blurRadius: 12)]),
+                        Icon(Icons.location_pin,
+                            color: accent,
+                            size: 48,
+                            shadows: const [
+                              Shadow(color: Colors.black54, blurRadius: 12)
+                            ]),
                       ],
                     ),
                   ),
@@ -252,7 +267,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
             right: 12,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(.65),
                   borderRadius: BorderRadius.circular(30),
@@ -264,7 +280,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
                       widget.multiPoint
                           ? Icons.touch_app_rounded
                           : Icons.drag_indicator_rounded,
-                      color: accent, size: 16,
+                      color: accent,
+                      size: 16,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -272,7 +289,9 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
                           ? _t('اضغط لإضافة نقطة', 'Tap to add point')
                           : '$lat, $lng',
                       style: const TextStyle(
-                          color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700),
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -286,9 +305,15 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
             bottom: 160,
             child: Column(
               children: [
-                _MapBtn(icon: Icons.add_rounded, accent: accent, onTap: () => _zoom(1)),
+                _MapBtn(
+                    icon: Icons.add_rounded,
+                    accent: accent,
+                    onTap: () => _zoom(1)),
                 const SizedBox(height: 8),
-                _MapBtn(icon: Icons.remove_rounded, accent: accent, onTap: () => _zoom(-1)),
+                _MapBtn(
+                    icon: Icons.remove_rounded,
+                    accent: accent,
+                    onTap: () => _zoom(-1)),
                 const SizedBox(height: 16),
                 _MapBtn(
                   icon: Icons.my_location_rounded,
@@ -340,12 +365,16 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
           color: accent,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)
+          ],
         ),
         alignment: Alignment.center,
         child: Text('$number',
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 12)),
       ),
     );
   }
@@ -356,7 +385,8 @@ class _MapBtn extends StatelessWidget {
   final IconData icon;
   final Color accent;
   final VoidCallback onTap;
-  const _MapBtn({required this.icon, required this.accent, required this.onTap});
+  const _MapBtn(
+      {required this.icon, required this.accent, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -372,7 +402,9 @@ class _MapBtn extends StatelessWidget {
           color: Colors.black.withOpacity(.72),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: accent.withOpacity(.25)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(.25), blurRadius: 8)
+          ],
         ),
         child: Icon(icon, color: Colors.white, size: 22),
       ),
@@ -447,7 +479,9 @@ class _BottomPanel extends StatelessWidget {
                     ? Text(
                         'نقاط: $pointsCount',
                         style: TextStyle(
-                            color: text, fontWeight: FontWeight.w800, fontSize: 14),
+                            color: text,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14),
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,7 +489,9 @@ class _BottomPanel extends StatelessWidget {
                           Text(
                             center.latitude.toStringAsFixed(6),
                             style: TextStyle(
-                                color: text, fontWeight: FontWeight.w900, fontSize: 13),
+                                color: text,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13),
                           ),
                           Text(
                             center.longitude.toStringAsFixed(6),
@@ -510,7 +546,8 @@ class _BottomPanel extends StatelessWidget {
                   onPressed: canConfirm ? onConfirm : null,
                   icon: const Icon(Icons.check_rounded, size: 20),
                   label: Text(labelConfirm,
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 15)),
                 ),
               ),
             ],
@@ -546,7 +583,8 @@ class _SmallBtn extends StatelessWidget {
           foregroundColor: text,
           side: BorderSide(color: muted.withOpacity(.4)),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: enabled
             ? () {

@@ -164,8 +164,8 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
     // بلا دورٍ مصرَّح لا رابط. والدور الوحيد المعروف اليوم هو الإحالة إلىٰ
     // نصٍّ يُتلىٰ، فلا يُعرض «انظر: …» إلىٰ بطاقة إرشاد لا تُتلىٰ أصلًا.
     if (!dua.hasRecitationLink) return null;
-    final ids = SupplicationModel.sanitizeRelatedIds(
-        dua.relatedRecordIds, dua.duaId);
+    final ids =
+        SupplicationModel.sanitizeRelatedIds(dua.relatedRecordIds, dua.duaId);
     for (final id in ids) {
       for (final item in _allItems) {
         if (item.dua.duaId == id && item.dua.canPlayManually) return item.dua;
@@ -337,7 +337,8 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                     backgroundColor: palette.card,
                     onRefresh: _loadData,
                     child: ListView(
-                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                      physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics()),
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                       children: [
                         Text(
@@ -358,128 +359,147 @@ class _DuasScreenState extends State<DuasScreen> with TickerProviderStateMixin {
                           onChanged: (_) => _applyFilters(),
                           onMicTap: _startVoiceSearch,
                         ),
-                    const SizedBox(height: 14),
-                    _ZoneFilterBar(
-                      palette: palette,
-                      allLabel: s.duasAllZones,
-                      zones: _zones,
-                      selectedZoneId: _selectedZoneId,
-                      langCode: langCode,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedZoneId = value;
-                        });
-                        _applyFilters();
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    if (_isLoading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 40),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: palette.gold,
-                          ),
+                        const SizedBox(height: 14),
+                        _ZoneFilterBar(
+                          palette: palette,
+                          allLabel: s.duasAllZones,
+                          zones: _zones,
+                          selectedZoneId: _selectedZoneId,
+                          langCode: langCode,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedZoneId = value;
+                            });
+                            _applyFilters();
+                          },
                         ),
-                      )
-                    else if (_filteredItems.isEmpty)
-                      _EmptyDuasState(
-                        palette: palette,
-                        title: s.duasEmptyTitle,
-                        message: s.duasEmptyMessage,
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        primary: false,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredItems[index];
+                        const SizedBox(height: 18),
+                        if (_isLoading)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 40),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: palette.gold,
+                              ),
+                            ),
+                          )
+                        else if (_filteredItems.isEmpty)
+                          _EmptyDuasState(
+                            palette: palette,
+                            title: s.duasEmptyTitle,
+                            message: s.duasEmptyMessage,
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            primary: false,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _filteredItems.length,
+                            itemBuilder: (context, index) {
+                              final item = _filteredItems[index];
 
-                          final double start = (index * 0.08).clamp(0.0, 1.0);
-                          final double end = (start + 0.4).clamp(0.0, 1.0);
+                              final double start =
+                                  (index * 0.08).clamp(0.0, 1.0);
+                              final double end = (start + 0.4).clamp(0.0, 1.0);
 
-                          return AnimatedBuilder(
-                            animation: _listAnimationController,
-                            builder: (context, child) {
-                              final animationCurve = CurvedAnimation(
-                                parent: _listAnimationController,
-                                curve: Interval(start, end, curve: Curves.easeOutCubic),
-                              );
+                              return AnimatedBuilder(
+                                animation: _listAnimationController,
+                                builder: (context, child) {
+                                  final animationCurve = CurvedAnimation(
+                                    parent: _listAnimationController,
+                                    curve: Interval(start, end,
+                                        curve: Curves.easeOutCubic),
+                                  );
 
-                              return Transform.translate(
-                                offset: Offset(0, 36 * (1.0 - animationCurve.value)),
-                                child: Opacity(
-                                  opacity: animationCurve.value,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              // الإرشاد ليس دعاءً: يُعرض في بطاقة إرشادية
-                              // منفصلة بلا زر تشغيل وبلا عنوان «دعاء».
-                              // ثلاثة مسارات لا اثنان: الإرشاد بطاقته،
-                              // والأثر المرويّ بطاقته بعزوه، وما عداهما
-                              // نصّ يُتلىٰ بزر تشغيل. كان الأثر يسقط في
-                              // المسار الأخير فيظهر بزر تشغيل.
-                              child: item.dua.contentKind ==
-                                      SupplicationContentKind.proceduralGuidance
-                                  ? GuidanceCard(
-                                      title: item.dua.titleByLanguage(langCode),
-                                      body: item.dua.textByLanguage(langCode),
-                                      attribution: item.dua.attribution,
-                                      references: item.dua.sourceReferences,
-                                      hasUnnamedFurtherReferences:
-                                          item.dua.hasUnnamedFurtherReferences,
-                                      isPropheticDirective: true,
-                                      usageNoteAr: item.dua.usageNoteAr,
-                                      relatedRecordTitle: _relatedTitle(
-                                          item.dua, langCode),
-                                      onOpenRelated: () => _openRelated(
-                                          item.dua, langCode),
-                                      cardColor: palette.card,
-                                      textColor: palette.text,
-                                    )
-                                  : item.dua.contentKind ==
+                                  return Transform.translate(
+                                    offset: Offset(
+                                        0, 36 * (1.0 - animationCurve.value)),
+                                    child: Opacity(
+                                      opacity: animationCurve.value,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  // الإرشاد ليس دعاءً: يُعرض في بطاقة إرشادية
+                                  // منفصلة بلا زر تشغيل وبلا عنوان «دعاء».
+                                  // ثلاثة مسارات لا اثنان: الإرشاد بطاقته،
+                                  // والأثر المرويّ بطاقته بعزوه، وما عداهما
+                                  // نصّ يُتلىٰ بزر تشغيل. كان الأثر يسقط في
+                                  // المسار الأخير فيظهر بزر تشغيل.
+                                  child: item.dua.contentKind ==
                                           SupplicationContentKind
-                                              .contextualEvidence
-                                      ? ContextualEvidenceCard(
+                                              .proceduralGuidance
+                                      ? GuidanceCard(
                                           title: item.dua
                                               .titleByLanguage(langCode),
-                                          body: item.dua
-                                              .textByLanguage(langCode),
+                                          body:
+                                              item.dua.textByLanguage(langCode),
                                           attribution: item.dua.attribution,
-                                          references:
-                                              item.dua.sourceReferences,
+                                          references: item.dua.sourceReferences,
                                           hasUnnamedFurtherReferences: item
                                               .dua.hasUnnamedFurtherReferences,
+                                          isPropheticDirective: true,
+                                          usageNoteAr: item.dua.usageNoteAr,
+                                          relatedRecordTitle:
+                                              _relatedTitle(item.dua, langCode),
+                                          onOpenRelated: () =>
+                                              _openRelated(item.dua, langCode),
                                           cardColor: palette.card,
                                           textColor: palette.text,
                                         )
-                                      : _DuaResultCard(
-                                palette: palette,
-                                title: item.dua.titleByLanguage(langCode),
-                                text: item.dua.textByLanguage(langCode),
-                                kind: item.dua.contentKind,
-                                policy: item.dua.recitationPolicy,
-                                usageNoteAr: item.dua.usageNoteAr,
-                                zoneName: item.zone?.displayName(langCode) ?? s.duasUnknownZone,
-                                buttonText: s.duasPlayButton,
-                                onPlay: () async => await _playDua(item.dua),
-                                onShare: () {
-                                  Clipboard.setData(ClipboardData(text: item.dua.textByLanguage(langCode)));
-                                  Fluttertoast.showToast(msg: 'تم نسخ الدعاء', backgroundColor: const Color(0xFFD4AF37), textColor: Colors.black);
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
-                ),
-              ),
+                                      : item.dua.contentKind ==
+                                              SupplicationContentKind
+                                                  .contextualEvidence
+                                          ? ContextualEvidenceCard(
+                                              title: item.dua
+                                                  .titleByLanguage(langCode),
+                                              body: item.dua
+                                                  .textByLanguage(langCode),
+                                              attribution: item.dua.attribution,
+                                              references:
+                                                  item.dua.sourceReferences,
+                                              hasUnnamedFurtherReferences: item
+                                                  .dua
+                                                  .hasUnnamedFurtherReferences,
+                                              cardColor: palette.card,
+                                              textColor: palette.text,
+                                            )
+                                          : _DuaResultCard(
+                                              palette: palette,
+                                              title: item.dua
+                                                  .titleByLanguage(langCode),
+                                              text: item.dua
+                                                  .textByLanguage(langCode),
+                                              kind: item.dua.contentKind,
+                                              policy: item.dua.recitationPolicy,
+                                              usageNoteAr: item.dua.usageNoteAr,
+                                              zoneName: item.zone
+                                                      ?.displayName(langCode) ??
+                                                  s.duasUnknownZone,
+                                              buttonText: s.duasPlayButton,
+                                              onPlay: () async =>
+                                                  await _playDua(item.dua),
+                                              onShare: () {
+                                                Clipboard.setData(ClipboardData(
+                                                    text: item.dua
+                                                        .textByLanguage(
+                                                            langCode)));
+                                                Fluttertoast.showToast(
+                                                    msg: 'تم نسخ الدعاء',
+                                                    backgroundColor:
+                                                        const Color(0xFFD4AF37),
+                                                    textColor: Colors.black);
+                                              },
+                                            ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
                   // ── تبويب المناسك ──
                   _ManasikTab(
                     palette: palette,
@@ -671,7 +691,8 @@ class _ZoneFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _ZoneFilterData(id: null, label: allLabel),
-      ...zones.map((e) => _ZoneFilterData(id: e.zoneId, label: e.displayName(langCode))),
+      ...zones.map(
+          (e) => _ZoneFilterData(id: e.zoneId, label: e.displayName(langCode))),
     ];
 
     return SizedBox(
@@ -683,7 +704,8 @@ class _ZoneFilterBar extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final item = items[index];
-          final active = selectedZoneId == item.id || (selectedZoneId == null && item.id == null);
+          final active = selectedZoneId == item.id ||
+              (selectedZoneId == null && item.id == null);
 
           return GestureDetector(
             onTap: () => onChanged(item.id),
@@ -693,7 +715,8 @@ class _ZoneFilterBar extends StatelessWidget {
                 color: active ? palette.gold.withOpacity(.15) : palette.card,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: active ? palette.gold.withOpacity(.80) : palette.border,
+                  color:
+                      active ? palette.gold.withOpacity(.80) : palette.border,
                   width: active ? 1.3 : 1.0,
                 ),
               ),
@@ -790,22 +813,31 @@ class _DuaResultCardState extends State<_DuaResultCard> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: widget.palette.chipBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   widget.zoneName,
-                  style: TextStyle(color: widget.palette.gold, fontSize: 12.5, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                      color: widget.palette.gold,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900),
                 ),
               ),
               const Spacer(),
-              Text(widget.title, style: TextStyle(color: widget.palette.text, fontSize: 16, fontWeight: FontWeight.w900)),
+              Text(widget.title,
+                  style: TextStyle(
+                      color: widget.palette.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900)),
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: widget.onShare,
-                child: Icon(Icons.copy_rounded, color: widget.palette.gold.withOpacity(.6), size: 19),
+                child: Icon(Icons.copy_rounded,
+                    color: widget.palette.gold.withOpacity(.6), size: 19),
               ),
             ],
           ),
@@ -842,7 +874,6 @@ class _DuaResultCardState extends State<_DuaResultCard> {
             ),
           ),
           const SizedBox(height: 18),
-
           GestureDetector(
             onTapDown: (_) {
               setState(() {
@@ -1073,7 +1104,8 @@ class _DaleelHeader extends StatelessWidget {
               dividerColor: Colors.transparent,
               labelColor: const Color(0xFF14171C),
               unselectedLabelColor: palette.textSoft,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
               tabs: [
                 Tab(text: isAr ? 'الأدعية' : 'Supplications'),
                 Tab(text: isAr ? 'المناسك' : 'Rituals'),
@@ -1102,7 +1134,8 @@ class _ManasikTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // العنصر 0 = جدول الحج الزمني، ثم المناسك، وآخرها التنويه.
     return ListView.builder(
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics:
+          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
       itemCount: manasikRituals.length + 2,
       itemBuilder: (context, index) {
@@ -1211,7 +1244,9 @@ class _HajjScheduleCardState extends State<_HajjScheduleCard> {
                   child: Text(
                     widget.isAr ? 'الجدول الزمني للحج' : 'Hajj Timeline',
                     style: TextStyle(
-                        color: p.gold, fontSize: 16, fontWeight: FontWeight.w900),
+                        color: p.gold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
@@ -1231,11 +1266,13 @@ class _HajjScheduleCardState extends State<_HajjScheduleCard> {
                     setState(() => _openDay = open ? -1 : i);
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
                             color: p.gold.withOpacity(.12),
                             borderRadius: BorderRadius.circular(8),
@@ -1243,7 +1280,9 @@ class _HajjScheduleCardState extends State<_HajjScheduleCard> {
                           child: Text(
                             d.day(lang),
                             style: TextStyle(
-                                color: p.gold, fontSize: 11.5, fontWeight: FontWeight.w800),
+                                color: p.gold,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -1251,7 +1290,9 @@ class _HajjScheduleCardState extends State<_HajjScheduleCard> {
                           child: Text(
                             d.title(lang),
                             style: TextStyle(
-                                color: p.text, fontSize: 14, fontWeight: FontWeight.w800),
+                                color: p.text,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800),
                           ),
                         ),
                         AnimatedRotation(
@@ -1276,10 +1317,12 @@ class _HajjScheduleCardState extends State<_HajjScheduleCard> {
                                 .map((t) => Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Padding(
-                                            padding: const EdgeInsets.only(top: 6),
+                                            padding:
+                                                const EdgeInsets.only(top: 6),
                                             child: Container(
                                               width: 6,
                                               height: 6,
@@ -1379,7 +1422,10 @@ class _ManasikCardState extends State<_ManasikCard> {
                     ),
                     child: Text(
                       '${widget.number}',
-                      style: TextStyle(color: p.gold, fontWeight: FontWeight.w900, fontSize: 14),
+                      style: TextStyle(
+                          color: p.gold,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1392,20 +1438,27 @@ class _ManasikCardState extends State<_ManasikCard> {
                             Flexible(
                               child: Text(
                                 r.title(lang),
-                                style: TextStyle(color: p.text, fontSize: 16, fontWeight: FontWeight.w900),
+                                style: TextStyle(
+                                    color: p.text,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900),
                               ),
                             ),
                             if (r.isHajjOnly) ...[
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: p.gold.withOpacity(.12),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   widget.isAr ? 'حج' : 'Hajj',
-                                  style: TextStyle(color: p.gold, fontSize: 10.5, fontWeight: FontWeight.w800),
+                                  style: TextStyle(
+                                      color: p.gold,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800),
                                 ),
                               ),
                             ],
@@ -1414,7 +1467,11 @@ class _ManasikCardState extends State<_ManasikCard> {
                         const SizedBox(height: 3),
                         Text(
                           r.summary(lang),
-                          style: TextStyle(color: p.muted, fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.4),
+                          style: TextStyle(
+                              color: p.muted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4),
                         ),
                       ],
                     ),
@@ -1423,7 +1480,8 @@ class _ManasikCardState extends State<_ManasikCard> {
                   AnimatedRotation(
                     turns: _open ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 220),
-                    child: Icon(Icons.keyboard_arrow_down_rounded, color: p.gold, size: 24),
+                    child: Icon(Icons.keyboard_arrow_down_rounded,
+                        color: p.gold, size: 24),
                   ),
                 ],
               ),
@@ -1448,12 +1506,19 @@ class _ManasikCardState extends State<_ManasikCard> {
                               children: [
                                 Text(
                                   '${i + 1}. ',
-                                  style: TextStyle(color: p.gold, fontWeight: FontWeight.w900, fontSize: 14),
+                                  style: TextStyle(
+                                      color: p.gold,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14),
                                 ),
                                 Expanded(
                                   child: Text(
                                     steps[i],
-                                    style: TextStyle(color: p.text, fontSize: 14, height: 1.55, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                        color: p.text,
+                                        fontSize: 14,
+                                        height: 1.55,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ),
                               ],
@@ -1468,20 +1533,28 @@ class _ManasikCardState extends State<_ManasikCard> {
                             decoration: BoxDecoration(
                               color: p.gold.withOpacity(.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: p.gold.withOpacity(.25)),
+                              border:
+                                  Border.all(color: p.gold.withOpacity(.25)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   widget.isAr ? 'الدعاء' : 'Supplication',
-                                  style: TextStyle(color: p.gold, fontSize: 12.5, fontWeight: FontWeight.w900),
+                                  style: TextStyle(
+                                      color: p.gold,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w900),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   dua,
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: p.text, fontSize: 15, height: 1.7, fontWeight: FontWeight.w700),
+                                  style: TextStyle(
+                                      color: p.text,
+                                      fontSize: 15,
+                                      height: 1.7,
+                                      fontWeight: FontWeight.w700),
                                 ),
                               ],
                             ),
