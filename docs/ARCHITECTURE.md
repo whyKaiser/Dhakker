@@ -495,7 +495,7 @@ installed into the working environment and the real commands were run,
 with exit codes checked explicitly:
 
 ```
-dart format --output=none --set-exit-if-changed <feature files>   # exit 0
+dart format --output=none --set-exit-if-changed .                  # exit 0
 flutter pub get                                                    # exit 0
 flutter analyze                                                    # exit 0, "No issues found!"
 flutter test                                                       # exit 0, 44/44 passing
@@ -538,11 +538,11 @@ denied, it is simply not a clean `false`.
 
 **CI** — `.github/workflows/flutter-ci.yml` runs both suites on every push
 to this branch and on PRs targeting `main`, and can be triggered manually
-via `workflow_dispatch`. Its formatting step deliberately checks only the
-Dart files this feature owns rather than the whole tree: the repository's
-pre-existing files were never run through `dart format` on a
-case-sensitive filesystem, so a repo-wide check fails on ~60 unrelated
-files. The step still fails if any feature-owned file is misformatted.
+via `workflow_dispatch`. Its formatting step checks the whole tree.
+It once checked only a hand-maintained list of "feature-owned" files,
+because ~54 pre-existing files had never been run through `dart format`;
+that debt has since been paid in a formatting-only change, so the list and
+the exception it encoded are both gone.
 
 ### Still not verified here
 
