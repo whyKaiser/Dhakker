@@ -27,13 +27,25 @@ on:
       - main
   workflow_dispatch:
 
+# This workflow checks out the repository, runs tests, and writes nothing back
+# — no comments, no releases, no packages, no deployments. `contents: read` is
+# therefore the entire requirement, and declaring it stops the job inheriting
+# whatever the repository default happens to be (often read/write).
+#
+# `pull_request` (not `pull_request_target`) means a fork's run gets no
+# secrets, so a PR cannot exfiltrate anything through this file.
+permissions:
+  contents: read
+
 jobs:
   analyze-and-test:
     name: Format, analyze, and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      # NOT PINNED TO A SHA — see the note at the bottom of this file.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -113,10 +125,22 @@ jobs:
     name: Assistant proxy Worker tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # actions/setup-node v7.0.0 — same commit the credential-bearing
+      # workflows already run with `node-version: "20"`.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "20"
+      # Static analysis of every .mjs/.js in the repository's Node code. The
+      # config is a correctness net, not a style pass — see eslint.config.mjs
+      # for what is deliberately switched off and why.
+      - name: Install Node tooling
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint Node code
+        run: npm run lint
+
       - name: Run Worker tests
         working-directory: assistant-proxy
         run: node --test worker.test.mjs
@@ -156,11 +180,15 @@ jobs:
     name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # actions/setup-node v7.0.0 — same commit the credential-bearing
+      # workflows already run with `node-version: "20"`.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "20"
       # The Firestore emulator is a Java process.
+      # NOT PINNED TO A SHA — see the note at the bottom of this file.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -222,3 +250,26 @@ jobs:
       - name: Run boot smoke check
         working-directory: test_web_boot
         run: npm run smoke
+
+# ── Remaining SHA pins (manual step) ─────────────────────────────────────
+#
+# actions/checkout and actions/setup-node above are pinned to the exact
+# commits the credential-bearing workflows in this repository already use, so
+# those SHAs are ones this project has already reviewed.
+#
+# subosito/flutter-action@v2 and actions/setup-java@v4 are still tag-pinned.
+# A tag is mutable: whoever controls the repository can repoint it at other
+# code, and this workflow would run it. They are NOT pinned here because the
+# SHAs could not be resolved from inside this repository, and inventing one
+# would be worse than leaving the tag — a wrong SHA is an unrunnable workflow,
+# and a plausible-looking wrong SHA is a lie in a security control.
+#
+# To finish the job, resolve each tag and replace it, keeping the version in a
+# comment beside it in the same style as the lines above:
+#
+#   gh api repos/subosito/flutter-action/git/ref/tags/v2.18.0 --jq .object.sha
+#   gh api repos/actions/setup-java/git/ref/tags/v4.5.0       --jq .object.sha
+#
+# Note this job holds no secrets and `permissions: contents: read`, so the
+# blast radius of a hijacked tag here is a poisoned test result rather than a
+# leaked credential. Worth fixing, not urgent.
