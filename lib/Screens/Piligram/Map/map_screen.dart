@@ -28,13 +28,15 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
 
   late final MapControllerService _mapControllerService;
   late final AnimationController _pulseController;
 
-  final ZoneDetectionService _zoneDetectionService = const ZoneDetectionService();
+  final ZoneDetectionService _zoneDetectionService =
+      const ZoneDetectionService();
 
   List<ZoneModel> _zones = [];
   ZoneModel? _currentZone;
@@ -106,7 +108,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     });
 
     _subscribeMembers(gid);
-    if (mounted) AppCubit.get(context).setGroupSharing(groupId: gid, enabled: sharing);
+    if (mounted)
+      AppCubit.get(context).setGroupSharing(groupId: gid, enabled: sharing);
   }
 
   void _subscribeMembers(String gid) {
@@ -165,7 +168,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     if (ok != true) return;
     await _groupService.leaveGroup(gid);
     await CashHelper.saveCash(key: _kShareKey, value: false);
-    if (mounted) AppCubit.get(context).setGroupSharing(groupId: null, enabled: false);
+    if (mounted)
+      AppCubit.get(context).setGroupSharing(groupId: null, enabled: false);
     _membersSub?.cancel();
     if (mounted) {
       setState(() {
@@ -204,14 +208,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         final palette = _MapPalette.fromBrightness(isDark);
         return Dialog(
           backgroundColor: palette.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Padding(
             padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('كود المجموعة',
-                    style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900)),
+                    style: TextStyle(
+                        color: palette.gold,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900)),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -228,7 +236,11 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 const SizedBox(height: 16),
                 SelectableText(
                   _groupCode,
-                  style: TextStyle(color: palette.textPrimary, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                  style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -263,7 +275,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       builder: (ctx) => AlertDialog(
         backgroundColor: palette.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text(title, style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w900)),
+        title: Text(title,
+            style: TextStyle(
+                color: palette.textPrimary, fontWeight: FontWeight.w900)),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -281,7 +295,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(action, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+            child: Text(action,
+                style: TextStyle(
+                    color: palette.gold, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -300,8 +316,11 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       builder: (ctx) => AlertDialog(
         backgroundColor: palette.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: Text(title, style: TextStyle(color: palette.textPrimary, fontWeight: FontWeight.w900)),
-        content: Text(message, style: TextStyle(color: palette.textMuted, height: 1.6)),
+        title: Text(title,
+            style: TextStyle(
+                color: palette.textPrimary, fontWeight: FontWeight.w900)),
+        content: Text(message,
+            style: TextStyle(color: palette.textMuted, height: 1.6)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -309,7 +328,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(action, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+            child: Text(action,
+                style: TextStyle(
+                    color: palette.gold, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -346,8 +367,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     final permission = await Geolocator.checkPermission();
 
-    final hasPermission =
-        permission == LocationPermission.always || permission == LocationPermission.whileInUse;
+    final hasPermission = permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
 
     if (!serviceEnabled || !hasPermission) {
       return;
@@ -364,7 +385,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.best, // رفع الدقة لأعلى مستوى ممكن
-        distanceFilter: 2, // تحديث الموقع فور التحرك مترين فقط لثبات الإشارة عند الخيف
+        distanceFilter:
+            2, // تحديث الموقع فور التحرك مترين فقط لثبات الإشارة عند الخيف
       ),
     ).listen((position) async {
       await _handlePosition(position);
@@ -384,7 +406,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     if (mounted) {
       AppCubit.get(context).updateLocationAndCheckRounds(
         position,
-        isInZone: detected != null, // يرسل true إذا كان داخل زون الصالة، و false إذا خرج للمنطقة المفتوحة
+        isInZone: detected !=
+            null, // يرسل true إذا كان داخل زون الصالة، و false إذا خرج للمنطقة المفتوحة
       );
     }
     // ----------------------------------------------------------------------------------
@@ -439,7 +462,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         radius: zone.radiusM ?? 0.0,
         useRadiusInMeter: true,
         color: color,
-        borderColor: zone.zoneId == activeZoneId ? palette.active : palette.gold.withOpacity(0.5),
+        borderColor: zone.zoneId == activeZoneId
+            ? palette.active
+            : palette.gold.withOpacity(0.5),
         borderStrokeWidth: zone.zoneId == activeZoneId ? 3.0 : 1.5,
       );
     }).toList();
@@ -451,14 +476,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
     final labelMarkers = _zones
         .map((zone) => renderer.buildZoneLabelMarker(
-      zone: zone,
-      label: zone.displayName(langCode),
-      isActive: zone.zoneId == activeZoneId,
-    ))
+              zone: zone,
+              label: zone.displayName(langCode),
+              isActive: zone.zoneId == activeZoneId,
+            ))
         .whereType<Marker>()
         .toList();
 
-    final userMarker = _buildUserMarker(palette: palette, position: _currentPosition, heading: cubit.userHeading);
+    final userMarker = _buildUserMarker(
+        palette: palette,
+        position: _currentPosition,
+        heading: cubit.userHeading);
 
     final myUid = FirebaseAuth.instance.currentUser?.uid;
     final memberMarkers = _members
@@ -485,14 +513,20 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Align(
-                    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isAr ? Alignment.centerRight : Alignment.centerLeft,
                     child: Text(
                       s.mapTitle,
-                      style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                      style: TextStyle(
+                          color: palette.gold,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'AlamirBold'),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Container(height: 1, color: palette.textMuted.withOpacity(.16)),
+                  Container(
+                      height: 1, color: palette.textMuted.withOpacity(.16)),
                   const SizedBox(height: 18),
                   _MapCard(
                     palette: palette,
@@ -505,7 +539,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                             mapController: _mapController,
                             options: MapOptions(
                               initialCenter: _currentPosition != null
-                                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                                  ? LatLng(_currentPosition!.latitude,
+                                      _currentPosition!.longitude)
                                   : const LatLng(21.4132, 39.8711),
                               initialZoom: 18.1,
                               minZoom: 16.0,
@@ -519,9 +554,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                                 subdomains: const ['a', 'b', 'c', 'd'],
                                 userAgentPackageName: 'dhakker',
                               ),
-                              if (polygonZones.isNotEmpty) PolygonLayer(polygons: polygonZones),
-                              if (circleZones.isNotEmpty) CircleLayer(circles: circleZones),
-                              if (allMarkers.isNotEmpty) MarkerLayer(markers: allMarkers),
+                              if (polygonZones.isNotEmpty)
+                                PolygonLayer(polygons: polygonZones),
+                              if (circleZones.isNotEmpty)
+                                CircleLayer(circles: circleZones),
+                              if (allMarkers.isNotEmpty)
+                                MarkerLayer(markers: allMarkers),
                             ],
                           ),
                         ),
@@ -533,7 +571,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                             child: _CurrentZoneChip(
                               key: ValueKey(_currentZone?.zoneId ?? 'no_zone'),
                               palette: palette,
-                              text: _currentZone?.displayName(langCode) ?? s.mapNoZoneDetected,
+                              text: _currentZone?.displayName(langCode) ??
+                                  s.mapNoZoneDetected,
                             ),
                           ),
                         ),
@@ -542,15 +581,23 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                           start: 14,
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Colors.black.withOpacity(0.65), borderRadius: BorderRadius.circular(10)),
+                            decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.65),
+                                borderRadius: BorderRadius.circular(10)),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _LegendRow(color: Colors.greenAccent, text: isAr ? "هادئ" : "Calm"),
+                                _LegendRow(
+                                    color: Colors.greenAccent,
+                                    text: isAr ? "هادئ" : "Calm"),
                                 const SizedBox(height: 4),
-                                _LegendRow(color: Colors.orangeAccent, text: isAr ? "متوسط" : "Moderate"),
+                                _LegendRow(
+                                    color: Colors.orangeAccent,
+                                    text: isAr ? "متوسط" : "Moderate"),
                                 const SizedBox(height: 4),
-                                _LegendRow(color: Colors.redAccent, text: isAr ? "مزدحم" : "Crowded"),
+                                _LegendRow(
+                                    color: Colors.redAccent,
+                                    text: isAr ? "مزدحم" : "Crowded"),
                               ],
                             ),
                           ),
@@ -558,21 +605,35 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                         PositionedDirectional(
                           end: 14,
                           bottom: 14,
-                          child: _MiniBtn(palette: palette, icon: Icons.my_location_rounded, onTap: _focusOnUser),
+                          child: _MiniBtn(
+                              palette: palette,
+                              icon: Icons.my_location_rounded,
+                              onTap: _focusOnUser),
                         ),
                         if (_isLoading)
                           Positioned.fill(
-                            child: Container(color: Colors.black.withOpacity(.12), child: Center(child: CircularProgressIndicator(color: palette.gold))),
+                            child: Container(
+                                color: Colors.black.withOpacity(.12),
+                                child: Center(
+                                    child: CircularProgressIndicator(
+                                        color: palette.gold))),
                           ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
                   Align(
-                    alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isAr ? Alignment.centerRight : Alignment.centerLeft,
                     child: Text(
-                      isAr ? "تتبُّع الأشواط واتجاه القبلة" : "Rounds & Qibla Tracking",
-                      style: TextStyle(color: palette.active, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                      isAr
+                          ? "تتبُّع الأشواط واتجاه القبلة"
+                          : "Rounds & Qibla Tracking",
+                      style: TextStyle(
+                          color: palette.active,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'AlamirBold'),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -580,10 +641,15 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                     isAr
                         ? "يدور مؤشّر القبلة تلقائيًا مع اتجاه جهازك ليدلّك على القبلة نحو الكعبة المشرفة, وتظهر مناطق المناسك على الخريطة فيُحتسب طوافك وسعيك تلقائيًا كلما تحرّكت بينها."
                         : "The Qibla pointer rotates automatically with your phone to guide you toward the Holy Kaaba, while the ritual zones appear on the map so your Tawaf and Sa'i rounds are counted automatically as you move through them.",
-                    style: TextStyle(color: palette.textMuted, fontSize: 14, fontWeight: FontWeight.w600, height: 1.6),
+                    style: TextStyle(
+                        color: palette.textMuted,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.6),
                   ),
                   const SizedBox(height: 22),
-                  Container(height: 1, color: palette.textMuted.withOpacity(.16)),
+                  Container(
+                      height: 1, color: palette.textMuted.withOpacity(.16)),
                   const SizedBox(height: 18),
                   _buildGroupSection(palette, isAr),
                 ],
@@ -595,7 +661,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     );
   }
 
-  Marker? _buildUserMarker({required _MapPalette palette, required Position? position, required double heading}) {
+  Marker? _buildUserMarker(
+      {required _MapPalette palette,
+      required Position? position,
+      required double heading}) {
     if (position == null) return null;
     return Marker(
       point: LatLng(position.latitude, position.longitude),
@@ -613,7 +682,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 child: Container(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: palette.active.withOpacity(0.10 + o * 0.10), border: Border.all(color: palette.active.withOpacity(0.22 + o * 0.12), width: 2)),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: palette.active.withOpacity(0.10 + o * 0.10),
+                      border: Border.all(
+                          color: palette.active.withOpacity(0.22 + o * 0.12),
+                          width: 2)),
                 ),
               ),
               Transform.rotate(
@@ -622,17 +696,23 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   alignment: Alignment.center,
                   children: [
                     Container(
-                      width: 18, height: 18,
+                      width: 18,
+                      height: 18,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: palette.active,
                         border: Border.all(color: Colors.white, width: 2.5),
-                        boxShadow: [BoxShadow(color: palette.active.withOpacity(.4), blurRadius: 10)],
+                        boxShadow: [
+                          BoxShadow(
+                              color: palette.active.withOpacity(.4),
+                              blurRadius: 10)
+                        ],
                       ),
                     ),
                     Positioned(
                       top: 0,
-                      child: Icon(Icons.navigation_rounded, size: 13, color: palette.active),
+                      child: Icon(Icons.navigation_rounded,
+                          size: 13, color: palette.active),
                     )
                   ],
                 ),
@@ -663,12 +743,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               color: palette.gold,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)],
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(.3), blurRadius: 6)
+              ],
             ),
             alignment: Alignment.center,
             child: Text(
               initial,
-              style: const TextStyle(color: Color(0xFF14171C), fontWeight: FontWeight.w900, fontSize: 14),
+              style: const TextStyle(
+                  color: Color(0xFF14171C),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14),
             ),
           ),
           if (firstName.isNotEmpty)
@@ -681,7 +766,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               ),
               child: Text(
                 firstName,
-                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700),
               ),
             ),
         ],
@@ -692,7 +780,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   String _fmtDistance(GroupMember m) {
     final p = _currentPosition;
     if (p == null || !m.hasLocation) return '—';
-    final d = Geolocator.distanceBetween(p.latitude, p.longitude, m.lat!, m.lng!);
+    final d =
+        Geolocator.distanceBetween(p.latitude, p.longitude, m.lat!, m.lng!);
     if (d < 1000) return '${d.round()} م';
     return '${(d / 1000).toStringAsFixed(1)} كم';
   }
@@ -712,13 +801,20 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               const SizedBox(width: 8),
               Text(
                 isAr ? 'مجموعتي' : 'My Group',
-                style: TextStyle(color: palette.gold, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                style: TextStyle(
+                    color: palette.gold,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'AlamirBold'),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        if (_groupId == null) _buildNoGroup(palette, isAr) else _buildGroupCard(palette, isAr),
+        if (_groupId == null)
+          _buildNoGroup(palette, isAr)
+        else
+          _buildGroupCard(palette, isAr),
       ],
     );
   }
@@ -738,7 +834,11 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 ? 'أنشئ مجموعة لعائلتك أو انضم بكود، لتشوفوا مواقع بعض على الخريطة وتتجنّبوا الضياع.'
                 : 'Create a family group or join with a code to see each other on the map and avoid getting lost.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: palette.textMuted, fontSize: 13.5, height: 1.6, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: palette.textMuted,
+                fontSize: 13.5,
+                height: 1.6,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 14),
           Row(
@@ -777,8 +877,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         if (p == null) return 0;
         if (!a.hasLocation) return 1;
         if (!b.hasLocation) return -1;
-        final da = Geolocator.distanceBetween(p.latitude, p.longitude, a.lat!, a.lng!);
-        final db = Geolocator.distanceBetween(p.latitude, p.longitude, b.lat!, b.lng!);
+        final da =
+            Geolocator.distanceBetween(p.latitude, p.longitude, a.lat!, a.lng!);
+        final db =
+            Geolocator.distanceBetween(p.latitude, p.longitude, b.lat!, b.lng!);
         return da.compareTo(db);
       });
 
@@ -799,10 +901,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_groupName,
-                        style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.w900)),
+                        style: TextStyle(
+                            color: palette.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
                     Text(_groupCode,
-                        style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                        style: TextStyle(
+                            color: palette.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1)),
                   ],
                 ),
               ),
@@ -823,13 +932,20 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ),
             child: Row(
               children: [
-                Icon(_sharing ? Icons.location_on_rounded : Icons.location_off_rounded,
-                    color: _sharing ? palette.active : palette.textMuted, size: 20),
+                Icon(
+                    _sharing
+                        ? Icons.location_on_rounded
+                        : Icons.location_off_rounded,
+                    color: _sharing ? palette.active : palette.textMuted,
+                    size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     isAr ? 'مشاركة موقعي مع المجموعة' : 'Share my location',
-                    style: TextStyle(color: palette.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                        color: palette.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700),
                   ),
                 ),
                 Switch(
@@ -845,7 +961,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                isAr ? 'لا يوجد أفراد آخرون بعد — شارك الكود لينضمّوا.' : 'No other members yet — share the code.',
+                isAr
+                    ? 'لا يوجد أفراد آخرون بعد — شارك الكود لينضمّوا.'
+                    : 'No other members yet — share the code.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: palette.textMuted, fontSize: 13),
               ),
@@ -857,9 +975,11 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             alignment: isAr ? Alignment.centerLeft : Alignment.centerRight,
             child: TextButton.icon(
               onPressed: _leaveGroup,
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFFE0463F), size: 18),
+              icon: const Icon(Icons.logout_rounded,
+                  color: Color(0xFFE0463F), size: 18),
               label: Text(isAr ? 'مغادرة المجموعة' : 'Leave group',
-                  style: const TextStyle(color: Color(0xFFE0463F), fontWeight: FontWeight.w800)),
+                  style: const TextStyle(
+                      color: Color(0xFFE0463F), fontWeight: FontWeight.w800)),
             ),
           ),
         ],
@@ -877,19 +997,27 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: palette.gold.withOpacity(.16), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: palette.gold.withOpacity(.16), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: Text(initial, style: TextStyle(color: palette.gold, fontWeight: FontWeight.w900)),
+            child: Text(initial,
+                style: TextStyle(
+                    color: palette.gold, fontWeight: FontWeight.w900)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               trimmed.isEmpty ? (isAr ? 'حاج' : 'Pilgrim') : trimmed,
-              style: TextStyle(color: palette.textPrimary, fontSize: 14, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  color: palette.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700),
             ),
           ),
           Text(
-            m.hasLocation ? _fmtDistance(m) : (isAr ? 'لم يشارك موقعه' : 'No location'),
+            m.hasLocation
+                ? _fmtDistance(m)
+                : (isAr ? 'لم يشارك موقعه' : 'No location'),
             style: TextStyle(
               color: m.hasLocation ? palette.active : palette.textMuted,
               fontSize: 12.5,
@@ -929,12 +1057,16 @@ class _GroupButton extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: filled ? null : Border.all(color: palette.gold.withOpacity(.6), width: 1.3),
+            border: filled
+                ? null
+                : Border.all(color: palette.gold.withOpacity(.6), width: 1.3),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: filled ? const Color(0xFF14171C) : palette.gold),
+              Icon(icon,
+                  size: 18,
+                  color: filled ? const Color(0xFF14171C) : palette.gold),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -960,9 +1092,16 @@ class _LegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+        Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+        Text(text,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1026,7 +1165,12 @@ class _MapCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         border: Border.all(color: palette.border.withOpacity(.95), width: 1.2),
-        boxShadow: [BoxShadow(color: palette.shadow.withOpacity(.16), blurRadius: 28, offset: const Offset(0, 18))],
+        boxShadow: [
+          BoxShadow(
+              color: palette.shadow.withOpacity(.16),
+              blurRadius: 28,
+              offset: const Offset(0, 18))
+        ],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(26), child: child),
     );
@@ -1036,13 +1180,18 @@ class _MapCard extends StatelessWidget {
 class _CurrentZoneChip extends StatelessWidget {
   final _MapPalette palette;
   final String text;
-  const _CurrentZoneChip({super.key, required this.palette, required this.text});
+  const _CurrentZoneChip(
+      {super.key, required this.palette, required this.text});
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(14)),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+          color: Colors.black.withOpacity(.62),
+          borderRadius: BorderRadius.circular(14)),
+      child: Text(text,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -1066,6 +1215,7 @@ class _DotGridPainter extends CustomPainter {
       }
     }
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
@@ -1074,7 +1224,8 @@ class _MiniBtn extends StatefulWidget {
   final _MapPalette palette;
   final IconData icon;
   final VoidCallback onTap;
-  const _MiniBtn({required this.palette, required this.icon, required this.onTap});
+  const _MiniBtn(
+      {required this.palette, required this.icon, required this.onTap});
 
   @override
   State<_MiniBtn> createState() => _MiniBtnState();
@@ -1108,12 +1259,12 @@ class _MiniBtnState extends State<_MiniBtn> {
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeOutCubic,
         child: Container(
-          width: 44, height: 44,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
               color: Colors.black.withOpacity(.62),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: widget.palette.gold.withOpacity(.22))
-          ),
+              border: Border.all(color: widget.palette.gold.withOpacity(.22))),
           child: Icon(widget.icon, color: Colors.white, size: 22),
         ),
       ),

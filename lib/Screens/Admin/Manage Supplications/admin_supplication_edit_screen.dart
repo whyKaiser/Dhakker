@@ -24,7 +24,8 @@ class AdminSupplicationEditScreen extends StatefulWidget {
 }
 
 class _AdminSupplicationEditScreenState
-    extends State<AdminSupplicationEditScreen> with SingleTickerProviderStateMixin {
+    extends State<AdminSupplicationEditScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   final _titleArController = TextEditingController();
@@ -53,7 +54,8 @@ class _AdminSupplicationEditScreenState
   String? _provenanceGapMessage() {
     if (!_isVerifiedSource) return null;
     final missing = <String>[];
-    if (_authorityController.text.trim().isEmpty) missing.add('الجهة المُصدِرة');
+    if (_authorityController.text.trim().isEmpty)
+      missing.add('الجهة المُصدِرة');
     final url = _sourceUrlController.text.trim();
     if (url.isEmpty || !url.startsWith('https://')) {
       missing.add('رابط المصدر (https)');
@@ -133,7 +135,8 @@ class _AdminSupplicationEditScreenState
       ]);
 
       final zonesSnap = results[0] as QuerySnapshot<Map<String, dynamic>>;
-      final supplicationDoc = results[1] as DocumentSnapshot<Map<String, dynamic>>;
+      final supplicationDoc =
+          results[1] as DocumentSnapshot<Map<String, dynamic>>;
 
       if (!supplicationDoc.exists) {
         if (!mounted) return;
@@ -456,7 +459,9 @@ class _AdminSupplicationEditScreenState
         const SizedBox(height: 12),
         _AudioFilePickerCard(
           fileName: _newAudioFileName ??
-              (_existingAudioUrl != null ? s.adminSupplicationCurrentAudioAvailable : null),
+              (_existingAudioUrl != null
+                  ? s.adminSupplicationCurrentAudioAvailable
+                  : null),
           onPick: _pickAudioFile,
         ),
       ],
@@ -576,23 +581,28 @@ class _AdminSupplicationEditScreenState
                 backgroundColor: accent,
                 foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
                 disabledBackgroundColor: accent,
-                disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                disabledForegroundColor:
+                    isDark ? DhakkerColors.bg : Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: null,
               icon: _isSaving
                   ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.3,
-                  color: isDark ? DhakkerColors.bg : Colors.white,
-                ),
-              )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.3,
+                        color: isDark ? DhakkerColors.bg : Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.save_rounded),
               label: Text(
-                _isSaving ? s.adminSupplicationSaving : s.adminSupplicationEditSave,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                _isSaving
+                    ? s.adminSupplicationSaving
+                    : s.adminSupplicationEditSave,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
               ),
             ),
           ),
@@ -616,37 +626,38 @@ class _AdminSupplicationEditScreenState
         child: _isLoading
             ? const _SupplicationFormLoadingView()
             : Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List.generate(editSections.length, (index) {
-                final double start = (index * 0.03).clamp(0.0, 1.0);
-                final double end = (start + 0.30).clamp(0.0, 1.0);
+                key: _formKey,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: List.generate(editSections.length, (index) {
+                      final double start = (index * 0.03).clamp(0.0, 1.0);
+                      final double end = (start + 0.30).clamp(0.0, 1.0);
 
-                return AnimatedBuilder(
-                  animation: _editEntranceController,
-                  builder: (context, child) {
-                    final curve = CurvedAnimation(
-                      parent: _editEntranceController,
-                      curve: Interval(start, end, curve: Curves.easeOutCubic),
-                    );
-                    return Transform.translate(
-                      offset: Offset(0, 20 * (1.0 - curve.value)),
-                      child: Opacity(
-                        opacity: curve.value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: editSections[index],
-                );
-              }),
-            ),
-          ),
-        ),
+                      return AnimatedBuilder(
+                        animation: _editEntranceController,
+                        builder: (context, child) {
+                          final curve = CurvedAnimation(
+                            parent: _editEntranceController,
+                            curve: Interval(start, end,
+                                curve: Curves.easeOutCubic),
+                          );
+                          return Transform.translate(
+                            offset: Offset(0, 20 * (1.0 - curve.value)),
+                            child: Opacity(
+                              opacity: curve.value,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: editSections[index],
+                      );
+                    }),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -679,7 +690,11 @@ class _ZoneDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.3, fontWeight: FontWeight.w800)),
+        Text(label,
+            style: TextStyle(
+                color: muted.withOpacity(.95),
+                fontSize: 12.3,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
@@ -688,19 +703,32 @@ class _ZoneDropdown extends StatelessWidget {
           style: TextStyle(color: text, fontWeight: FontWeight.w700),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: muted.withOpacity(.85), fontWeight: FontWeight.w700),
+            hintStyle: TextStyle(
+                color: muted.withOpacity(.85), fontWeight: FontWeight.w700),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: (isDark ? Colors.white : Colors.black).withOpacity(.08))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: (isDark ? Colors.white : Colors.black).withOpacity(.08))),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                    color: (isDark ? Colors.white : Colors.black)
+                        .withOpacity(.08))),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                    color: (isDark ? Colors.white : Colors.black)
+                        .withOpacity(.08))),
           ),
           items: zoneDocs.map((doc) {
             final data = doc.data();
             final name = isAr
                 ? (data['nameAr'] ?? data['nameEn'] ?? '').toString().trim()
                 : (data['nameEn'] ?? data['nameAr'] ?? '').toString().trim();
-            return DropdownMenuItem<String>(value: doc.id, child: Text(name.isEmpty ? doc.id : name, overflow: TextOverflow.ellipsis));
+            return DropdownMenuItem<String>(
+                value: doc.id,
+                child: Text(name.isEmpty ? doc.id : name,
+                    overflow: TextOverflow.ellipsis));
           }).toList(),
         ),
       ],
@@ -718,9 +746,21 @@ class _AudioModeSelector extends StatelessWidget {
     final s = S.of(context);
     return Row(
       children: [
-        Expanded(child: _TypeCard(title: s.adminSupplicationAudioTts, subtitle: s.adminSupplicationAudioTtsDesc, icon: Icons.record_voice_over_rounded, isSelected: value == 'tts', onTap: () => onChanged('tts'))),
+        Expanded(
+            child: _TypeCard(
+                title: s.adminSupplicationAudioTts,
+                subtitle: s.adminSupplicationAudioTtsDesc,
+                icon: Icons.record_voice_over_rounded,
+                isSelected: value == 'tts',
+                onTap: () => onChanged('tts'))),
         const SizedBox(width: 10),
-        Expanded(child: _TypeCard(title: s.adminSupplicationAudioFile, subtitle: s.adminSupplicationAudioFileDesc, icon: Icons.audiotrack_rounded, isSelected: value == 'file', onTap: () => onChanged('file'))),
+        Expanded(
+            child: _TypeCard(
+                title: s.adminSupplicationAudioFile,
+                subtitle: s.adminSupplicationAudioFileDesc,
+                icon: Icons.audiotrack_rounded,
+                isSelected: value == 'file',
+                onTap: () => onChanged('file'))),
       ],
     );
   }
@@ -752,7 +792,12 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? .30 : .07), blurRadius: 18, offset: const Offset(0, 12))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(isDark ? .30 : .07),
+              blurRadius: 18,
+              offset: const Offset(0, 12))
+        ],
       ),
       child: Column(
         children: [
@@ -760,7 +805,14 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
             children: [
               Icon(Icons.attach_file_rounded, color: accent),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.fileName == null || widget.fileName!.trim().isEmpty ? s.adminSupplicationNoAudioSelected : widget.fileName!, style: TextStyle(color: widget.fileName == null ? muted : text, fontWeight: FontWeight.w700))),
+              Expanded(
+                  child: Text(
+                      widget.fileName == null || widget.fileName!.trim().isEmpty
+                          ? s.adminSupplicationNoAudioSelected
+                          : widget.fileName!,
+                      style: TextStyle(
+                          color: widget.fileName == null ? muted : text,
+                          fontWeight: FontWeight.w700))),
             ],
           ),
           const SizedBox(height: 12),
@@ -779,10 +831,19 @@ class _AudioFilePickerCardState extends State<_AudioFilePickerCard> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: isDark ? DhakkerColors.bg : Colors.white, disabledBackgroundColor: accent, disabledForegroundColor: isDark ? DhakkerColors.bg : Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
+                      disabledBackgroundColor: accent,
+                      disabledForegroundColor:
+                          isDark ? DhakkerColors.bg : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14))),
                   onPressed: null,
                   icon: const Icon(Icons.upload_file_rounded),
-                  label: Text(s.adminSupplicationPickAudio, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  label: Text(s.adminSupplicationPickAudio,
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
             ),
@@ -831,8 +892,14 @@ class _CardBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(18),
-        border: Border(right: BorderSide(color: accent.withOpacity(.55), width: 3)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? .30 : .07), blurRadius: 18, offset: const Offset(0, 12))],
+        border:
+            Border(right: BorderSide(color: accent.withOpacity(.55), width: 3)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(isDark ? .30 : .07),
+              blurRadius: 18,
+              offset: const Offset(0, 12))
+        ],
       ),
       child: child,
     );
@@ -846,7 +913,12 @@ class _AppField extends StatelessWidget {
   final String? Function(String?)? validator;
   final int maxLines;
 
-  const _AppField({required this.controller, required this.label, required this.hint, this.validator, this.maxLines = 1});
+  const _AppField(
+      {required this.controller,
+      required this.label,
+      required this.hint,
+      this.validator,
+      this.maxLines = 1});
 
   @override
   Widget build(BuildContext context) {
@@ -858,7 +930,11 @@ class _AppField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: muted.withOpacity(.95), fontSize: 12.3, fontWeight: FontWeight.w800)),
+        Text(label,
+            style: TextStyle(
+                color: muted.withOpacity(.95),
+                fontSize: 12.3,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -867,15 +943,34 @@ class _AppField extends StatelessWidget {
           style: TextStyle(color: text, fontWeight: FontWeight.w700),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: muted.withOpacity(.85), fontWeight: FontWeight.w700),
+            hintStyle: TextStyle(
+                color: muted.withOpacity(.85), fontWeight: FontWeight.w700),
             filled: true,
             fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: (isDark ? Colors.white : Colors.black).withOpacity(.08))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: (isDark ? Colors.white : Colors.black).withOpacity(.08))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: accent.withOpacity(.75), width: 1.2)),
-            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.1)),
-            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.2)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                    color: (isDark ? Colors.white : Colors.black)
+                        .withOpacity(.08))),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                    color: (isDark ? Colors.white : Colors.black)
+                        .withOpacity(.08))),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    BorderSide(color: accent.withOpacity(.75), width: 1.2)),
+            errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: Color(0xFFDC2626), width: 1.1)),
+            focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: Color(0xFFDC2626), width: 1.2)),
           ),
         ),
       ],
@@ -889,7 +984,12 @@ class _TypeCard extends StatefulWidget {
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
-  const _TypeCard({required this.title, required this.subtitle, required this.icon, required this.isSelected, required this.onTap});
+  const _TypeCard(
+      {required this.title,
+      required this.subtitle,
+      required this.icon,
+      required this.isSelected,
+      required this.onTap});
 
   @override
   State<_TypeCard> createState() => _TypeCardState();
@@ -923,16 +1023,40 @@ class _TypeCardState extends State<_TypeCard> {
           decoration: BoxDecoration(
             color: card,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: widget.isSelected ? accent.withOpacity(.75) : (isDark ? Colors.white : Colors.black).withOpacity(.07), width: widget.isSelected ? 1.4 : 1),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? .30 : .07), blurRadius: 18, offset: const Offset(0, 12))],
+            border: Border.all(
+                color: widget.isSelected
+                    ? accent.withOpacity(.75)
+                    : (isDark ? Colors.white : Colors.black).withOpacity(.07),
+                width: widget.isSelected ? 1.4 : 1),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? .30 : .07),
+                  blurRadius: 18,
+                  offset: const Offset(0, 12))
+            ],
           ),
           child: Column(
             children: [
-              Container(width: 52, height: 52, decoration: BoxDecoration(color: accent.withOpacity(.10), borderRadius: BorderRadius.circular(16)), child: Icon(widget.icon, color: accent, size: 28)),
+              Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                      color: accent.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Icon(widget.icon, color: accent, size: 28)),
               const SizedBox(height: 10),
-              Text(widget.title, textAlign: TextAlign.center, style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 14)),
+              Text(widget.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: text, fontWeight: FontWeight.w900, fontSize: 14)),
               const SizedBox(height: 4),
-              Text(widget.subtitle, textAlign: TextAlign.center, style: TextStyle(color: muted, fontWeight: FontWeight.w700, fontSize: 11.8, height: 1.45)),
+              Text(widget.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: muted,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11.8,
+                      height: 1.45)),
             ],
           ),
         ),
@@ -946,7 +1070,11 @@ class _SwitchCard extends StatelessWidget {
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
-  const _SwitchCard({required this.title, required this.subtitle, required this.value, required this.onChanged});
+  const _SwitchCard(
+      {required this.title,
+      required this.subtitle,
+      required this.value,
+      required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -969,9 +1097,18 @@ class _SwitchCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 13.2)),
+                Text(title,
+                    style: TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13.2)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(color: muted, fontWeight: FontWeight.w700, fontSize: 12.2, height: 1.45)),
+                Text(subtitle,
+                    style: TextStyle(
+                        color: muted,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.2,
+                        height: 1.45)),
               ],
             ),
           ),
@@ -995,8 +1132,19 @@ class _SectionTitle extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(child: Text(title, style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: .1))),
-        Container(width: 26, height: 3, decoration: BoxDecoration(color: muted.withOpacity(.35), borderRadius: BorderRadius.circular(99))),
+        Expanded(
+            child: Text(title,
+                style: TextStyle(
+                    color: text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .1))),
+        Container(
+            width: 26,
+            height: 3,
+            decoration: BoxDecoration(
+                color: muted.withOpacity(.35),
+                borderRadius: BorderRadius.circular(99))),
       ],
     );
   }
@@ -1011,7 +1159,8 @@ class _LoadingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(18)),
+      decoration:
+          BoxDecoration(color: card, borderRadius: BorderRadius.circular(18)),
     );
   }
 }

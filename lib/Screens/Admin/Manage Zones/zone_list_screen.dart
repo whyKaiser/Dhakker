@@ -64,7 +64,8 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
           child: FloatingActionButton.extended(
             backgroundColor: accent,
             foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-            onPressed: null, // معطل لأن الـ GestureDetector يتعامل مع اللمس والأنميشن
+            onPressed:
+                null, // معطل لأن الـ GestureDetector يتعامل مع اللمس والأنميشن
             icon: const Icon(Icons.add_rounded),
             label: Text(
               s.adminZonesAddZone,
@@ -74,19 +75,20 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         ),
       ),
       body: SafeArea(
-        top: true, // تفعيل التغطية الآمنة لمنع تداخل النصوص مع شريط الحالات العلوية
+        top:
+            true, // تفعيل التغطية الآمنة لمنع تداخل النصوص مع شريط الحالات العلوية
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(), // فيزياء ارتداد سلسة ومرنة ومطاطية للسحب
+                physics:
+                    const BouncingScrollPhysics(), // فيزياء ارتداد سلسة ومرنة ومطاطية للسحب
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _SectionTitle(title: s.adminZonesTitle),
                     const SizedBox(height: 12),
-
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -132,17 +134,17 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                               suffixIcon: _searchController.text.isEmpty
                                   ? null
                                   : IconButton(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _search = '';
-                                  });
-                                },
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  color: muted,
-                                ),
-                              ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _search = '';
+                                        });
+                                      },
+                                      icon: Icon(
+                                        Icons.close_rounded,
+                                        color: muted,
+                                      ),
+                                    ),
                               filled: true,
                               fillColor: (isDark ? Colors.white : Colors.black)
                                   .withOpacity(.04),
@@ -232,9 +234,7 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: query.snapshots(),
                       builder: (context, snap) {
@@ -289,10 +289,16 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
                                 docId: doc.id,
                                 data: data,
                                 onView: () {
-                                  goToScreen(context: context, screen: AdminZoneDetailsScreen(zoneId: doc.id));
+                                  goToScreen(
+                                      context: context,
+                                      screen: AdminZoneDetailsScreen(
+                                          zoneId: doc.id));
                                 },
                                 onEdit: () {
-                                  goToScreen(context: context, screen: AdminZoneEditScreen(zoneId: doc.id));
+                                  goToScreen(
+                                      context: context,
+                                      screen:
+                                          AdminZoneEditScreen(zoneId: doc.id));
                                 },
                                 onDelete: () async {
                                   await _deleteZone(context, doc.id, data);
@@ -321,9 +327,8 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
     final type = (data['type'] ?? '').toString().toLowerCase().trim();
     final isActive = data['isActive'] == true;
 
-    final matchesSearch = _search.isEmpty ||
-        nameAr.contains(_search) ||
-        nameEn.contains(_search);
+    final matchesSearch =
+        _search.isEmpty || nameAr.contains(_search) || nameEn.contains(_search);
 
     final matchesType =
         _selectedType == 'all' || type == _selectedType.toLowerCase();
@@ -336,10 +341,10 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
   }
 
   Future<void> _deleteZone(
-      BuildContext context,
-      String docId,
-      Map<String, dynamic> data,
-      ) async {
+    BuildContext context,
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
     final s = S.of(context);
     final langCode = Localizations.localeOf(context).languageCode;
     final isAr = langCode == 'ar';
@@ -359,7 +364,8 @@ class _AdminZonesListScreenState extends State<AdminZonesListScreen> {
         return AlertDialog(
           backgroundColor: card,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18), // التعديل هنا: BorderRadius بدلاً من المكرر القديم
+            borderRadius: BorderRadius.circular(
+                18), // التعديل هنا: BorderRadius بدلاً من المكرر القديم
           ),
           title: Text(
             s.adminZonesDeleteTitle,
@@ -543,17 +549,17 @@ class _FilterDropdown extends StatelessWidget {
           items: items
               .map(
                 (e) => DropdownMenuItem<String>(
-              value: e.value,
-              child: Text(
-                e.label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: text,
-                  fontWeight: FontWeight.w700,
+                  value: e.value,
+                  child: Text(
+                    e.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
+              )
               .toList(),
         ),
       ],
@@ -598,18 +604,17 @@ class _ZoneCard extends StatelessWidget {
     final typeLabel = typeRaw == 'circle'
         ? s.adminZonesTypeCircle
         : typeRaw == 'polygon'
-        ? s.adminZonesTypePolygon
-        : '—';
+            ? s.adminZonesTypePolygon
+            : '—';
 
     final statusLabel =
-    isActive ? s.adminZonesStatusActive : s.adminZonesStatusInactive;
+        isActive ? s.adminZonesStatusActive : s.adminZonesStatusInactive;
 
-    final typeColor = typeRaw == 'circle'
-        ? const Color(0xFF2563EB)
-        : const Color(0xFF7C3AED);
+    final typeColor =
+        typeRaw == 'circle' ? const Color(0xFF2563EB) : const Color(0xFF7C3AED);
 
     final statusColor =
-    isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+        isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1017,8 +1022,10 @@ class _ZoneSkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
-    final line = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .10 : .08);
+    final base =
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
+    final line =
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .10 : .08);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1075,11 +1082,26 @@ class _ZoneSkeletonCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: Container(height: 40, decoration: BoxDecoration(color: line, borderRadius: BorderRadius.circular(14)))),
+              Expanded(
+                  child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                          color: line,
+                          borderRadius: BorderRadius.circular(14)))),
               const SizedBox(width: 10),
-              Expanded(child: Container(height: 40, decoration: BoxDecoration(color: line, borderRadius: BorderRadius.circular(14)))),
+              Expanded(
+                  child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                          color: line,
+                          borderRadius: BorderRadius.circular(14)))),
               const SizedBox(width: 10),
-              Expanded(child: Container(height: 40, decoration: BoxDecoration(color: line, borderRadius: BorderRadius.circular(14)))),
+              Expanded(
+                  child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                          color: line,
+                          borderRadius: BorderRadius.circular(14)))),
             ],
           ),
         ],

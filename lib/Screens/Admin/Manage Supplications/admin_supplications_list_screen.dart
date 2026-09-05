@@ -40,7 +40,8 @@ class _AdminSupplicationsListScreenState
   void initState() {
     super.initState();
 
-    if (widget.initialZoneId != null && widget.initialZoneId!.trim().isNotEmpty) {
+    if (widget.initialZoneId != null &&
+        widget.initialZoneId!.trim().isNotEmpty) {
       _selectedZoneId = widget.initialZoneId!.trim();
     }
 
@@ -60,7 +61,8 @@ class _AdminSupplicationsListScreenState
       final zoneDocs = snap.docs;
       final zoneMap = <String, String>{};
 
-      final langCode = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      final langCode =
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
       final isAr = langCode == 'ar';
 
       for (final doc in zoneDocs) {
@@ -232,7 +234,8 @@ class _AdminSupplicationsListScreenState
             context,
             MaterialPageRoute(
               builder: (_) => AdminSupplicationAddScreen(
-                initialZoneId: _selectedZoneId == 'all' ? null : _selectedZoneId,
+                initialZoneId:
+                    _selectedZoneId == 'all' ? null : _selectedZoneId,
               ),
             ),
           );
@@ -245,7 +248,8 @@ class _AdminSupplicationsListScreenState
           child: FloatingActionButton.extended(
             backgroundColor: accent,
             foregroundColor: isDark ? DhakkerColors.bg : Colors.white,
-            onPressed: null, // معطل تفادياً للتداخل مع الـ GestureDetector الحركي
+            onPressed:
+                null, // معطل تفادياً للتداخل مع الـ GestureDetector الحركي
             icon: const Icon(Icons.add_rounded),
             label: Text(
               s.adminSupplicationsAddButton,
@@ -260,7 +264,8 @@ class _AdminSupplicationsListScreenState
           children: [
             Expanded(
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(), // فيزياء ارتداد مطاطية ناعمة لتمطيط القوائم عند السحب
+                physics:
+                    const BouncingScrollPhysics(), // فيزياء ارتداد مطاطية ناعمة لتمطيط القوائم عند السحب
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -332,7 +337,9 @@ class _AdminSupplicationsListScreenState
                           }
 
                           final docs = snap.data?.docs ?? const [];
-                          final filtered = docs.where((doc) => _matchesFilters(doc)).toList();
+                          final filtered = docs
+                              .where((doc) => _matchesFilters(doc))
+                              .toList();
 
                           if (filtered.isEmpty) {
                             return _StateCard(
@@ -362,13 +369,16 @@ class _AdminSupplicationsListScreenState
                               ...List.generate(filtered.length, (index) {
                                 final doc = filtered[index];
                                 final data = doc.data();
-                                final double start = (index * 0.03).clamp(0.0, 1.0);
-                                final double end = (start + 0.30).clamp(0.0, 1.0);
+                                final double start =
+                                    (index * 0.03).clamp(0.0, 1.0);
+                                final double end =
+                                    (start + 0.30).clamp(0.0, 1.0);
 
                                 return TweenAnimationBuilder<double>(
                                   tween: Tween<double>(begin: 0.0, end: 1.0),
                                   duration: const Duration(milliseconds: 500),
-                                  curve: Interval(start, end, curve: Curves.easeOutCubic),
+                                  curve: Interval(start, end,
+                                      curve: Curves.easeOutCubic),
                                   builder: (context, value, child) {
                                     return Transform.translate(
                                       offset: Offset(0, 24 * (1.0 - value)),
@@ -386,7 +396,8 @@ class _AdminSupplicationsListScreenState
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => AdminSupplicationDetailsScreen(
+                                          builder: (_) =>
+                                              AdminSupplicationDetailsScreen(
                                             supplicationId: doc.id,
                                           ),
                                         ),
@@ -396,14 +407,16 @@ class _AdminSupplicationsListScreenState
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => AdminSupplicationEditScreen(
+                                          builder: (_) =>
+                                              AdminSupplicationEditScreen(
                                             supplicationId: doc.id,
                                           ),
                                         ),
                                       );
                                     },
                                     onDelete: () async {
-                                      await _deleteSupplication(context, doc.id);
+                                      await _deleteSupplication(
+                                          context, doc.id);
                                     },
                                   ),
                                 );
@@ -496,11 +509,12 @@ class _FilterPanel extends StatelessWidget {
               suffixIcon: searchController.text.isEmpty
                   ? null
                   : IconButton(
-                onPressed: onClearSearch,
-                icon: Icon(Icons.close_rounded, color: muted),
-              ),
+                      onPressed: onClearSearch,
+                      icon: Icon(Icons.close_rounded, color: muted),
+                    ),
               filled: true,
-              fillColor: (isDark ? Colors.white : Colors.black).withOpacity(.04),
+              fillColor:
+                  (isDark ? Colors.white : Colors.black).withOpacity(.04),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 14,
@@ -508,13 +522,15 @@ class _FilterPanel extends StatelessWidget {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(.08),
+                  color:
+                      (isDark ? Colors.white : Colors.black).withOpacity(.08),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(.08),
+                  color:
+                      (isDark ? Colors.white : Colors.black).withOpacity(.08),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -540,16 +556,17 @@ class _FilterPanel extends StatelessWidget {
                     ),
                     ...zoneDocs.map((doc) {
                       final data = doc.data();
-                      final langCode = Localizations.localeOf(context).languageCode;
+                      final langCode =
+                          Localizations.localeOf(context).languageCode;
                       final isAr = langCode == 'ar';
 
                       final name = isAr
                           ? (data['nameAr'] ?? data['nameEn'] ?? '')
-                          .toString()
-                          .trim()
+                              .toString()
+                              .trim()
                           : (data['nameEn'] ?? data['nameAr'] ?? '')
-                          .toString()
-                          .trim();
+                              .toString()
+                              .trim();
 
                       return _FilterItem(
                         value: doc.id,
@@ -641,10 +658,10 @@ class _SupplicationCard extends StatelessWidget {
     final titleMap = data['title'];
     final title = titleMap is Map
         ? (isAr
-        ? (titleMap['ar'] ?? titleMap['en'] ?? '')
-        : (titleMap['en'] ?? titleMap['ar'] ?? ''))
-        .toString()
-        .trim()
+                ? (titleMap['ar'] ?? titleMap['en'] ?? '')
+                : (titleMap['en'] ?? titleMap['ar'] ?? ''))
+            .toString()
+            .trim()
         : '';
 
     final zoneId = (data['zoneId'] ?? '').toString().trim();
@@ -656,19 +673,18 @@ class _SupplicationCard extends StatelessWidget {
     final audioLabel = audioMode == 'tts'
         ? s.adminSupplicationsAudioTts
         : audioMode == 'file'
-        ? s.adminSupplicationsAudioFile
-        : '—';
+            ? s.adminSupplicationsAudioFile
+            : '—';
 
     final statusLabel = isActive
         ? s.adminSupplicationsStatusActive
         : s.adminSupplicationsStatusInactive;
 
-    final audioColor = audioMode == 'tts'
-        ? const Color(0xFF2563EB)
-        : const Color(0xFF7C3AED);
+    final audioColor =
+        audioMode == 'tts' ? const Color(0xFF2563EB) : const Color(0xFF7C3AED);
 
     final statusColor =
-    isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+        isActive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -879,7 +895,8 @@ class _FilterDropdown extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final text = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
-    final langCode = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    final langCode =
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
     final isAr = langCode == 'ar';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,7 +913,8 @@ class _FilterDropdown extends StatelessWidget {
         DropdownButtonFormField<String>(
           value: value,
           onChanged: onChanged,
-          isExpanded: true, // يمنع طفح الاسم الطويل خارج الصف (RenderFlex overflow)
+          isExpanded:
+              true, // يمنع طفح الاسم الطويل خارج الصف (RenderFlex overflow)
           dropdownColor: isDark ? DhakkerColors.card : Colors.white,
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: muted),
           style: TextStyle(
@@ -933,17 +951,17 @@ class _FilterDropdown extends StatelessWidget {
           items: items
               .map(
                 (e) => DropdownMenuItem<String>(
-              value: e.value,
-              child: Text(
-                e.label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: text,
-                  fontWeight: FontWeight.w700,
+                  value: e.value,
+                  child: Text(
+                    e.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
+              )
               .toList(),
         ),
       ],
@@ -1177,9 +1195,9 @@ class _SupplicationSkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base =
-    (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .06 : .05);
     final line =
-    (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .10 : .08);
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .10 : .08);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

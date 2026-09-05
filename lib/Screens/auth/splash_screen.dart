@@ -84,8 +84,7 @@ class _SplashScreenState extends State<SplashScreen>
     _timer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
 
-      switch(widget.userTypeIndex)
-      {
+      switch (widget.userTypeIndex) {
         case 0:
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
@@ -95,13 +94,13 @@ class _SplashScreenState extends State<SplashScreen>
         case 1:
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) =>  const AdminHomeLayout(),
+              builder: (_) => const AdminHomeLayout(),
             ),
           );
         case 2:
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) =>  const AppHomeLayout(),
+              builder: (_) => const AppHomeLayout(),
             ),
           );
       }
@@ -138,15 +137,15 @@ class _SplashScreenState extends State<SplashScreen>
             end: Alignment.bottomCenter,
             colors: isDark
                 ? [
-              DhakkerColors.bg,
-              const Color(0xFF111418),
-              DhakkerColors.bg,
-            ]
+                    DhakkerColors.bg,
+                    const Color(0xFF111418),
+                    DhakkerColors.bg,
+                  ]
                 : [
-              DhakkerColors.lightBg,
-              const Color(0xFFF9F4E8),
-              DhakkerColors.lightBg,
-            ],
+                    DhakkerColors.lightBg,
+                    const Color(0xFFF9F4E8),
+                    DhakkerColors.lightBg,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -265,8 +264,8 @@ class _SplashScreenState extends State<SplashScreen>
                             child: LinearProgressIndicator(
                               minHeight: 5,
                               backgroundColor:
-                              (isDark ? Colors.white : Colors.black)
-                                  .withOpacity(.08),
+                                  (isDark ? Colors.white : Colors.black)
+                                      .withOpacity(.08),
                               valueColor: AlwaysStoppedAnimation(gold),
                             ),
                           ),
