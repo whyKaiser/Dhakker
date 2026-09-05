@@ -54,8 +54,9 @@ class _AdminSupplicationEditScreenState
   String? _provenanceGapMessage() {
     if (!_isVerifiedSource) return null;
     final missing = <String>[];
-    if (_authorityController.text.trim().isEmpty)
+    if (_authorityController.text.trim().isEmpty) {
       missing.add('الجهة المُصدِرة');
+    }
     final url = _sourceUrlController.text.trim();
     if (url.isEmpty || !url.startsWith('https://')) {
       missing.add('رابط المصدر (https)');
