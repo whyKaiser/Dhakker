@@ -29,10 +29,22 @@ the text that was judged unfit to publish. Emulator tests assert this at five
 path shapes for every identity.
 
 **No audio file was touched.** The retirement path never contacts Cloud
-Storage: the service account it ran as holds no `roles/storage.*` binding, so
+Storage: the service account it ran as held no `roles/storage.*` binding, so
 the objects were unreachable by the credential rather than merely
 un-referenced by the code. Every run printed, and the workflow asserted,
 `Storage:   NOT CONTACTED`.
+
+**The retirement machinery has been dismantled.** After the final
+reconciliation, the `dhakker-legacy-retirement` service account and the
+`firebase-legacy-retirement` GitHub environment were both deleted. Nothing
+now holds a standing credential that can delete production documents, and
+`.github/workflows/legacy-retirement.yml` cannot run: it fails its own
+configuration gate with no environment and no service-account variable.
+
+That is the intended end state, not an omission. Should the workflow ever be
+needed again, `docs/LEGACY_RETIREMENT_SETUP.md` describes recreating both from
+scratch — deliberately, so that re-arming it is a conscious act rather than
+something left switched on.
 
 ## The 73 records are not in production — and that is not a failure
 
@@ -91,16 +103,10 @@ hosting and the Worker.
   custom claim and fails closed without it, so no account can upload audio
   until this is done — including accounts with `role: 'admin'` in Firestore.
   See `docs/ADMIN_CLAIM_SETUP.md`.
-- **Remove the retirement service account.** `dhakker-legacy-retirement` still
-  holds `roles/datastore.user` project-wide. Its work is finished; a standing
-  identity that can delete production documents has no remaining purpose. See
-  `docs/LEGACY_RETIREMENT_SETUP.md` §A.4.
 - **Web boot still depends on `gstatic.com`** for the Firebase JS SDK. The app
   now shows a bilingual failure screen with a retry instead of a blank page,
   but it still cannot start on a network that blocks that host. See
   `docs/WEB_BOOT.md`.
-- **Pin the two remaining GitHub Actions** to commit SHAs. See the note at the
-  foot of `.github/workflows/flutter-ci.yml`.
 
 ## What has never been verified
 
