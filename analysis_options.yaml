@@ -9,6 +9,25 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  language:
+    # Firestore and SharedPreferences both hand back `dynamic`. Without
+    # this, an implicit downcast from `dynamic` to a concrete type is
+    # silent at compile time and throws at runtime — on a pilgrim's phone,
+    # on data nobody in this repository controls.
+    #
+    # Turning it on surfaced 13 such sites, every one of them parsing
+    # untrusted stored data: zone coordinates, isActive flags, the cached
+    # user id read on the very first frame. They are fixed; this keeps
+    # them fixed.
+    #
+    # `strict-inference` and `strict-raw-types` are deliberately NOT
+    # enabled here. They flag 51 and 10 sites respectively, almost all
+    # about missing type arguments rather than unsound casts — a
+    # style-scale change with no runtime failure behind it. Worth doing
+    # one day, in its own change, not smuggled in with a bug fix.
+    strict-casts: true
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

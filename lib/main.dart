@@ -64,9 +64,15 @@ Future<void> main() async {
   ThemeController.setTheme(savedDarkMode is bool ? savedDarkMode : true);
 
   Widget widget;
-  var userTypeIndex = CashHelper.getCash(key: 'userTypeIndex');
+  // SharedPreferences is untyped storage: a key written by an older build
+  // (or corrupted on disk) can come back as any type. Narrow here rather
+  // than letting a wrong type reach a widget constructor and crash the app
+  // on its very first frame, before any error screen exists to catch it.
+  final rawUserType = CashHelper.getCash(key: 'userTypeIndex');
+  final int? userTypeIndex = rawUserType is int ? rawUserType : null;
 
-  tempId = CashHelper.getCash(key: 'uid');
+  final rawUid = CashHelper.getCash(key: 'uid');
+  tempId = rawUid is String ? rawUid : null;
 
   if (tempId != null) {
     userID = tempId!;

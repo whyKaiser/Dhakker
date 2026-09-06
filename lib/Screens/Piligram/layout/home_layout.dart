@@ -1296,7 +1296,7 @@ class _DialogSecondaryButton extends StatefulWidget {
 
 // زر البوصلة في الشريط العلوي
 class _QiblaIconButton extends StatelessWidget {
-  final dynamic palette;
+  final _HomeLayoutPalette palette;
   const _QiblaIconButton({required this.palette});
 
   @override

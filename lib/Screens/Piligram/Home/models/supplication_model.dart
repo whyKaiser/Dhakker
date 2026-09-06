@@ -586,7 +586,7 @@ class SupplicationModel {
       audioMode: (data['audioMode'] ?? 'tts').toString(),
       audioUrl: (data['audioUrl'] ?? '').toString(),
       languageCodes: langs,
-      isActive: data['isActive'] ?? true,
+      isActive: data['isActive'] is bool ? data['isActive'] as bool : true,
       updatedAt: data['updatedAt'] is Timestamp
           ? data['updatedAt'] as Timestamp
           : null,
@@ -727,7 +727,7 @@ class SupplicationModel {
       audioMode: (data['audioMode'] ?? 'tts').toString(),
       audioUrl: (data['audioUrl'] ?? '').toString(),
       languageCodes: langs,
-      isActive: data['isActive'] ?? true,
+      isActive: data['isActive'] is bool ? data['isActive'] as bool : true,
       updatedAt: null,
       usageCount: (data['usage_count'] as num?)?.toInt() ?? 0,
       contentKind:
