@@ -1,6 +1,8 @@
 # Production readiness
 
-State of the project as of `main` @ `8593d5e`, and what still has to happen
+State of the project on `main` as of the merge of #36 — the last of the
+group-privacy (#33), stored-data-typing (#34), rate-limiter (#35) and
+documentation (#36) changes — and what still has to happen
 before a pilgrim can usefully open the app. Nothing in this document has been
 executed; every numbered step below is a manual, human decision.
 
@@ -107,6 +109,27 @@ hosting and the Worker.
   now shows a bilingual failure screen with a retry instead of a blank page,
   but it still cannot start on a network that blocks that host. See
   `docs/WEB_BOOT.md`.
+- **Create pointer documents for any pre-existing family group** before
+  deploying the rules that close the group-location leak. Ordering matters
+  and the check is one query; if `groups` is empty — expected while the app
+  is unlaunched — there is nothing to do. See
+  `docs/GROUP_PRIVACY_MIGRATION.md`.
+
+## Known limits that are recorded, not fixed
+
+- **Family group join codes are four digits** (`HAJJ-1000`..`HAJJ-9999`).
+  They can no longer be enumerated, but 9000 is small enough to brute-force
+  at roughly one Firestore read per attempt; only quota stands in the way. A
+  longer code or an attempt limit is the real answer, and it is a deliberate
+  decision rather than something to change quietly. See
+  `docs/GROUP_PRIVACY_MIGRATION.md`.
+- **Dependency advisories are dev-only.** `npm audit --omit=dev` reports zero
+  at the repository root. The outstanding advisories are all transitive
+  devDependencies of `firebase-tools` and `eslint` — emulator and lint
+  tooling that never ships to a pilgrim or runs in the Worker. They are not
+  force-upgraded, because the emulator versions in
+  `test_firestore_rules/package.json` are pinned as a mutually compatible
+  set.
 
 ## What has never been verified
 

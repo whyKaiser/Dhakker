@@ -1,5 +1,22 @@
 # Legacy retirement — manual setup and operating procedure
 
+> ## ⚠️ الحالة: منتهية ومُفكَّكة — لا شيء هنا معلَّق
+>
+> **التقاعد نُفِّذ بالكامل وانتهى.** أُرشِفت الـ16 وثيقة ثم حُذِفت، وأكّدت
+> مطابقة نهائية `present_but_removed_from_pack: 0`. التفاصيل والتواريخ في
+> `docs/PRODUCTION_READINESS.md`.
+>
+> **وآلة التنفيذ فُكِّكت بعدها:** حُذِف حساب الخدمة
+> `dhakker-legacy-retirement` وبيئة `firebase-legacy-retirement`. لا يملك أي
+> شيء اليوم صلاحية قائمة لحذف وثائق إنتاج، و
+> `.github/workflows/legacy-retirement.yml` لا يمكن تشغيله: يسقط عند بوابة
+> الإعداد الخاصة به بلا بيئة ولا متغيّر حساب خدمة.
+>
+> **هذه هي الحالة المقصودة، لا نقصًا.** ما تبقّى من هذا الملف مكتوب بصيغة
+> المستقبل لأنه محفوظ لغرض واحد: إعادة بناء المسار من الصفر لو احتيج مرة
+> أخرى — عمدًا، ليكون إعادة تسليحه فعلًا واعيًا لا شيئًا تُرك مشتغلًا.
+> اقرأه على أنه إجراء إعادة الإنشاء، لا قائمة مهام مفتوحة.
+
 This is the only operation in the repository that deletes production data.
 Read it in full before dispatching either phase.
 
