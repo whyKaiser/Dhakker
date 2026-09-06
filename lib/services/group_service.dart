@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// فرد في مجموعة الحاج: معرّفه واسمه وآخر موقع شاركه (قد يكون null إن لم يشارك).
@@ -42,26 +43,63 @@ class GroupMember {
 /// ملاحظة: تحتاج قواعد أمان Firestore تسمح لأعضاء المجموعة بقراءة/كتابة
 /// مستندات `groups/{id}` و `groups/{id}/members/{uid}`.
 class GroupService {
-  final FirebaseFirestore _db;
-  final FirebaseAuth _auth;
+  // Both plugin singletons wire platform channels the moment they are
+  // touched, so resolving them in the initializer would make this service
+  // unconstructible off-device even when every seam below is overridden.
+  // `late final` defers that to first real use — on a device nothing
+  // changes; in a test that supplies a fake db and overrides the auth
+  // seams, FirebaseAuth.instance is never reached at all.
+  final FirebaseFirestore? _dbOverride;
+  final FirebaseAuth? _authOverride;
+
+  late final FirebaseFirestore _db = _dbOverride ?? FirebaseFirestore.instance;
+  late final FirebaseAuth _auth = _authOverride ?? FirebaseAuth.instance;
 
   GroupService({FirebaseFirestore? db, FirebaseAuth? auth})
-      : _db = db ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+      : _dbOverride = db,
+        _authOverride = auth;
 
-  String get _uid => _auth.currentUser?.uid ?? '';
+  // ── auth seams ──────────────────────────────────────────────────────────
+  //
+  // The only two places this service reads the signed-in identity. They are
+  // separated out so the join/create logic — which decides who may see a
+  // family's live location — can be exercised without a real FirebaseAuth
+  // instance. Everything else runs for real against a fake Firestore.
+
+  @protected
+  @visibleForTesting
+  String get currentUid => _auth.currentUser?.uid ?? '';
+
+  @protected
+  @visibleForTesting
+  String get currentDisplayName => _auth.currentUser?.displayName ?? '';
+
+  String get _uid => currentUid;
 
   CollectionReference<Map<String, dynamic>> get _groups =>
       _db.collection('groups');
 
+  /// مؤشّرات الكود → المجموعة. معرّف كل وثيقة هو الكود نفسه، فيُحلّ الكود
+  /// بـ`get` مباشر لا باستعلام. هذا ما يسمح بمنع سرد `groups` كليًّا:
+  /// من لا يعرف الكود لا يملك طريقة لاكتشافه.
+  CollectionReference<Map<String, dynamic>> get _codes =>
+      _db.collection('group_codes');
+
+  /// يطبّع الكود إلى الصيغة المخزَّنة. الكود معرّف وثيقة، فلا يحتمل فراغًا
+  /// ولا اختلاف حالة أحرف ولا شرطة مائلة (وهي محظورة في معرّفات Firestore).
+  static String normalizeCode(String code) => code.trim().toUpperCase();
+
   /// يولّد كود انضمام قصير سهل القراءة مثل HAJJ-4821 مع ضمان عدم تصادمه
-  /// مع مجموعة قائمة (فضاء الأكواد 9000 فقط، والتصادم يعني انضمام حاج
+  /// مع كود مسجَّل (فضاء الأكواد 9000 فقط، والتصادم يعني انضمام حاج
   /// لمجموعة غريبة). بعد عدة تصادمات نوسّع لخمس خانات كخطة أخيرة.
+  ///
+  /// الفحص يجري على `group_codes` لا على `groups`: هي السجل الحاسم للتفرّد
+  /// (كود مسجَّل هناك لا يُعاد تسجيله)، وهي المقروءة بـ`get` دون سرد.
   Future<String> _generateUniqueCode() async {
     for (var attempt = 0; attempt < 5; attempt++) {
       final code = 'HAJJ-${Random().nextInt(9000) + 1000}'; // 1000..9999
-      final dup = await _groups.where('code', isEqualTo: code).limit(1).get();
-      if (dup.docs.isEmpty) return code;
+      final existing = await _codes.doc(code).get();
+      if (!existing.exists) return code;
     }
     return 'HAJJ-${Random().nextInt(90000) + 10000}'; // 10000..99999
   }
@@ -80,7 +118,15 @@ class GroupService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    await _addSelfAsMember(ref.id);
+    // المؤشّر يُكتب بعد المجموعة: لو فشلت كتابة المجموعة لا يبقى كود
+    // معلّق يشير إلى لا شيء. والقواعد تمنع تعديله لاحقًا، فلا يُخطَف.
+    await _codes.doc(code).set({
+      'groupId': ref.id,
+      'ownerId': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await _addSelfAsMember(ref.id, code);
     await _setMyGroupId(ref.id);
     return (groupId: ref.id, code: code);
   }
@@ -90,22 +136,25 @@ class GroupService {
     final uid = _uid;
     if (uid.isEmpty) throw Exception('غير مسجّل الدخول');
 
-    final normalized = code.trim().toUpperCase();
-    final query =
-        await _groups.where('code', isEqualTo: normalized).limit(1).get();
-    if (query.docs.isEmpty) {
+    final normalized = normalizeCode(code);
+    if (normalized.isEmpty) throw Exception('لا توجد مجموعة بهذا الكود');
+
+    final pointer = await _codes.doc(normalized).get();
+    final groupId = pointer.data()?['groupId'];
+    if (!pointer.exists || groupId is! String || groupId.isEmpty) {
       throw Exception('لا توجد مجموعة بهذا الكود');
     }
 
-    final groupId = query.docs.first.id;
-    await _addSelfAsMember(groupId);
+    // الكود يُمرَّر إلى وثيقة العضوية: القواعد تطابقه بكود المجموعة، فلا
+    // ينضم أحد إلى مجموعة لا يعرف كودها.
+    await _addSelfAsMember(groupId, normalized);
     await _setMyGroupId(groupId);
     return groupId;
   }
 
-  Future<void> _addSelfAsMember(String groupId) async {
+  Future<void> _addSelfAsMember(String groupId, String joinCode) async {
     final uid = _uid;
-    String name = _auth.currentUser?.displayName ?? '';
+    String name = currentDisplayName;
     if (name.trim().isEmpty) {
       try {
         final prof = await _db.collection('users').doc(uid).get();
@@ -117,6 +166,7 @@ class GroupService {
     }
     await _groups.doc(groupId).collection('members').doc(uid).set({
       'name': name,
+      'joinCode': joinCode,
       'joinedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
