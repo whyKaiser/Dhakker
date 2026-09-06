@@ -53,64 +53,14 @@ jobs:
           channel: "stable"
           cache: true
 
-      # This repo's pre-existing files were never run through `dart format`
-      # on a case-sensitive filesystem, so `dart format .` across the whole
-      # tree fails on ~60 files unrelated to this feature. Until the whole
-      # repo is formatted in its own dedicated change, only check the Dart
-      # files this feature fully owns (new files, or files where every line
-      # in the diff is this feature's own addition) — this must still fail
-      # if any of them is incorrectly formatted. Files where this feature
-      # only inserted a small, surgical diff into a pre-existing, not-yet-
-      # formatted file (lib/bloc/cubit.dart, home_dua_controller.dart) are
-      # deliberately excluded: formatting them would force an unrelated
-      # full-file reflow, which is exactly what this check exists to avoid.
-      - name: Verify formatting (feature-owned files only)
-        run: |
-          FEATURE_DART_FILES=(
-            "lib/Screens/Assistant/assistant_screen.dart"
-            "lib/Screens/Piligram/Duas/widgets/content_kind_card.dart"
-            "lib/Screens/Piligram/Home/models/supplication_model.dart"
-            "test/content_kind_classification_test.dart"
-            "test/source_pack_integrity_test.dart"
-            "test/quran_text_authority_test.dart"
-            "test/no_bundled_third_party_test.dart"
-            "lib/data/offline_knowledge_repository.dart"
-            "lib/services/assistant_service.dart"
-            "lib/services/language_policy.dart"
-            "test/language_policy_test.dart"
-            "lib/services/pilgrim_context_builder.dart"
-            "test/assistant_response_widget_test.dart"
-            "test/assistant_service_test.dart"
-            "test/offline_knowledge_repository_test.dart"
-            "test/review_ledger_test.dart"
-            "test/usage_qualifier_test.dart"
-            "test/supplication_writers_test.dart"
-            "test/content_kind_batch_b_test.dart"
-            "test/quran_authority_coverage_test.dart"
-            "test/source_references_test.dart"
-            "test/recitation_policy_test.dart"
-            "test/safa_trigger_gap_test.dart"
-            "test/marwah_relation_test.dart"
-            "test/high_risk_content_test.dart"
-            "test/guidance_batches_g3_g5_g6_test.dart"
-            "test/guidance_batches_g1_g2_g4_test.dart"
-            "test/page_97_general_duas_test.dart"
-            "test/halq_shamil_citation_test.dart"
-            "test/page_98_and_g7_batch_test.dart"
-            "test/tamam_umrah_test.dart"
-            "test/page_99_test.dart"
-            "test/page_100_test.dart"
-            "test/page_101_test.dart"
-            "test/page_102_test.dart"
-            "test/page_64_test.dart"
-            "test/takhrij_review_test.dart"
-            "lib/Screens/Piligram/Home/services/dua_playback_service.dart"
-            "test/dua_playback_fallback_test.dart"
-            "lib/boot_signal.dart"
-            "lib/boot_signal_stub.dart"
-            "lib/boot_signal_web.dart"
-          )
-          dart format --output=none --set-exit-if-changed "${FEATURE_DART_FILES[@]}"
+      # The whole repository is formatted, so the gate is the whole
+      # repository. This replaces a hand-maintained list of 39 "feature-owned"
+      # files that existed only because ~54 pre-existing files had never been
+      # run through `dart format`. That debt is paid, so the list and the
+      # exception it encoded are both gone, and `dart format .` locally now
+      # agrees with CI — which it previously did not.
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
 
       - name: Install dependencies
         run: flutter pub get
