@@ -14,6 +14,7 @@ const {
   isAllowedOrigin,
   isRateLimited,
   rateBuckets,
+  sweepRateBuckets,
   sanitizeText,
   retrieveKnowledge,
   DEV_FIXTURE_DOCS,
@@ -227,6 +228,73 @@ test("isRateLimited blocks after the configured burst", () => {
     if (isRateLimited(key)) blocked = true;
   }
   assert.equal(blocked, true);
+});
+
+test("a distinct key gets its own budget", () => {
+  rateBuckets.clear();
+  for (let i = 0; i < 25; i++) isRateLimited("noisy-neighbour");
+  assert.equal(isRateLimited("quiet-user"), false);
+});
+
+test("expired buckets are swept, so the map cannot grow without bound", () => {
+  // Every distinct uid — and every distinct IP behind an unauthenticated
+  // rejection — used to leave a bucket behind for the life of the isolate,
+  // because a bucket was only ever replaced when its OWN key came back. A
+  // client cycling identities could grow this deliberately.
+  //
+  // The sweep is interval-gated, and each call moves the gate forward, so
+  // every test below picks a sweep instant further ahead than the last and
+  // dates its buckets relative to THAT instant rather than to now.
+  rateBuckets.clear();
+  const sweepAt = Date.now() + 10 * 60_000;
+  for (let i = 0; i < 200; i++) {
+    rateBuckets.set(`stale-${i}`, {
+      windowStart: sweepAt - 10 * 60_000, // ten minutes before the sweep
+      count: 1,
+    });
+  }
+  // A bucket whose window is still open at the moment of the sweep.
+  rateBuckets.set("fresh", { windowStart: sweepAt, count: 3 });
+  assert.equal(rateBuckets.size, 201);
+
+  sweepRateBuckets(sweepAt);
+
+  assert.equal(rateBuckets.size, 1, "stale buckets were not swept");
+  assert.equal(rateBuckets.has("fresh"), true, "a live bucket was swept");
+});
+
+test("sweeping never changes a rate-limit decision", () => {
+  // A swept bucket is one that would have been overwritten on its next
+  // request anyway, so the caller cannot tell the difference.
+  rateBuckets.clear();
+  const key = "swept-then-seen-again";
+  const sweepAt = Date.now() + 20 * 60_000;
+  rateBuckets.set(key, { windowStart: sweepAt - 10 * 60_000, count: 99 });
+
+  sweepRateBuckets(sweepAt);
+  assert.equal(rateBuckets.has(key), false);
+
+  // Fresh window, so the very next request is allowed — exactly as it would
+  // have been had the expired bucket simply been overwritten in place.
+  assert.equal(isRateLimited(key), false);
+});
+
+test("the sweep is bounded, so its cost does not scale with the map", () => {
+  rateBuckets.clear();
+  const sweepAt = Date.now() + 30 * 60_000;
+  for (let i = 0; i < 1200; i++) {
+    rateBuckets.set(`stale-${i}`, {
+      windowStart: sweepAt - 10 * 60_000,
+      count: 1,
+    });
+  }
+
+  sweepRateBuckets(sweepAt);
+
+  // One pass clears at most RATE_SWEEP_MAX_SCAN (500) entries; the rest go
+  // on later passes. The point is a flat per-request cost, not emptying the
+  // map in one go.
+  assert.equal(rateBuckets.size, 700);
 });
 
 // ── Sanitization ─────────────────────────────────────────────────────────
