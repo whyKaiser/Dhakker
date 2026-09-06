@@ -21,7 +21,6 @@ import {
   buildWriteRequest,
   canonical,
   changedPackFields,
-  createOnlyDefaults,
   normalisedTextHash,
   safeDecodeId,
   assertConfirmations,
@@ -1604,7 +1603,6 @@ test("1) a new document carries createdAt and updatedAt as timestamps", async ()
   assert.equal(out.created, 1);
   assert.equal(out.writes, 1);
 
-  const sent = JSON.parse(patches(fs)[0] && "{}" || "{}"); // placeholder
   const doc = fs.store[rec.duaId];
   for (const f of ["createdAt", "updatedAt"]) {
     assert.ok(doc[f], `${f} missing — the record would be invisible in the ` +
@@ -1617,8 +1615,9 @@ test("1) a new document carries createdAt and updatedAt as timestamps", async ()
   assert.ok(wouldAppearInOrderBy(doc));
 
   // It is a real timestampValue on the wire, not a plain string.
-  const body = JSON.parse(
-    fs.calls.find((c) => c.method === "PATCH").url ? "{}" : "{}",
+  assert.ok(
+    fs.calls.some((c) => c.method === "PATCH"),
+    "expected a PATCH to have been issued",
   );
   const req = buildWriteRequest(rec, null, PLAN, new Date("2026-01-02T03:04:05Z"));
   assert.deepEqual(req.fields.createdAt, { timestampValue: "2026-01-02T03:04:05.000Z" });
