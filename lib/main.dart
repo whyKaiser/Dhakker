@@ -19,6 +19,7 @@ import 'admin_bloc/admin_cubit.dart';
 import 'bloc/cubit.dart';
 import 'generated/l10n.dart';
 import 'locale_controller.dart';
+import 'boot_signal.dart';
 
 import 'theme/dhakker_theme.dart';
 
@@ -82,6 +83,11 @@ Future<void> main() async {
   }
 
   runApp(MyApp(widget));
+
+  // Tell the web boot screen the app actually painted. The engine inserts its
+  // host element before any widget renders, so the page cannot tell "started"
+  // from "up" on its own — see lib/boot_signal.dart. No-op off the web.
+  WidgetsBinding.instance.addPostFrameCallback((_) => signalAppReady());
 }
 
 class MyApp extends StatefulWidget {

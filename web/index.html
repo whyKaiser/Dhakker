@@ -18,7 +18,8 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="ذكّر — رفيق الحاج والمعتمر">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,8 +32,143 @@
 
   <title>dhakker</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* ── Boot screen ──────────────────────────────────────────────────────
+       Shown from the first paint, so the user never faces a blank page while
+       the engine loads, and replaced by a readable message if it never does.
+       Inline and dependency-free on purpose: this has to work in exactly the
+       situation where other resources did not load. */
+    html, body { margin: 0; padding: 0; height: 100%; background: #0E1A17; }
+
+    #boot {
+      position: fixed; inset: 0; z-index: 2147483647;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 18px; padding: 24px; box-sizing: border-box;
+      background: #0E1A17; color: #E8E2D2;
+      font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+      text-align: center; line-height: 1.7;
+    }
+    #boot[hidden] { display: none; }
+
+    #boot-spinner {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 3px solid rgba(212,175,90,.25); border-top-color: #D4AF5A;
+      animation: boot-spin .9s linear infinite;
+    }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-spinner { animation-duration: 3s; }
+    }
+
+    #boot-error { display: none; max-width: 30rem; }
+    #boot.failed #boot-spinner,
+    #boot.failed #boot-loading { display: none; }
+    #boot.failed #boot-error { display: block; }
+
+    #boot h1 { font-size: 1.15rem; margin: 0 0 .35rem; color: #D4AF5A; font-weight: 600; }
+    #boot p  { font-size: .95rem; margin: .2rem 0; opacity: .92; }
+    #boot .en { direction: ltr; opacity: .75; font-size: .88rem; }
+    #boot hr { width: 60%; border: 0; border-top: 1px solid rgba(232,226,210,.15); margin: 14px auto; }
+
+    #boot-retry {
+      margin-top: 16px; padding: 11px 30px; font: inherit; font-size: .95rem;
+      color: #0E1A17; background: #D4AF5A; border: 0; border-radius: 999px;
+      cursor: pointer; font-weight: 600;
+    }
+    #boot-retry:hover { filter: brightness(1.07); }
+    #boot-retry:focus-visible { outline: 3px solid #E8E2D2; outline-offset: 3px; }
+  </style>
 </head>
 <body>
+  <!-- Visible before any script runs. Removed once Flutter paints. -->
+  <div id="boot" role="status" aria-live="polite">
+    <div id="boot-spinner" aria-hidden="true"></div>
+    <p id="boot-loading" dir="rtl">جارٍ التحميل… <span class="en">Loading…</span></p>
+
+    <div id="boot-error" role="alert">
+      <div dir="rtl">
+        <h1>تعذّر تشغيل التطبيق</h1>
+        <p>لم نتمكّن من تحميل ملفات التطبيق. تحقّق من اتصالك بالإنترنت ثم أعد المحاولة.</p>
+        <p>إذا كنت على شبكة مقيّدة، جرّب شبكة أخرى.</p>
+      </div>
+      <hr>
+      <div class="en" dir="ltr">
+        <h1>Couldn’t start the app</h1>
+        <p>We couldn’t load the app’s files. Check your connection and try again.</p>
+        <p>If you’re on a restricted network, try a different one.</p>
+      </div>
+      <button id="boot-retry" type="button">إعادة المحاولة · Retry</button>
+    </div>
+  </div>
+
+  <script>
+  // ── Boot watchdog ───────────────────────────────────────────────────────
+  //
+  // Without this the page stays permanently blank when a resource the engine
+  // needs cannot be fetched — the app's own Dart error handling never runs,
+  // because the failure happens in the JS layer before main() is reached.
+  // A pilgrim on a congested or restricted network saw white and nothing else.
+  //
+  // Deliberately shows a GENERIC message. The underlying error can name
+  // internal endpoints and Firebase configuration; that goes to the console
+  // for a developer, never to the screen.
+  (function () {
+    var boot = document.getElementById('boot');
+    var settled = false;
+
+    function ok() {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      boot.parentNode && boot.parentNode.removeChild(boot);
+    }
+
+    function fail(why) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      // Developer-facing only.
+      try { console.error('[dhakker] boot failed:', why); } catch (_) {}
+      boot.className = 'failed';
+    }
+
+    // SUCCESS IS SIGNALLED BY THE APP, NOT INFERRED FROM THE DOM.
+    //
+    // The engine inserts flt-glass-pane before any widget paints, so its
+    // presence cannot distinguish "the app is up" from "the engine started
+    // and then the app failed to render" — the second leaves the viewer
+    // staring at a flat empty rectangle, which is the very failure this
+    // screen exists to replace. Only the app knows it painted, so the app
+    // says so: lib/boot_signal.dart calls this hook after its first frame.
+    window.dhakkerAppReady = ok;
+
+    // A hard ceiling. Slow networks legitimately take a while, so this is
+    // generous — it exists to end an indefinite wait, not to police latency.
+    var timer = setTimeout(function () {
+      fail('timeout: the app did not report a first frame within 30s');
+    }, 30000);
+
+    // A failed dynamic import (CanvasKit, the Firebase JS SDK) surfaces as an
+    // unhandled rejection rather than a load error, so both are watched. This
+    // turns the common case into an immediate message instead of a 30s wait.
+    window.addEventListener('error', function (e) {
+      if (e && e.target && e.target !== window && (e.target.src || e.target.href)) {
+        fail('resource failed: ' + (e.target.src || e.target.href));
+      }
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) {
+      var m = e && e.reason && (e.reason.message || String(e.reason));
+      if (m && /import|fetch|network|load/i.test(m)) fail('rejected: ' + m);
+    });
+
+    document.getElementById('boot-retry').addEventListener('click', function () {
+      window.location.reload();
+    });
+  })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
