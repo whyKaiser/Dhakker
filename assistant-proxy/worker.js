@@ -114,6 +114,14 @@ const ERROR_CODES = {
 const rateBuckets = new Map();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
+// A bucket was only ever replaced when its own key came back, so a key seen
+// once stayed for the life of the isolate. Every distinct uid — and every
+// distinct IP for unauthenticated rejections — left one behind, and a client
+// cycling identities could grow the map deliberately. Expired buckets are now
+// swept, bounded so the sweep cost stays flat regardless of map size.
+const RATE_SWEEP_INTERVAL_MS = 60_000;
+const RATE_SWEEP_MAX_SCAN = 500;
+let lastRateSweepAt = 0;
 
 let cachedJwks = null;
 let cachedJwksAt = 0;
@@ -376,8 +384,26 @@ function isProduction(env) {
 
 // ── Rate limiting (best-effort per-isolate) ────────────────────────────────
 
+/// Drops buckets whose window has closed. They can only ever be overwritten
+/// or ignored, so removing them changes no decision — it only stops the map
+/// growing without bound.
+///
+/// Runs at most once per interval and scans a fixed slice, because Map
+/// iteration is insertion-ordered: the oldest entries come first, which is
+/// exactly where the expired ones are.
+function sweepRateBuckets(now) {
+  if (now - lastRateSweepAt < RATE_SWEEP_INTERVAL_MS) return;
+  lastRateSweepAt = now;
+  let scanned = 0;
+  for (const [key, bucket] of rateBuckets) {
+    if (scanned++ >= RATE_SWEEP_MAX_SCAN) break;
+    if (now - bucket.windowStart > RATE_LIMIT_WINDOW_MS) rateBuckets.delete(key);
+  }
+}
+
 function isRateLimited(key) {
   const now = Date.now();
+  sweepRateBuckets(now);
   const bucket = rateBuckets.get(key);
   if (!bucket || now - bucket.windowStart > RATE_LIMIT_WINDOW_MS) {
     rateBuckets.set(key, { windowStart: now, count: 1 });
@@ -1572,6 +1598,7 @@ export const __testing__ = {
   isAllowedOrigin,
   isRateLimited,
   rateBuckets,
+  sweepRateBuckets,
   sanitizeText,
   retrieveKnowledge,
   DEV_FIXTURE_DOCS,
