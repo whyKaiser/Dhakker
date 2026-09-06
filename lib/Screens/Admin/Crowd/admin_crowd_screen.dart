@@ -55,7 +55,8 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
         final id = (data['zoneId'] ?? d.id).toString();
         final nameAr = (data['nameAr'] ?? '').toString();
         final nameEn = (data['nameEn'] ?? '').toString();
-        map[id] = nameAr.isNotEmpty ? nameAr : (nameEn.isNotEmpty ? nameEn : id);
+        map[id] =
+            nameAr.isNotEmpty ? nameAr : (nameEn.isNotEmpty ? nameEn : id);
       }
       if (mounted) {
         setState(() {
@@ -96,7 +97,8 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
           backgroundColor: bg,
           elevation: 0,
           title: const Text('الازدحام اللحظي',
-              style: TextStyle(color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
+              style: TextStyle(
+                  color: DhakkerColors.gold, fontWeight: FontWeight.w900)),
           iconTheme: const IconThemeData(color: DhakkerColors.gold),
           actions: [
             IconButton(
@@ -108,13 +110,16 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
           ],
         ),
         body: !_zonesLoaded
-            ? const Center(child: CircularProgressIndicator(color: DhakkerColors.gold))
+            ? const Center(
+                child: CircularProgressIndicator(color: DhakkerColors.gold))
             : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                stream:
+                    FirebaseFirestore.instance.collection('users').snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(
-                        child: CircularProgressIndicator(color: DhakkerColors.gold));
+                        child: CircularProgressIndicator(
+                            color: DhakkerColors.gold));
                   }
 
                   // نعدّ الحجّاج حسب المنطقة الحالية (نتجاهل الفارغ/غير المتواجد).
@@ -132,7 +137,9 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
                     final at = data['currentZoneAt'];
                     // نستبعد التواجد القديم (أو بلا ختم زمني = غير موثوق).
                     if (at is! Timestamp) continue;
-                    if (now.difference(at.toDate()) > _freshnessWindow) continue;
+                    if (now.difference(at.toDate()) > _freshnessWindow) {
+                      continue;
+                    }
 
                     counts[zone] = (counts[zone] ?? 0) + 1;
                     totalPresent++;
@@ -155,7 +162,8 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
                             : entries.isEmpty
                                 ? _emptyState()
                                 : ListView.builder(
-                                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 4, 16, 18),
                                     itemCount: entries.length,
                                     itemBuilder: (_, i) {
                                       final zoneId = entries[i].key;
@@ -193,7 +201,8 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
               size: 56, color: DhakkerColors.muted.withOpacity(.5)),
           const SizedBox(height: 12),
           const Text('لا يوجد حجّاج داخل النطاقات حالياً',
-              style: TextStyle(color: DhakkerColors.muted, fontWeight: FontWeight.w700)),
+              style: TextStyle(
+                  color: DhakkerColors.muted, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -271,9 +280,13 @@ class _AdminCrowdScreenState extends State<AdminCrowdScreen>
         children: [
           Text(value,
               style: const TextStyle(
-                  color: DhakkerColors.gold, fontSize: 24, fontWeight: FontWeight.w900)),
+                  color: DhakkerColors.gold,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900)),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: DhakkerColors.muted, fontSize: 12.5)),
+          Text(label,
+              style:
+                  const TextStyle(color: DhakkerColors.muted, fontSize: 12.5)),
         ],
       ),
     );
@@ -355,7 +368,8 @@ class _CrowdCard extends StatelessWidget {
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle),
                     ),
                   ],
                 ),
@@ -367,23 +381,30 @@ class _CrowdCard extends StatelessWidget {
                   children: [
                     Text(name,
                         style: TextStyle(
-                            color: textColor, fontSize: 16, fontWeight: FontWeight.w900)),
+                            color: textColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900)),
                     const SizedBox(height: 3),
                     Text(label,
                         style: TextStyle(
-                            color: color, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                            color: color,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: color.withOpacity(.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text('$count',
                     style: TextStyle(
-                        color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+                        color: color,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900)),
               ),
             ],
           ),
@@ -414,14 +435,14 @@ class _HaramMap extends StatefulWidget {
 }
 
 class _HaramMapState extends State<_HaramMap> {
-  double _azimuth   = math.pi * 0.25; // زاوية الدوران الأفقي
+  double _azimuth = math.pi * 0.25; // زاوية الدوران الأفقي
   double _elevation = math.pi * 0.30; // زاوية الميل العمودي
-  double _scale     = 1.0;
+  double _scale = 1.0;
 
-  double _baseAzimuth   = 0;
+  double _baseAzimuth = 0;
   double _baseElevation = 0;
-  double _baseScale     = 1;
-  Offset _baseFocal     = Offset.zero;
+  double _baseScale = 1;
+  Offset _baseFocal = Offset.zero;
 
   String? _selectedId;
 
@@ -429,10 +450,10 @@ class _HaramMapState extends State<_HaramMap> {
   final List<_ZoneHit> _hitZones = [];
 
   void _onScaleStart(ScaleStartDetails d) {
-    _baseAzimuth   = _azimuth;
+    _baseAzimuth = _azimuth;
     _baseElevation = _elevation;
-    _baseScale     = _scale;
-    _baseFocal     = d.focalPoint;
+    _baseScale = _scale;
+    _baseFocal = d.focalPoint;
   }
 
   void _onScaleUpdate(ScaleUpdateDetails d) {
@@ -440,7 +461,7 @@ class _HaramMapState extends State<_HaramMap> {
       _scale = (_baseScale * d.scale).clamp(0.4, 4.0);
       final dx = d.focalPoint.dx - _baseFocal.dx;
       final dy = d.focalPoint.dy - _baseFocal.dy;
-      _azimuth   = _baseAzimuth   - dx * 0.007 / _scale;
+      _azimuth = _baseAzimuth - dx * 0.007 / _scale;
       _elevation = (_baseElevation + dy * 0.005 / _scale)
           .clamp(0.08, math.pi / 2 - 0.08);
     });
@@ -481,7 +502,7 @@ class _HaramMapState extends State<_HaramMap> {
   Widget build(BuildContext context) {
     final sel = _selectedId;
     final selCount = sel != null ? (widget.counts[sel] ?? 0) : 0;
-    final selName  = sel != null
+    final selName = sel != null
         ? (widget.zoneNames[sel] ?? _Iso3DPainter.zoneLabelFor(sel))
         : '';
 
@@ -501,14 +522,14 @@ class _HaramMapState extends State<_HaramMap> {
                   animation: widget.pulse,
                   builder: (_, __) => CustomPaint(
                     painter: _Iso3DPainter(
-                      counts:      widget.counts,
-                      isDark:      widget.isDark,
-                      phase:       widget.pulse.value,
-                      azimuth:     _azimuth,
-                      elevation:   _elevation,
-                      scale:       _scale,
-                      selectedId:  _selectedId,
-                      hitZones:    _hitZones,
+                      counts: widget.counts,
+                      isDark: widget.isDark,
+                      phase: widget.pulse.value,
+                      azimuth: _azimuth,
+                      elevation: _elevation,
+                      scale: _scale,
+                      selectedId: _selectedId,
+                      hitZones: _hitZones,
                     ),
                     child: const SizedBox.expand(),
                   ),
@@ -558,9 +579,8 @@ class _HaramMapState extends State<_HaramMap> {
                           child: Text(
                             selName,
                             style: TextStyle(
-                              color: widget.isDark
-                                  ? Colors.white
-                                  : Colors.black87,
+                              color:
+                                  widget.isDark ? Colors.white : Colors.black87,
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               fontFamily: 'AlamirBold',
@@ -585,24 +605,20 @@ class _HaramMapState extends State<_HaramMap> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _legend('هادئ',   const Color(0xFF38C793)),
+              _legend('هادئ', const Color(0xFF38C793)),
               const SizedBox(width: 14),
-              _legend('متوسط',  const Color(0xFFE0A23C)),
+              _legend('متوسط', const Color(0xFFE0A23C)),
               const SizedBox(width: 14),
               _legend('مزدحم', const Color(0xFFE0463F)),
               const Spacer(),
               Icon(Icons.swipe_rounded,
                   size: 14,
-                  color: widget.isDark
-                      ? Colors.white30
-                      : Colors.black26),
+                  color: widget.isDark ? Colors.white30 : Colors.black26),
               const SizedBox(width: 4),
               Text('اسحب للدوران',
                   style: TextStyle(
                     fontSize: 10,
-                    color: widget.isDark
-                        ? Colors.white30
-                        : Colors.black38,
+                    color: widget.isDark ? Colors.white30 : Colors.black38,
                   )),
             ],
           ),
@@ -617,8 +633,7 @@ class _HaramMapState extends State<_HaramMap> {
           Container(
               width: 9,
               height: 9,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 4),
           Text(label,
               style: TextStyle(
@@ -649,11 +664,11 @@ class _Iso3DPainter extends CustomPainter {
 
   static String zoneLabelFor(String id) {
     const m = {
-      'Z_MASAA':  'المسعى',
+      'Z_MASAA': 'المسعى',
       'Z_MARWAH': 'المروة',
-      'Z_SAFA':   'الصفا',
-      'Z_MATAF':  'المطاف',
-      'Z_MAQAM':  'مقام إبراهيم',
+      'Z_SAFA': 'الصفا',
+      'Z_MATAF': 'المطاف',
+      'Z_MAQAM': 'مقام إبراهيم',
       'Z_ZAMZAM': 'بئر زمزم',
       'Z_GATE_1': 'الباب الأول',
       'Z_GATE_2': 'الباب الثاني',
@@ -696,18 +711,26 @@ class _Iso3DPainter extends CustomPainter {
   Color _densityColor(int c, {String id = ''}) {
     if (c > 50) return const Color(0xFFE0463F);
     if (c > 20) return const Color(0xFFE0A23C);
-    if (c > 0)  return const Color(0xFF38C793);
+    if (c > 0) return const Color(0xFF38C793);
     // ألوان مميّزة لكل منطقة حتى عند الفراغ
     switch (id) {
-      case 'Z_MATAF':  return const Color(0xFF1C3A5E); // أزرق داكن — مطاف
-      case 'Z_MASAA':  return const Color(0xFF2E3A1E); // أخضر داكن — مسعى
-      case 'Z_SAFA':   return const Color(0xFF3A2A1E); // بني — صفا
-      case 'Z_MARWAH': return const Color(0xFF3A2A1E); // بني — مروة
-      case 'Z_MAQAM':  return const Color(0xFF3A321E); // ذهبي داكن — مقام
-      case 'Z_ZAMZAM': return const Color(0xFF1E2E3A); // أزرق رمادي — زمزم
+      case 'Z_MATAF':
+        return const Color(0xFF1C3A5E); // أزرق داكن — مطاف
+      case 'Z_MASAA':
+        return const Color(0xFF2E3A1E); // أخضر داكن — مسعى
+      case 'Z_SAFA':
+        return const Color(0xFF3A2A1E); // بني — صفا
+      case 'Z_MARWAH':
+        return const Color(0xFF3A2A1E); // بني — مروة
+      case 'Z_MAQAM':
+        return const Color(0xFF3A321E); // ذهبي داكن — مقام
+      case 'Z_ZAMZAM':
+        return const Color(0xFF1E2E3A); // أزرق رمادي — زمزم
       case 'Z_GATE_1':
-      case 'Z_GATE_2': return const Color(0xFF2A2240); // بنفسجي — باب
-      default:         return const Color(0xFF2A2D35);
+      case 'Z_GATE_2':
+        return const Color(0xFF2A2240); // بنفسجي — باب
+      default:
+        return const Color(0xFF2A2D35);
     }
   }
 
@@ -742,13 +765,13 @@ class _Iso3DPainter extends CustomPainter {
   }) {
     Offset p(double x, double y, double z) => _proj(x, y, z, origin, cs);
 
-    final t0 = p(gx,      gy,      gh);
-    final t1 = p(gx + gw, gy,      gh);
+    final t0 = p(gx, gy, gh);
+    final t1 = p(gx + gw, gy, gh);
     final t2 = p(gx + gw, gy + gd, gh);
-    final t3 = p(gx,      gy + gd, gh);
-    final b1 = p(gx + gw, gy,      0);
+    final t3 = p(gx, gy + gd, gh);
+    final b1 = p(gx + gw, gy, 0);
     final b2 = p(gx + gw, gy + gd, 0);
-    final b3 = p(gx,      gy + gd, 0);
+    final b3 = p(gx, gy + gd, 0);
 
     // هالة توهّج
     if (glow || selected) {
@@ -771,12 +794,10 @@ class _Iso3DPainter extends CustomPainter {
     }
 
     // جانب أيسر
-    canvas.drawPath(
-        Path()..addPolygon([t3, t2, b2, b3], true),
+    canvas.drawPath(Path()..addPolygon([t3, t2, b2, b3], true),
         Paint()..color = _shade(base, 0.45));
     // جانب أيمن
-    canvas.drawPath(
-        Path()..addPolygon([t1, t2, b2, b1], true),
+    canvas.drawPath(Path()..addPolygon([t1, t2, b2, b1], true),
         Paint()..color = _shade(base, 0.65));
     // السقف
     final topPath = Path()..addPolygon([t0, t1, t2, t3], true);
@@ -850,31 +871,31 @@ class _Iso3DPainter extends CustomPainter {
     for (int gx = -3; gx <= 7; gx++) {
       canvas.drawLine(
         _proj(gx.toDouble(), -1, 0, origin, cs),
-        _proj(gx.toDouble(),  7, 0, origin, cs),
+        _proj(gx.toDouble(), 7, 0, origin, cs),
         gridP,
       );
     }
     for (int gy = -1; gy <= 7; gy++) {
       canvas.drawLine(
         _proj(-3, gy.toDouble(), 0, origin, cs),
-        _proj( 7, gy.toDouble(), 0, origin, cs),
+        _proj(7, gy.toDouble(), 0, origin, cs),
         gridP,
       );
     }
 
     // المناطق
     const zoneDefs = [
-      _ZoneDef('Z_MASAA',  -1, 1, 1.0, 4.0, 'المسعى'),
+      _ZoneDef('Z_MASAA', -1, 1, 1.0, 4.0, 'المسعى'),
       _ZoneDef('Z_MARWAH', -1, 0, 1.0, 1.0, 'المروة'),
-      _ZoneDef('Z_SAFA',   -1, 5, 1.0, 1.0, 'الصفا'),
-      _ZoneDef('Z_MATAF',   1, 1, 1.0, 4.0, 'مطاف'),
-      _ZoneDef('Z_MATAF',   4, 1, 1.0, 4.0, 'مطاف'),
-      _ZoneDef('Z_MATAF',   1, 1, 4.0, 1.0, 'مطاف'),
-      _ZoneDef('Z_MATAF',   1, 4, 4.0, 1.0, 'مطاف'),
-      _ZoneDef('Z_MAQAM',   3, 2, 0.8, 0.8, 'مقام'),
-      _ZoneDef('Z_ZAMZAM',  3, 3, 0.8, 0.8, 'زمزم'),
-      _ZoneDef('Z_GATE_1',  5, 0, 1.2, 1.2, 'باب 1'),
-      _ZoneDef('Z_GATE_2',  5, 5, 1.2, 1.2, 'باب 2'),
+      _ZoneDef('Z_SAFA', -1, 5, 1.0, 1.0, 'الصفا'),
+      _ZoneDef('Z_MATAF', 1, 1, 1.0, 4.0, 'مطاف'),
+      _ZoneDef('Z_MATAF', 4, 1, 1.0, 4.0, 'مطاف'),
+      _ZoneDef('Z_MATAF', 1, 1, 4.0, 1.0, 'مطاف'),
+      _ZoneDef('Z_MATAF', 1, 4, 4.0, 1.0, 'مطاف'),
+      _ZoneDef('Z_MAQAM', 3, 2, 0.8, 0.8, 'مقام'),
+      _ZoneDef('Z_ZAMZAM', 3, 3, 0.8, 0.8, 'زمزم'),
+      _ZoneDef('Z_GATE_1', 5, 0, 1.2, 1.2, 'باب 1'),
+      _ZoneDef('Z_GATE_2', 5, 5, 1.2, 1.2, 'باب 2'),
     ];
 
     // ترتيب painter's algorithm حسب العمق
@@ -897,8 +918,14 @@ class _Iso3DPainter extends CustomPainter {
       final pilH = _pillarH(c);
       final isSel = selectedId == z.id;
       final topPoly = _drawBox(
-        canvas, origin, cs,
-        z.gx, z.gy, z.spanW, z.spanD, pilH,
+        canvas,
+        origin,
+        cs,
+        z.gx,
+        z.gy,
+        z.spanW,
+        z.spanD,
+        pilH,
         color,
         glow: c > 20,
         selected: isSel,
@@ -911,16 +938,17 @@ class _Iso3DPainter extends CustomPainter {
     }
 
     // الكعبة
-    _drawBox(canvas, origin, cs, 2, 2, 1.8, 1.8, 2.5,
-        const Color(0xFF1A1A1A), label: '🕋');
+    _drawBox(canvas, origin, cs, 2, 2, 1.8, 1.8, 2.5, const Color(0xFF1A1A1A),
+        label: '🕋');
 
     // حدّ ذهبي على سقف الكعبة
-    final kTop = Path()..addPolygon([
-      _proj(2,   2,   2.5, origin, cs),
-      _proj(3.8, 2,   2.5, origin, cs),
-      _proj(3.8, 3.8, 2.5, origin, cs),
-      _proj(2,   3.8, 2.5, origin, cs),
-    ], true);
+    final kTop = Path()
+      ..addPolygon([
+        _proj(2, 2, 2.5, origin, cs),
+        _proj(3.8, 2, 2.5, origin, cs),
+        _proj(3.8, 3.8, 2.5, origin, cs),
+        _proj(2, 3.8, 2.5, origin, cs),
+      ], true);
     canvas.drawPath(
       kTop,
       Paint()
@@ -942,7 +970,8 @@ class _Iso3DPainter extends CustomPainter {
         ..shader = RadialGradient(colors: [
           const Color(0xFFD4AF37).withOpacity(0.18 + _pulse * 0.10),
           const Color(0xFFD4AF37).withOpacity(0),
-        ]).createShader(Rect.fromCircle(center: kCenter, radius: tawafR + cs * 0.3))
+        ]).createShader(
+            Rect.fromCircle(center: kCenter, radius: tawafR + cs * 0.3))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
     );
 
@@ -989,11 +1018,11 @@ class _Iso3DPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_Iso3DPainter old) =>
-      old.counts    != counts    ||
-      old.phase     != phase     ||
-      old.azimuth   != azimuth   ||
+      old.counts != counts ||
+      old.phase != phase ||
+      old.azimuth != azimuth ||
       old.elevation != elevation ||
-      old.scale     != scale     ||
+      old.scale != scale ||
       old.selectedId != selectedId;
 }
 
@@ -1004,4 +1033,3 @@ class _ZoneDef {
   final String label;
   const _ZoneDef(this.id, this.gx, this.gy, this.spanW, this.spanD, this.label);
 }
-

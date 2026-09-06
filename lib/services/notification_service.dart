@@ -80,7 +80,8 @@ class NotificationService {
 
   /// يبدأ مؤقتاً يتحقق كل دقيقة ويطلق إشعار الدواء عند المطابقة.
   /// [reminders] = قائمة من {'hour': int, 'minute': int, 'label': String}.
-  void startMedicationCheck(List<Map<String, dynamic>> reminders, {bool isAr = true}) {
+  void startMedicationCheck(List<Map<String, dynamic>> reminders,
+      {bool isAr = true}) {
     _medTimer?.cancel();
     if (reminders.isEmpty) return;
     final fired = <String>{};
@@ -98,7 +99,11 @@ class NotificationService {
             await _plugin.show(
               _idCounter++,
               isAr ? '💊 وقت الدواء' : '💊 Medication Time',
-              label.isNotEmpty ? label : (isAr ? 'حان موعد تناول دوائك' : 'Time to take your medication'),
+              label.isNotEmpty
+                  ? label
+                  : (isAr
+                      ? 'حان موعد تناول دوائك'
+                      : 'Time to take your medication'),
               const NotificationDetails(android: _medChannel),
             );
           } catch (e) {
@@ -172,7 +177,8 @@ class NotificationService {
     priority: Priority.high,
   );
 
-  Future<void> showPrayerReminder({required String name, bool isAr = true}) async {
+  Future<void> showPrayerReminder(
+      {required String name, bool isAr = true}) async {
     if (!_initialized) await init();
     try {
       await _plugin.show(
@@ -197,7 +203,8 @@ class NotificationService {
     priority: Priority.high,
   );
 
-  Future<void> showHajjReminder({required String title, required String body}) async {
+  Future<void> showHajjReminder(
+      {required String title, required String body}) async {
     if (!_initialized) await init();
     try {
       await _plugin.show(
@@ -222,7 +229,8 @@ class NotificationService {
     priority: Priority.max,
   );
 
-  Future<void> showBroadcast({required String title, required String body}) async {
+  Future<void> showBroadcast(
+      {required String title, required String body}) async {
     if (!_initialized) await init();
     try {
       await _plugin.show(
