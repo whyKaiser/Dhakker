@@ -212,11 +212,16 @@ void main() {
       expect(body.contains('playbackService'), isFalse);
       expect(body.contains('_playbackService'), isFalse);
       // And it is wired to a button's onPressed, not to any lifecycle hook.
-      expect(src.contains('onOpenRelated: () => _openRelated('), isTrue);
+      //
+      // Matched against whitespace-collapsed source: these assertions read
+      // the file as TEXT, so a formatter wrapping the argument across two
+      // lines would otherwise fail a test about behaviour.
+      String flat(String s) => s.replaceAll(RegExp(r'\s+'), ' ');
+      expect(flat(src).contains('onOpenRelated: () => _openRelated('), isTrue);
       final card = File(
         'lib/Screens/Piligram/Duas/widgets/content_kind_card.dart',
       ).readAsStringSync();
-      expect(card.contains('onPressed: onOpenRelated'), isTrue);
+      expect(flat(card).contains('onPressed: onOpenRelated'), isTrue);
     });
 
     test('the pointer changes neither recitability nor verification', () {

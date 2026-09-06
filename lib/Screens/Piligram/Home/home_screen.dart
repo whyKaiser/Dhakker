@@ -26,7 +26,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   late final Animation<double> _ring1;
   late final Animation<double> _ring2;
@@ -54,10 +55,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
     _ring2 = Tween<double>(begin: 0.84, end: 1.30).animate(
-      CurvedAnimation(parent: _pulseController, curve: const Interval(0.15, 1.0, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _pulseController,
+          curve: const Interval(0.15, 1.0, curve: Curves.easeOut)),
     );
     _ring3 = Tween<double>(begin: 0.76, end: 1.44).animate(
-      CurvedAnimation(parent: _pulseController, curve: const Interval(0.30, 1.0, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _pulseController,
+          curve: const Interval(0.30, 1.0, curve: Curves.easeOut)),
     );
 
     _loadUserName();
@@ -150,8 +155,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
             String statusText() {
               if (_controller.isLoading) return s.homeStatusLoading;
-              if (!_controller.autoLocationEnabled) return s.homeStatusAutoLocationDisabled;
-              if (_controller.errorMessage == 'location_unavailable') return s.homeStatusLocationUnavailable;
+              if (!_controller.autoLocationEnabled) {
+                return s.homeStatusAutoLocationDisabled;
+              }
+              if (_controller.errorMessage == 'location_unavailable') {
+                return s.homeStatusLocationUnavailable;
+              }
               if (!_controller.hasDetectedZone) return s.homeStatusNoZone;
               return s.homeCurrentLocation;
             }
@@ -169,10 +178,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: RefreshIndicator(
                   color: palette.gold,
                   backgroundColor: palette.card,
-                  onRefresh: () async => await _controller.refreshSettings(langCode),
+                  onRefresh: () async =>
+                      await _controller.refreshSettings(langCode),
                   child: SingleChildScrollView(
                     // تفعيل فيزياء الارتداد والتمطيط عند السحب لأعلى وأسفل (iOS Feel)
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics()),
                     padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
                     child: Column(
                       children: [
@@ -196,19 +207,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               return Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  _PulseRing(scale: _ring3.value, opacity: (1 - _pulseController.value).clamp(0.0, 1.0) * 0.14, color: palette.gold),
-                                  _PulseRing(scale: _ring2.value, opacity: (1 - (_pulseController.value * 1.05)).clamp(0.0, 1.0) * 0.18, color: palette.gold),
-                                  _PulseRing(scale: _ring1.value, opacity: (1 - (_pulseController.value * 1.10)).clamp(0.0, 1.0) * 0.22, stroke: 2, color: palette.gold),
+                                  _PulseRing(
+                                      scale: _ring3.value,
+                                      opacity: (1 - _pulseController.value)
+                                              .clamp(0.0, 1.0) *
+                                          0.14,
+                                      color: palette.gold),
+                                  _PulseRing(
+                                      scale: _ring2.value,
+                                      opacity:
+                                          (1 - (_pulseController.value * 1.05))
+                                                  .clamp(0.0, 1.0) *
+                                              0.18,
+                                      color: palette.gold),
+                                  _PulseRing(
+                                      scale: _ring1.value,
+                                      opacity:
+                                          (1 - (_pulseController.value * 1.10))
+                                                  .clamp(0.0, 1.0) *
+                                              0.22,
+                                      stroke: 2,
+                                      color: palette.gold),
                                   Container(
-                                    width: 126, height: 126,
+                                    width: 126,
+                                    height: 126,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: palette.screenBg,
-                                      border: Border.all(color: palette.gold.withOpacity(.42), width: 1.3),
-                                      boxShadow: [BoxShadow(color: palette.gold.withOpacity(.10), blurRadius: 30, offset: const Offset(0, 18))],
+                                      border: Border.all(
+                                          color: palette.gold.withOpacity(.42),
+                                          width: 1.3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color:
+                                                palette.gold.withOpacity(.10),
+                                            blurRadius: 30,
+                                            offset: const Offset(0, 18))
+                                      ],
                                     ),
                                     alignment: Alignment.center,
-                                    child: Image.asset('assets/images/kaaba.png', width: 68, height: 68, fit: BoxFit.contain),
+                                    child: Image.asset(
+                                        'assets/images/kaaba.png',
+                                        width: 68,
+                                        height: 68,
+                                        fit: BoxFit.contain),
                                   ),
                                 ],
                               );
@@ -218,164 +260,223 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                         // عدّاد الطواف يظهر فقط داخل منطقة المطاف.
                         if (ritual == 'tawaf') ...[
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // --- كبسولة عداد الأشواط التفاعلية مع أنميشن ارتداد مرن (Scale Animation) ---
-                        GestureDetector(
-                          onTapDown: (_) {
-                            setState(() {
-                              _roundButtonScale = 0.94; // تصغير خفيف عند لمس الزر
-                            });
-                          },
-                          onTapUp: (_) {
-                            setState(() {
-                              _roundButtonScale = 1.0; // رجوع الحجم الطبيعي عند رفع الإصبع
-                            });
-                          },
-                          onTapCancel: () {
-                            setState(() {
-                              _roundButtonScale = 1.0;
-                            });
-                          },
-                          onTap: () {
-                            // الاهتزاز يصدر من الكيوبت نفسه (نقطة العدّ الموحّدة
-                            // للمصادر الثلاثة: زر/GPS/بوصلة) فلا نكرره هنا.
-                            appCubit.incrementRound();
-                          },
-                          child: AnimatedScale(
-                            scale: _roundButtonScale,
-                            duration: const Duration(milliseconds: 120),
-                            curve: Curves.easeOutCubic,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [palette.gold, palette.gold2],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: palette.gold.withOpacity(0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
+                          // --- كبسولة عداد الأشواط التفاعلية مع أنميشن ارتداد مرن (Scale Animation) ---
+                          GestureDetector(
+                            onTapDown: (_) {
+                              setState(() {
+                                _roundButtonScale =
+                                    0.94; // تصغير خفيف عند لمس الزر
+                              });
+                            },
+                            onTapUp: (_) {
+                              setState(() {
+                                _roundButtonScale =
+                                    1.0; // رجوع الحجم الطبيعي عند رفع الإصبع
+                              });
+                            },
+                            onTapCancel: () {
+                              setState(() {
+                                _roundButtonScale = 1.0;
+                              });
+                            },
+                            onTap: () {
+                              // الاهتزاز يصدر من الكيوبت نفسه (نقطة العدّ الموحّدة
+                              // للمصادر الثلاثة: زر/GPS/بوصلة) فلا نكرره هنا.
+                              appCubit.incrementRound();
+                            },
+                            child: AnimatedScale(
+                              scale: _roundButtonScale,
+                              duration: const Duration(milliseconds: 120),
+                              curve: Curves.easeOutCubic,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [palette.gold, palette.gold2],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    isAr ? "الشوط الحالي" : "Current Round",
-                                    style: const TextStyle(color: Color(0xFF14171C), fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF14171C).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(30),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: palette.gold.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 550),
-                                      transitionBuilder: (child, anim) {
-                                        final bounce = Tween<double>(begin: 0.0, end: 1.0).animate(
-                                          CurvedAnimation(parent: anim, curve: Curves.elasticOut),
-                                        );
-                                        final slide = Tween<Offset>(begin: const Offset(0, -0.8), end: Offset.zero).animate(
-                                          CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
-                                        );
-                                        return SlideTransition(
-                                          position: slide,
-                                          child: ScaleTransition(scale: bounce, child: child),
-                                        );
-                                      },
-                                      child: Text(
-                                        "${appCubit.roundCount} / 7",
-                                        key: ValueKey(appCubit.roundCount),
-                                        style: const TextStyle(color: Color(0xFF14171C), fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      isAr ? "الشوط الحالي" : "Current Round",
+                                      style: const TextStyle(
+                                          color: Color(0xFF14171C),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF14171C)
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 550),
+                                        transitionBuilder: (child, anim) {
+                                          final bounce = Tween<double>(
+                                                  begin: 0.0, end: 1.0)
+                                              .animate(
+                                            CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.elasticOut),
+                                          );
+                                          final slide = Tween<Offset>(
+                                                  begin: const Offset(0, -0.8),
+                                                  end: Offset.zero)
+                                              .animate(
+                                            CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.easeOutCubic),
+                                          );
+                                          return SlideTransition(
+                                            position: slide,
+                                            child: ScaleTransition(
+                                                scale: bounce, child: child),
+                                          );
+                                        },
+                                        child: Text(
+                                          "${appCubit.roundCount} / 7",
+                                          key: ValueKey(appCubit.roundCount),
+                                          style: const TextStyle(
+                                              color: Color(0xFF14171C),
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              fontFamily: 'AlamirBold'),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-
                         ],
 
                         // عدّاد السعي يظهر فقط داخل منطقة السعي (الصفا/المروة/المسعى).
                         if (ritual == 'sai') ...[
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // --- كبسولة عدّاد السعي (الصفا ↔ المروة) بحدّ ذهبي مفرّغ لتمييزها عن الطواف ---
-                        GestureDetector(
-                          onTapDown: (_) => setState(() => _saiButtonScale = 0.94),
-                          onTapUp: (_) => setState(() => _saiButtonScale = 1.0),
-                          onTapCancel: () => setState(() => _saiButtonScale = 1.0),
-                          onTap: () {
-                            // الاهتزاز من الكيوبت (نقطة العدّ الموحّدة) — لا تكرار هنا.
-                            appCubit.incrementSai();
-                          },
-                          child: AnimatedScale(
-                            scale: _saiButtonScale,
-                            duration: const Duration(milliseconds: 120),
-                            curve: Curves.easeOutCubic,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: palette.gold.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: palette.gold.withOpacity(0.55), width: 1.4),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    isAr ? "شوط السعي" : "Sa'i Round",
-                                    style: TextStyle(color: palette.gold, fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: palette.gold.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(15),
+                          // --- كبسولة عدّاد السعي (الصفا ↔ المروة) بحدّ ذهبي مفرّغ لتمييزها عن الطواف ---
+                          GestureDetector(
+                            onTapDown: (_) =>
+                                setState(() => _saiButtonScale = 0.94),
+                            onTapUp: (_) =>
+                                setState(() => _saiButtonScale = 1.0),
+                            onTapCancel: () =>
+                                setState(() => _saiButtonScale = 1.0),
+                            onTap: () {
+                              // الاهتزاز من الكيوبت (نقطة العدّ الموحّدة) — لا تكرار هنا.
+                              appCubit.incrementSai();
+                            },
+                            child: AnimatedScale(
+                              scale: _saiButtonScale,
+                              duration: const Duration(milliseconds: 120),
+                              curve: Curves.easeOutCubic,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: palette.gold.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                      color: palette.gold.withOpacity(0.55),
+                                      width: 1.4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      isAr ? "شوط السعي" : "Sa'i Round",
+                                      style: TextStyle(
+                                          color: palette.gold,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold),
                                     ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 550),
-                                      transitionBuilder: (child, anim) {
-                                        final bounce = Tween<double>(begin: 0.0, end: 1.0).animate(
-                                          CurvedAnimation(parent: anim, curve: Curves.elasticOut),
-                                        );
-                                        final slide = Tween<Offset>(begin: const Offset(0, -0.8), end: Offset.zero).animate(
-                                          CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
-                                        );
-                                        return SlideTransition(
-                                          position: slide,
-                                          child: ScaleTransition(scale: bounce, child: child),
-                                        );
-                                      },
-                                      child: Text(
-                                        "${appCubit.saiCount} / 7",
-                                        key: ValueKey(appCubit.saiCount),
-                                        style: TextStyle(color: palette.gold, fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'AlamirBold'),
+                                    const SizedBox(width: 14),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: palette.gold.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 550),
+                                        transitionBuilder: (child, anim) {
+                                          final bounce = Tween<double>(
+                                                  begin: 0.0, end: 1.0)
+                                              .animate(
+                                            CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.elasticOut),
+                                          );
+                                          final slide = Tween<Offset>(
+                                                  begin: const Offset(0, -0.8),
+                                                  end: Offset.zero)
+                                              .animate(
+                                            CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.easeOutCubic),
+                                          );
+                                          return SlideTransition(
+                                            position: slide,
+                                            child: ScaleTransition(
+                                                scale: bounce, child: child),
+                                          );
+                                        },
+                                        child: Text(
+                                          "${appCubit.saiCount} / 7",
+                                          key: ValueKey(appCubit.saiCount),
+                                          style: TextStyle(
+                                              color: palette.gold,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              fontFamily: 'AlamirBold'),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         ],
 
                         const SizedBox(height: 28),
-                        Text(statusText(), textAlign: TextAlign.center, style: TextStyle(color: palette.muted, fontSize: 14, fontWeight: FontWeight.w700)),
+                        Text(statusText(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: palette.muted,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
-                        Text(zoneName ?? s.homeNoZoneDetected, textAlign: TextAlign.center, style: TextStyle(color: palette.textPrimary, fontSize: 20, fontWeight: FontWeight.w900, height: 1.12, fontFamily: 'AlamirBold')),
+                        Text(zoneName ?? s.homeNoZoneDetected,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: palette.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                height: 1.12,
+                                fontFamily: 'AlamirBold')),
                         const SizedBox(height: 22),
 
                         // --- بطاقة الدعاء الأساسي ---
@@ -391,34 +492,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           playingText: s.homePlayingNow,
                           onDone: _controller.hasDua
                               ? () async {
-                            await _controller.onPrimaryButtonTap(langCode, 0);
-                          }
+                                  await _controller.onPrimaryButtonTap(
+                                      langCode, 0);
+                                }
                               : null,
                         ),
 
                         // --- قائمة الأدعية الأخرى المحسنة للأداء عالي السلاسة ---
-                        if (_controller.hasDua && _controller.duasCount > 1) ...[
+                        if (_controller.hasDua &&
+                            _controller.duasCount > 1) ...[
                           const SizedBox(height: 28),
                           Align(
                             alignment: AlignmentDirectional.centerStart,
                             child: Text(
                               // لا نقول «مخصصة لهذا المكان»: التخصيص يُنسب
                               // للمصدر، وهو يظهر في وسم كل بطاقة على حدة.
-                              isAr ? 'أدعية أخرى تناسب هذا الموضع:' : 'More supplications you may say here:',
-                              style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
+                              isAr
+                                  ? 'أدعية أخرى تناسب هذا الموضع:'
+                                  : 'More supplications you may say here:',
+                              style: TextStyle(
+                                  color: palette.gold,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'AlamirBold'),
                             ),
                           ),
                           const SizedBox(height: 12),
-
                           ListView.builder(
                             shrinkWrap: true,
                             primary: false,
-                            physics: const NeverScrollableScrollPhysics(), // منع تعارض الاسكرول لثبات الفريمات
+                            physics:
+                                const NeverScrollableScrollPhysics(), // منع تعارض الاسكرول لثبات الفريمات
                             itemCount: _controller.duasCount - 1,
                             itemBuilder: (context, index) {
                               final realIndex = index + 1;
-                              final otherTitle = _controller.displayedDuaTitle(langCode, realIndex) ?? '';
-                              final otherText = _controller.displayedDuaText(langCode, realIndex) ?? '';
+                              final otherTitle = _controller.displayedDuaTitle(
+                                      langCode, realIndex) ??
+                                  '';
+                              final otherText = _controller.displayedDuaText(
+                                      langCode, realIndex) ??
+                                  '';
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 14),
@@ -426,37 +539,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 decoration: BoxDecoration(
                                   color: palette.card,
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: palette.gold.withOpacity(0.12)),
+                                  border: Border.all(
+                                      color: palette.gold.withOpacity(0.12)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(color: palette.chipBg, borderRadius: BorderRadius.circular(10)),
-                                      child: Text(otherTitle, style: TextStyle(color: palette.gold, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                          color: palette.chipBg,
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      child: Text(otherTitle,
+                                          style: TextStyle(
+                                              color: palette.gold,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold)),
                                     ),
-                                    if (_controller.displayedDuaKind(realIndex) != null) ...[
+                                    if (_controller
+                                            .displayedDuaKind(realIndex) !=
+                                        null) ...[
                                       const SizedBox(height: 8),
-                                      ContentKindBadge(kind: _controller.displayedDuaKind(realIndex)!),
+                                      ContentKindBadge(
+                                          kind: _controller
+                                              .displayedDuaKind(realIndex)!),
                                     ],
                                     const SizedBox(height: 10),
-                                    Text(otherText, style: TextStyle(color: palette.textPrimary, fontSize: 16, height: 1.6, fontWeight: FontWeight.w600)),
+                                    Text(otherText,
+                                        style: TextStyle(
+                                            color: palette.textPrimary,
+                                            fontSize: 16,
+                                            height: 1.6,
+                                            fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 12),
                                     Align(
                                       alignment: AlignmentDirectional.centerEnd,
                                       child: InkWell(
-                                        onTap: () async => await _controller.onPrimaryButtonTap(langCode, realIndex),
+                                        onTap: () async => await _controller
+                                            .onPrimaryButtonTap(
+                                                langCode, realIndex),
                                         borderRadius: BorderRadius.circular(12),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                          decoration: BoxDecoration(color: palette.gold.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 8),
+                                          decoration: BoxDecoration(
+                                              color:
+                                                  palette.gold.withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.play_circle_fill_rounded, color: palette.gold, size: 20),
+                                              Icon(
+                                                  Icons
+                                                      .play_circle_fill_rounded,
+                                                  color: palette.gold,
+                                                  size: 20),
                                               const SizedBox(width: 6),
-                                              Text(isAr ? 'تشغيل الدعاء' : 'Play Dua', style: TextStyle(color: palette.gold, fontWeight: FontWeight.bold)),
+                                              Text(
+                                                  isAr
+                                                      ? 'تشغيل الدعاء'
+                                                      : 'Play Dua',
+                                                  style: TextStyle(
+                                                      color: palette.gold,
+                                                      fontWeight:
+                                                          FontWeight.bold)),
                                             ],
                                           ),
                                         ),
@@ -483,7 +632,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               isAr
                                   ? 'آثار موثّقة (للفائدة لا للترديد):'
                                   : 'Recorded narrations (for benefit, not recitation):',
-                              style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
+                              style: TextStyle(
+                                  color: palette.gold,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'AlamirBold'),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -505,8 +658,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           Align(
                             alignment: AlignmentDirectional.centerStart,
                             child: Text(
-                              isAr ? 'إرشادات هذا الموضع (ليست أدعية):' : 'Guidance for this place (not supplications):',
-                              style: TextStyle(color: palette.gold, fontSize: 16, fontWeight: FontWeight.w800, fontFamily: 'AlamirBold'),
+                              isAr
+                                  ? 'إرشادات هذا الموضع (ليست أدعية):'
+                                  : 'Guidance for this place (not supplications):',
+                              style: TextStyle(
+                                  color: palette.gold,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'AlamirBold'),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -726,12 +885,12 @@ class _DuaCard extends StatelessWidget {
               alignment: AlignmentDirectional.centerEnd,
               child: ContentKindBadge(kind: kind!),
             ),
-          if (policy != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: RecitationPolicyNote(
-                  policy: policy, textColor: palette.textPrimary),
-            ),
+            if (policy != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: RecitationPolicyNote(
+                    policy: policy, textColor: palette.textPrimary),
+              ),
           ],
           const SizedBox(height: 16),
           Text(
@@ -774,21 +933,21 @@ class _DuaCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 gradient: canPlay
                     ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    palette.gold.withOpacity(.98),
-                    palette.gold2.withOpacity(.98),
-                  ],
-                )
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          palette.gold.withOpacity(.98),
+                          palette.gold2.withOpacity(.98),
+                        ],
+                      )
                     : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    palette.muted.withOpacity(.45),
-                    palette.muted.withOpacity(.32),
-                  ],
-                ),
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          palette.muted.withOpacity(.45),
+                          palette.muted.withOpacity(.32),
+                        ],
+                      ),
                 boxShadow: [
                   BoxShadow(
                     color: palette.gold.withOpacity(.16),
@@ -806,7 +965,9 @@ class _DuaCard extends StatelessWidget {
                     child: Text(
                       buttonText,
                       style: TextStyle(
-                        color: canPlay ? const Color(0xFF14171C) : palette.textPrimary.withOpacity(.70),
+                        color: canPlay
+                            ? const Color(0xFF14171C)
+                            : palette.textPrimary.withOpacity(.70),
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
@@ -862,20 +1023,31 @@ class _WelcomeCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+                shape: BoxShape.circle, color: palette.gold.withOpacity(.12)),
             child: Icon(Icons.person_rounded, color: palette.gold, size: 20),
           ),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_greeting(), style: TextStyle(color: palette.muted, fontSize: 11, fontWeight: FontWeight.w600)),
-              Text(name, style: TextStyle(color: palette.textPrimary, fontSize: 15, fontWeight: FontWeight.w900)),
+              Text(_greeting(),
+                  style: TextStyle(
+                      color: palette.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+              Text(name,
+                  style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900)),
             ],
           ),
           const Spacer(),
-          Icon(Icons.favorite_rounded, color: palette.gold.withOpacity(.6), size: 18),
+          Icon(Icons.favorite_rounded,
+              color: palette.gold.withOpacity(.6), size: 18),
         ],
       ),
     );
@@ -1001,9 +1173,8 @@ class _TopInfoSectionState extends State<_TopInfoSection> {
   String _fmtTime(DateTime t) {
     final m = t.minute.toString().padLeft(2, '0');
     final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
-    final period = t.hour < 12
-        ? (widget.isAr ? 'ص' : 'AM')
-        : (widget.isAr ? 'م' : 'PM');
+    final period =
+        t.hour < 12 ? (widget.isAr ? 'ص' : 'AM') : (widget.isAr ? 'م' : 'PM');
     return '$h12:$m $period';
   }
 
@@ -1023,7 +1194,8 @@ class _TopInfoSectionState extends State<_TopInfoSection> {
     return Column(
       children: [
         if (p != null) _prayerCard(p),
-        if (_heat != null && _heat!.level != HeatLevel.none) _heatBanner(_heat!),
+        if (_heat != null && _heat!.level != HeatLevel.none)
+          _heatBanner(_heat!),
       ],
     );
   }
@@ -1105,9 +1277,7 @@ class _TopInfoSectionState extends State<_TopInfoSection> {
   Widget _heatBanner(HeatAdvice h) {
     final danger = h.level == HeatLevel.danger;
     final color = danger ? const Color(0xFFE0463F) : const Color(0xFFE08A2E);
-    final tempStr = h.temperature != null
-        ? '${h.temperature!.round()}° '
-        : '';
+    final tempStr = h.temperature != null ? '${h.temperature!.round()}° ' : '';
     final String msg;
     if (danger) {
       msg = widget.isAr

@@ -6,8 +6,6 @@ import '../Screens/Admin/Manage Zones/zone_list_screen.dart';
 import '../Screens/Admin/Settings/admin_settings_screen.dart';
 import 'admin_states.dart';
 
-
-
 class AdminCubit extends Cubit<AdminState> {
   AdminCubit() : super(AdminInitState());
 
@@ -22,22 +20,11 @@ class AdminCubit extends Cubit<AdminState> {
     AdminSettingsScreen(),
   ];
 
-  List<String> screenAr=[
-    'لوحة المشرف',
-    'المناطق',
-    'الأدعية',
-    'الإعدادات'
-  ];
+  List<String> screenAr = ['لوحة المشرف', 'المناطق', 'الأدعية', 'الإعدادات'];
 
-  List<String> screenEn=[
-    'Dashboard',
-    'Zones',
-    'Supplications',
-    'Settings'
-  ];
+  List<String> screenEn = ['Dashboard', 'Zones', 'Supplications', 'Settings'];
   void changeScreen(int index) {
     currentScreen = index;
     emit(AdminChangeScreenState());
   }
-
 }

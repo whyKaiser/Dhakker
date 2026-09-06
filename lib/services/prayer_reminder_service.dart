@@ -16,21 +16,21 @@ class PrayerReminderService {
   final Set<String> _firedToday = {};
 
   static const _namesAr = {
-    Prayer.fajr:    'الفجر',
+    Prayer.fajr: 'الفجر',
     Prayer.sunrise: 'الشروق',
-    Prayer.dhuhr:   'الظهر',
-    Prayer.asr:     'العصر',
+    Prayer.dhuhr: 'الظهر',
+    Prayer.asr: 'العصر',
     Prayer.maghrib: 'المغرب',
-    Prayer.isha:    'العشاء',
+    Prayer.isha: 'العشاء',
   };
 
   static const _namesEn = {
-    Prayer.fajr:    'Fajr',
+    Prayer.fajr: 'Fajr',
     Prayer.sunrise: 'Sunrise',
-    Prayer.dhuhr:   'Dhuhr',
-    Prayer.asr:     'Asr',
+    Prayer.dhuhr: 'Dhuhr',
+    Prayer.asr: 'Asr',
     Prayer.maghrib: 'Maghrib',
-    Prayer.isha:    'Isha',
+    Prayer.isha: 'Isha',
   };
 
   void start({required double lat, required double lng, bool isAr = true}) {
@@ -68,8 +68,10 @@ class PrayerReminderService {
           final key = '$todayKey-$prayer';
           if (_firedToday.contains(key)) continue;
           _firedToday.add(key);
-          final name = _isAr ? (_namesAr[prayer] ?? '') : (_namesEn[prayer] ?? '');
-          NotificationService.instance.showPrayerReminder(name: name, isAr: _isAr);
+          final name =
+              _isAr ? (_namesAr[prayer] ?? '') : (_namesEn[prayer] ?? '');
+          NotificationService.instance
+              .showPrayerReminder(name: name, isAr: _isAr);
         }
       }
     } catch (e) {
@@ -78,11 +80,13 @@ class PrayerReminderService {
   }
 
   /// يعيد وقت الصلاة القادمة واسمها (للعرض في الواجهة).
-  Map<String, dynamic>? nextPrayer({double? lat, double? lng, bool isAr = true}) {
+  Map<String, dynamic>? nextPrayer(
+      {double? lat, double? lng, bool isAr = true}) {
     try {
       final coords = Coordinates(lat ?? _lat, lng ?? _lng);
       final params = CalculationMethod.umm_al_qura.getParameters();
-      final times = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+      final times =
+          PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
       final next = times.nextPrayer();
       if (next == Prayer.none) return null;
       final t = times.timeForPrayer(next);

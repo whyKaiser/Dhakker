@@ -99,7 +99,8 @@ class SupplicationService {
             .get();
         for (final doc in ritualQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
-          byId.putIfAbsent(item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
+          byId.putIfAbsent(
+              item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
         }
       }
 
@@ -113,7 +114,8 @@ class SupplicationService {
             .get();
         for (final doc in idQuery.docs) {
           final item = SupplicationModel.fromFirestore(doc);
-          byId.putIfAbsent(item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
+          byId.putIfAbsent(
+              item.duaId.isNotEmpty ? item.duaId : doc.id, () => item);
         }
       }
 
@@ -156,7 +158,8 @@ class SupplicationService {
         cacheKey: cacheKey,
         hint: 'فشل غير متوقع أثناء جلب النصوص.',
       );
-      debugPrint('[supplications] unexpected query failure for "$cacheKey": $e');
+      debugPrint(
+          '[supplications] unexpected query failure for "$cacheKey": $e');
     }
 
     // ثانياً: إذا فشل Firestore (بدون نت) → ارجع للكاش المحلي.
@@ -169,11 +172,12 @@ class SupplicationService {
     return [];
   }
 
-  Future<void> _persistToCache(String cacheKey, List<SupplicationModel> items) async {
+  Future<void> _persistToCache(
+      String cacheKey, List<SupplicationModel> items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json =
-          jsonEncode(items.where(isDisplayable).map((e) => e.toJson()).toList());
+      final json = jsonEncode(
+          items.where(isDisplayable).map((e) => e.toJson()).toList());
       await prefs.setString(_prefKey(cacheKey), json);
     } catch (_) {}
   }
@@ -187,7 +191,8 @@ class SupplicationService {
       // يحوي سجلًا غير موثّق أو أُلغي بعد حفظه، وحذفه من الجهاز ليس بيدنا.
       // فالفلترة هنا هي ما يحمي الحاج من نصّ سُحب بعد أن خُزِّن عنده.
       final list = (jsonDecode(raw) as List)
-          .map((e) => SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) =>
+              SupplicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
           .where(isDisplayable)
           .toList();
       return list;
@@ -203,7 +208,8 @@ class SupplicationService {
     if (items.isEmpty) return null;
 
     for (final item in items) {
-      if (item.supportsLanguage(langCode) && item.textByLanguage(langCode).trim().isNotEmpty) {
+      if (item.supportsLanguage(langCode) &&
+          item.textByLanguage(langCode).trim().isNotEmpty) {
         return item;
       }
     }

@@ -23,7 +23,6 @@ import 'boot_signal.dart';
 
 import 'theme/dhakker_theme.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

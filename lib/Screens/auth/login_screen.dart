@@ -52,7 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (!userDoc.exists) {
         await FirebaseAuth.instance.signOut();
         _showSnack(s.authNoProfileDoc, isError: true);
@@ -104,7 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final fieldFill = isDark ? DhakkerColors.bg.withOpacity(.72) : Colors.white;
-    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
+    final borderColor =
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -112,12 +114,14 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(30)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(isDark ? .45 : .12),
@@ -151,7 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           DhakkerColors.gold2.withOpacity(.10),
                         ],
                       ),
-                      border: Border.all(color: DhakkerColors.gold.withOpacity(.28)),
+                      border: Border.all(
+                          color: DhakkerColors.gold.withOpacity(.28)),
                     ),
                     child: const Icon(
                       Icons.lock_reset_rounded,
@@ -192,9 +197,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: s.authEmailLabel,
                       hintText: s.authEmailHint,
-                      labelStyle: TextStyle(color: muted, fontWeight: FontWeight.w700),
-                      hintStyle: TextStyle(color: muted.withOpacity(.7), fontWeight: FontWeight.w600),
-                      prefixIcon: Icon(Icons.email_rounded, color: DhakkerColors.gold2.withOpacity(.92)),
+                      labelStyle:
+                          TextStyle(color: muted, fontWeight: FontWeight.w700),
+                      hintStyle: TextStyle(
+                          color: muted.withOpacity(.7),
+                          fontWeight: FontWeight.w600),
+                      prefixIcon: Icon(Icons.email_rounded,
+                          color: DhakkerColors.gold2.withOpacity(.92)),
                       filled: true,
                       fillColor: fieldFill,
                       enabledBorder: OutlineInputBorder(
@@ -203,21 +212,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: DhakkerColors.gold.withOpacity(.85), width: 1.4),
+                        borderSide: BorderSide(
+                            color: DhakkerColors.gold.withOpacity(.85),
+                            width: 1.4),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.redAccent.withOpacity(.8), width: 1.2),
+                        borderSide: BorderSide(
+                            color: Colors.redAccent.withOpacity(.8),
+                            width: 1.2),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.redAccent.withOpacity(.95), width: 1.3),
+                        borderSide: BorderSide(
+                            color: Colors.redAccent.withOpacity(.95),
+                            width: 1.3),
                       ),
                     ),
                     validator: (v) {
                       final value = (v ?? '').trim();
                       if (value.isEmpty) return s.authEmailRequired;
-                      final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
+                      final ok =
+                          RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
                       if (!ok) return s.authInvalidEmail;
                       return null;
                     },
@@ -255,8 +271,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
     );
-
-
   }
 
   Future<void> _sendResetPassword(String email) async {
@@ -361,7 +375,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         DhakkerColors.gold.withOpacity(.10),
                       ],
                     ),
-                    border: Border.all(color: const Color(0xFF38C793).withOpacity(.35)),
+                    border: Border.all(
+                        color: const Color(0xFF38C793).withOpacity(.35)),
                   ),
                   child: const Icon(
                     Icons.mark_email_read_rounded,
@@ -466,7 +481,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final muted = isDark ? DhakkerColors.muted : DhakkerColors.lightMuted;
     final textColor = isDark ? Colors.white : DhakkerColors.lightText;
     final fieldFill = isDark ? DhakkerColors.bg.withOpacity(.72) : Colors.white;
-    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
+    final borderColor =
+        (isDark ? Colors.white : Colors.black).withOpacity(isDark ? .08 : .06);
 
     return Scaffold(
       backgroundColor: bg,
@@ -527,7 +543,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
-                          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                              color: textColor, fontWeight: FontWeight.w700),
                           decoration: _inputDecoration(
                             context: context,
                             label: s.authEmailLabel,
@@ -542,7 +559,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           validator: (v) {
                             final value = (v ?? '').trim();
                             if (value.isEmpty) return s.authEmailRequired;
-                            final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
+                            final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                .hasMatch(value);
                             if (!ok) return s.authInvalidEmail;
                             return null;
                           },
@@ -553,7 +571,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: _obscure,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _login(),
-                          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                              color: textColor, fontWeight: FontWeight.w700),
                           decoration: _inputDecoration(
                             context: context,
                             label: s.authPasswordLabel,
@@ -565,9 +584,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             gold: gold,
                             gold2: gold2,
                             suffix: IconButton(
-                              onPressed: () => setState(() => _obscure = !_obscure),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
                               icon: Icon(
-                                _obscure ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                                _obscure
+                                    ? Icons.visibility_rounded
+                                    : Icons.visibility_off_rounded,
                                 color: muted.withOpacity(.9),
                               ),
                             ),
@@ -582,7 +604,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
                           child: TextButton(
-                            onPressed: _loading ? null : _showForgotPasswordSheet,
+                            onPressed:
+                                _loading ? null : _showForgotPasswordSheet,
                             child: Text(
                               s.authForgotPassword,
                               style: const TextStyle(
@@ -604,7 +627,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           textColor: textColor,
                           onCreate: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen()),
                             );
                           },
                         ),
@@ -636,8 +660,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: TextStyle(color: muted.withOpacity(.95), fontWeight: FontWeight.w700),
-      hintStyle: TextStyle(color: muted.withOpacity(.72), fontWeight: FontWeight.w600),
+      labelStyle:
+          TextStyle(color: muted.withOpacity(.95), fontWeight: FontWeight.w700),
+      hintStyle:
+          TextStyle(color: muted.withOpacity(.72), fontWeight: FontWeight.w600),
       prefixIcon: Icon(icon, color: gold2.withOpacity(.92)),
       suffixIcon: suffix,
       filled: true,
@@ -653,15 +679,18 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.redAccent.withOpacity(.8), width: 1.2),
+        borderSide:
+            BorderSide(color: Colors.redAccent.withOpacity(.8), width: 1.2),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.redAccent.withOpacity(.95), width: 1.3),
+        borderSide:
+            BorderSide(color: Colors.redAccent.withOpacity(.95), width: 1.3),
       ),
     );
   }
 }
+
 class _HomeTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onLanguageTap;
 
@@ -735,7 +764,9 @@ class _LangPill extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bg = isDark ? DhakkerColors.card : DhakkerColors.lightCard;
-    final border = isDark ? DhakkerColors.gold.withOpacity(.65) : DhakkerColors.gold2.withOpacity(.55);
+    final border = isDark
+        ? DhakkerColors.gold.withOpacity(.65)
+        : DhakkerColors.gold2.withOpacity(.55);
     final text = isDark ? DhakkerColors.gold : DhakkerColors.gold2;
 
     return Material(

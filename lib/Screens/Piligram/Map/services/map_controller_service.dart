@@ -7,9 +7,9 @@ class MapControllerService {
   MapControllerService(this.mapController);
 
   void focusOnPoint(
-      LatLng point, {
-        double zoom = 18.2,
-      }) {
+    LatLng point, {
+    double zoom = 18.2,
+  }) {
     mapController.move(point, zoom);
   }
 
