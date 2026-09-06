@@ -895,3 +895,228 @@ test("adding the archive rule left supplications itself unchanged", async () => 
   await assertSucceeds(getDoc(doc(pilgrimDb(), "supplications", "keep-1")));
   await assertSucceeds(getDoc(doc(adminDb(), "supplications", "keep-1")));
 });
+
+// ── Family groups: live GPS of pilgrims ──────────────────────────────────
+//
+// The most sensitive data in the product. These tests re-enact, in full, the
+// three-step attack the previous rules allowed — proven against the emulator
+// before the fix:
+//
+//   1. list `groups`            → every group, and every join code, visible
+//   2. create members/{me}      → join any group with no code at all
+//   3. list members             → read the family's live coordinates
+//
+// Each step is asserted closed. They fail if any future rule reopens one.
+
+const OWNER_UID = "family-owner";
+const RELATIVE_UID = "family-relative";
+const STRANGER_UID = "unrelated-stranger";
+
+const GROUP_ID = "group-1";
+const GROUP_CODE = "HAJJ-4821";
+
+const ownerDb = () => testEnv.authenticatedContext(OWNER_UID).firestore();
+const relativeDb = () => testEnv.authenticatedContext(RELATIVE_UID).firestore();
+const strangerDb = () => testEnv.authenticatedContext(STRANGER_UID).firestore();
+
+/// A group whose owner and one relative are already members, the relative
+/// sharing a live location. Seeded past the rules, as real usage would leave it.
+async function seedGroup() {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, "groups", GROUP_ID), {
+      name: "عائلتي", code: GROUP_CODE, ownerId: OWNER_UID,
+    });
+    await setDoc(doc(db, "group_codes", GROUP_CODE), {
+      groupId: GROUP_ID, ownerId: OWNER_UID,
+    });
+    await setDoc(doc(db, "groups", GROUP_ID, "members", OWNER_UID), {
+      name: "الأب", joinCode: GROUP_CODE,
+    });
+    await setDoc(doc(db, "groups", GROUP_ID, "members", RELATIVE_UID), {
+      name: "الأم", joinCode: GROUP_CODE, lat: 21.4225, lng: 39.8262,
+    });
+  });
+}
+
+test("step 1 is closed: nobody can list groups, so no code can be harvested", async () => {
+  await seedGroup();
+  for (const [who, db] of [
+    ["a stranger", strangerDb()], ["an admin", adminDb()],
+    ["the owner", ownerDb()], ["an anonymous client", anonDb()],
+  ]) {
+    await assertFails(
+      getDocs(collection(db, "groups")),
+      `${who} could enumerate groups`,
+    );
+  }
+});
+
+test("step 1 is closed: a code cannot be found by querying the code field", async () => {
+  await seedGroup();
+  await assertFails(
+    getDocs(query(collection(strangerDb(), "groups"), where("code", "==", GROUP_CODE))),
+  );
+});
+
+test("step 1 is closed: group_codes cannot be enumerated either", async () => {
+  await seedGroup();
+  await assertFails(getDocs(collection(strangerDb(), "group_codes")));
+});
+
+test("step 2 is closed: a stranger cannot join without presenting the code", async () => {
+  await seedGroup();
+  await assertFails(
+    setDoc(doc(strangerDb(), "groups", GROUP_ID, "members", STRANGER_UID), {
+      name: "دخيل",
+    }),
+  );
+});
+
+test("step 2 is closed: a wrong or absent code is refused", async () => {
+  await seedGroup();
+  for (const joinCode of ["HAJJ-0000", "", "hajj-4821", null]) {
+    await assertFails(
+      setDoc(doc(strangerDb(), "groups", GROUP_ID, "members", STRANGER_UID), {
+        name: "دخيل", joinCode,
+      }),
+      `joinCode ${JSON.stringify(joinCode)} was accepted`,
+    );
+  }
+});
+
+test("step 2 is closed: joining cannot be smuggled in as an update", async () => {
+  // `update` is not gated on the code, so the question is whether it can
+  // conjure a membership that `create` refuses. It cannot: Firestore rejects
+  // an update to a document that does not exist. Asserted on the OUTCOME
+  // rather than the error code — this one comes back NOT_FOUND, not
+  // PERMISSION_DENIED, and the security property is that no membership
+  // appears, not which of the two refusals fires.
+  await seedGroup();
+  await assert.rejects(
+    updateDoc(doc(strangerDb(), "groups", GROUP_ID, "members", STRANGER_UID), {
+      name: "دخيل",
+    }),
+  );
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(
+      doc(ctx.firestore(), "groups", GROUP_ID, "members", STRANGER_UID),
+    );
+    assert.equal(snap.exists(), false, "an update created a membership");
+  });
+});
+
+test("step 3 is closed: a non-member cannot read the members' locations", async () => {
+  await seedGroup();
+  await assertFails(getDocs(collection(strangerDb(), "groups", GROUP_ID, "members")));
+  await assertFails(
+    getDoc(doc(strangerDb(), "groups", GROUP_ID, "members", RELATIVE_UID)),
+  );
+});
+
+test("step 3 is closed: an admin is not a member and reads no locations", async () => {
+  // Admin is a CONTENT role. It carries no entitlement to family locations.
+  await seedGroup();
+  await assertFails(getDocs(collection(adminDb(), "groups", GROUP_ID, "members")));
+  await assertFails(getDoc(doc(adminDb(), "groups", GROUP_ID)));
+});
+
+test("the group document itself is not readable by a non-member", async () => {
+  await seedGroup();
+  await assertFails(getDoc(doc(strangerDb(), "groups", GROUP_ID)));
+});
+
+// ── The legitimate flows still work ──────────────────────────────────────
+
+test("someone who knows the code resolves it and joins", async () => {
+  await seedGroup();
+  const db = strangerDb();
+  const pointer = await assertSucceeds(getDoc(doc(db, "group_codes", GROUP_CODE)));
+  assert.equal(pointer.data().groupId, GROUP_ID);
+  await assertSucceeds(
+    setDoc(doc(db, "groups", GROUP_ID, "members", STRANGER_UID), {
+      name: "قريب", joinCode: GROUP_CODE,
+    }),
+  );
+  // …and only then can read the group and its members.
+  await assertSucceeds(getDocs(collection(db, "groups", GROUP_ID, "members")));
+  await assertSucceeds(getDoc(doc(db, "groups", GROUP_ID)));
+});
+
+test("a member updates only their own location, never anyone else's", async () => {
+  await seedGroup();
+  await assertSucceeds(
+    setDoc(doc(relativeDb(), "groups", GROUP_ID, "members", RELATIVE_UID),
+      { lat: 21.4, lng: 39.8 }, { merge: true }),
+  );
+  await assertFails(
+    setDoc(doc(relativeDb(), "groups", GROUP_ID, "members", OWNER_UID),
+      { lat: 0, lng: 0 }, { merge: true }),
+  );
+});
+
+test("a member leaves by deleting only their own membership", async () => {
+  await seedGroup();
+  await assertFails(
+    deleteDoc(doc(relativeDb(), "groups", GROUP_ID, "members", OWNER_UID)),
+  );
+  await assertSucceeds(
+    deleteDoc(doc(relativeDb(), "groups", GROUP_ID, "members", RELATIVE_UID)),
+  );
+});
+
+test("the owner creates a group and claims its code", async () => {
+  const db = ownerDb();
+  await assertSucceeds(
+    setDoc(doc(db, "groups", "new-group"), {
+      name: "مجموعة", code: "HAJJ-1111", ownerId: OWNER_UID,
+    }),
+  );
+  await assertSucceeds(
+    setDoc(doc(db, "group_codes", "HAJJ-1111"), {
+      groupId: "new-group", ownerId: OWNER_UID,
+    }),
+  );
+});
+
+test("a group cannot be created in someone else's name", async () => {
+  await assertFails(
+    setDoc(doc(strangerDb(), "groups", "forged"), {
+      name: "مزوّرة", code: "HAJJ-2222", ownerId: OWNER_UID,
+    }),
+  );
+  await assertFails(
+    setDoc(doc(strangerDb(), "group_codes", "HAJJ-2222"), {
+      groupId: "forged", ownerId: OWNER_UID,
+    }),
+  );
+});
+
+test("a claimed code can never be repointed or deleted", async () => {
+  // Otherwise an attacker could hijack a circulating code and redirect
+  // everyone who joins with it into a group they control.
+  await seedGroup();
+  for (const [who, db] of [
+    ["the owner", ownerDb()], ["a stranger", strangerDb()], ["an admin", adminDb()],
+  ]) {
+    await assertFails(
+      updateDoc(doc(db, "group_codes", GROUP_CODE), { groupId: "attacker-group" }),
+      `${who} could repoint a claimed code`,
+    );
+    await assertFails(
+      deleteDoc(doc(db, "group_codes", GROUP_CODE)),
+      `${who} could delete a claimed code`,
+    );
+  }
+});
+
+test("an unauthenticated client touches none of it", async () => {
+  await seedGroup();
+  const db = anonDb();
+  await assertFails(getDoc(doc(db, "group_codes", GROUP_CODE)));
+  await assertFails(getDoc(doc(db, "groups", GROUP_ID)));
+  await assertFails(getDocs(collection(db, "groups", GROUP_ID, "members")));
+  await assertFails(
+    setDoc(doc(db, "groups", GROUP_ID, "members", "anon"), { joinCode: GROUP_CODE }),
+  );
+});

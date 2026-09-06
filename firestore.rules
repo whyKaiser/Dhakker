@@ -212,22 +212,83 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // groups: مجموعات الحجّاج العائلية.
-    // - وثيقة المجموعة: يقرؤها أي مسجّل (للانضمام بالكود)، وينشئها صاحبها،
-    //   ويعدّلها/يحذفها مالكها فقط. لا تحوي مواقع — فقط الاسم والكود.
+    // ── مجموعات الحجّاج العائلية ─────────────────────────────────────────
+    //
+    // هذه المجموعات تحمل أخطر بيانات في التطبيق: إحداثيات GPS اللحظية
+    // لأفراد العائلة، بينهم نساء وأطفال وكبار سن.
+    //
+    // الصياغة السابقة كانت تسرّبها لأي مستخدم مسجّل، عبر ثلاث خطوات أثبتها
+    // الاختبار على المحاكي:
+    //   1) `allow read: if isSignedIn()` على وثيقة المجموعة كان يسمح بسرد
+    //      كل المجموعات وقراءة كود الانضمام من كل واحدة.
+    //   2) `allow create ... if memberId == request.auth.uid` كان يسمح لأي
+    //      مسجّل بإقحام نفسه عضوًا في أي مجموعة، بلا كود أصلًا.
+    //   3) وشرط القراءة `exists(members/$(uid))` يصير محقَّقًا بالوثيقة التي
+    //      أنشأها للتوّ — فيقرأ مواقع العائلة كلها.
+    // أي حساب حاج واحد كان يكفي لتتبّع كل مستخدمي التطبيق.
+    //
+    // الإغلاق هنا يقوم على مبدأين:
+    //   • الكود سرّ يُثبَت، لا يُكتشف: لا سرد لوثائق المجموعات إطلاقًا،
+    //     والانضمام يشترط تقديم الكود ومطابقته خادميًّا بوثيقة المجموعة.
+    //   • من لا يملك عضوية قائمة لا يقرأ شيئًا: القراءة للأعضاء والمالك.
+    //
+    // الضمان سلوكي لا نصّي: اختبارات المحاكي في
+    // test_firestore_rules/rules.test.mjs تعيد تمثيل الهجوم الثلاثي أعلاه
+    // كاملًا وتفشل إن عاد أي جزء منه ممكنًا.
+
+    function isGroupMember(groupId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    // group_codes/{code}: مؤشّر كود → معرّف مجموعة، معرّفه هو الكود نفسه.
+    //
+    // وجوده هو ما يسمح بإلغاء `list` على `groups` كليًّا: تحويل الكود إلى
+    // معرّف مجموعة صار `get` مباشرًا على وثيقة اسمها الكود، فلا يصل إليها
+    // إلا من يعرف الكود سلفًا. السرد ممنوع، فلا تُعدّ الأكواد ولا تُجمع.
+    //
+    // لا تعديل ولا حذف بعد الإنشاء: كود مُسجَّل لا يُعاد توجيهه إلى مجموعة
+    // أخرى. لو سُمح بالتعديل لأمكن لمهاجم أن يخطف كودًا شائعًا فيوجّه من
+    // ينضم به إلى مجموعته هو.
+    match /group_codes/{code} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn()
+                    && request.resource.data.groupId is string
+                    && request.resource.data.groupId.size() > 0
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     match /groups/{groupId} {
-      allow read: if isSignedIn();
+      // لا سرد. سرد المجموعات هو ما كان يسرّب الأكواد.
+      allow list: if false;
+      allow get: if isGroupMember(groupId)
+                 || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+
       allow create: if isSignedIn()
                     && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if isSignedIn()
                     && resource.data.ownerId == request.auth.uid;
 
-      // أفراد المجموعة (تحوي المواقع): يقرؤها أعضاء المجموعة فقط (خصوصية
-      // المواقع)، وكل حاج يكتب/يحذف وثيقته هو فقط.
+      // أفراد المجموعة (تحوي المواقع): يقرؤها الأعضاء فقط.
+      //
+      // الانضمام (create) يشترط إثبات معرفة الكود: تُكتب `joinCode` في
+      // الوثيقة، وتُقارَن خادميًّا بكود المجموعة. العميل لا يُصدَّق.
+      //
+      // التعديل والحذف على وثيقة العضو نفسه فقط، وبلا شرط الكود: تحديث
+      // الموقع (set/merge على وثيقة قائمة) والمغادرة عمليتان لعضو أثبت
+      // انتماءه لحظة انضمامه. ولا يمكن الالتفاف بـ`update` لإنشاء عضوية:
+      // التحديث يفشل على وثيقة غير موجودة، و`set` عليها يُقيَّم كإنشاء.
       match /members/{memberId} {
-        allow read: if isSignedIn()
-          && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
-        allow create, update, delete: if isSignedIn()
+        allow read: if isGroupMember(groupId);
+
+        allow create: if isSignedIn()
+          && memberId == request.auth.uid
+          && request.resource.data.joinCode
+             == get(/databases/$(database)/documents/groups/$(groupId)).data.code;
+
+        allow update, delete: if isSignedIn()
           && memberId == request.auth.uid;
       }
     }
