@@ -1,0 +1,12 @@
+{
+  "name": "dhakker-web-boot-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Boot smoke check: the built web app must never present a silent blank page.",
+  "scripts": {
+    "smoke": "node boot.smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.49.1"
+  }
+}
