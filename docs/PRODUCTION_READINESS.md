@@ -1,6 +1,8 @@
 # Production readiness
 
-State of the project as of `main` @ `0f9a709`, and what still has to happen
+State of the project on `main` as of the merge of #36 — the last of the
+group-privacy (#33), stored-data-typing (#34), rate-limiter (#35) and
+documentation (#36) changes — and what still has to happen
 before a pilgrim can usefully open the app. Nothing in this document has been
 executed; every numbered step below is a manual, human decision.
 
