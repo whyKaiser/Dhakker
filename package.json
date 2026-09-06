@@ -1,0 +1,14 @@
+{
+  "name": "dhakker-node-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Lint and test tooling for the repository's Node code: the assistant Worker, the import/retirement scripts, and the workflow gate tests. Not a published package and not part of the Flutter build.",
+  "scripts": {
+    "lint": "eslint .",
+    "test:node": "node --test assistant-proxy/worker.test.mjs scripts/import_source_pack.test.mjs scripts/retire_legacy_records.test.mjs .github/workflows/staging_import_workflow.test.mjs .github/workflows/production_reconcile_workflow.test.mjs .github/workflows/legacy_retirement_workflow.test.mjs"
+  },
+  "devDependencies": {
+    "eslint": "9.17.0",
+    "globals": "15.14.0"
+  }
+}
