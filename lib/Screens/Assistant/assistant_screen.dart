@@ -163,9 +163,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
               arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
         );
         if (best.isNotEmpty == true && best['name'] != null) {
+          // flutter_tts hands back an untyped map, and setVoice wants
+          // Map<String, String>. Convert rather than assume: a plugin that
+          // returns a non-String here would otherwise throw at the channel.
           await _tts.setVoice({
-            'name': best['name'],
-            'locale': best['locale'] ?? best['language'] ?? 'ar-SA'
+            'name': best['name'].toString(),
+            'locale':
+                (best['locale'] ?? best['language'] ?? 'ar-SA').toString(),
           });
         }
       }

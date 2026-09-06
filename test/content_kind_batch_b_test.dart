@@ -322,8 +322,8 @@ void _consumerTests() {
             reason: '${m.duaId} would render a card with no source line');
         expect(m.attribution, contains('صفحة'));
 
-        final roundTripped =
-            SupplicationModel.fromJson(jsonDecode(jsonEncode(m.toJson())));
+        final roundTripped = SupplicationModel.fromJson(
+            jsonDecode(jsonEncode(m.toJson())) as Map<String, dynamic>);
         expect(roundTripped.attribution, m.attribution,
             reason: 'the attribution must survive the offline cache');
         expect(roundTripped.contentKind, m.contentKind,
