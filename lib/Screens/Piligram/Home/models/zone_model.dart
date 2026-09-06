@@ -1,5 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// يحوّل قيمة قادمة من Firestore إلى double دون افتراض نوعها.
+///
+/// وثائق Firestore غير مقيّدة بمخطط: حقل إحداثي قد يصل رقمًا أو نصًا أو
+/// غائبًا. الصيغة السابقة `(map['lat'] ?? 0).toDouble()` كانت تفترض رقمًا،
+/// فترمي NoSuchMethodError على نص — وهي إحداثيات المناطق التي تُرسم عليها
+/// الخريطة ويُحسب بها الطواف.
+double? zoneDoubleOrNull(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+/// نفس التحويل بقيمة افتراضية 0 لموضع لا يقبل الغياب.
+double zoneDouble(dynamic value) => zoneDoubleOrNull(value) ?? 0;
+
+/// يقرأ علمًا منطقيًا لا يُصدَّق نوعه: أي شيء غير bool يعود إلى [fallback].
+bool zoneBool(dynamic value, {bool fallback = true}) =>
+    value is bool ? value : fallback;
+
 class ZonePoint {
   final double lat;
   final double lng;
@@ -11,8 +30,8 @@ class ZonePoint {
 
   factory ZonePoint.fromMap(Map<String, dynamic> map) {
     return ZonePoint(
-      lat: (map['lat'] ?? 0).toDouble(),
-      lng: (map['lng'] ?? 0).toDouble(),
+      lat: zoneDouble(map['lat']),
+      lng: zoneDouble(map['lng']),
     );
   }
 }
@@ -62,12 +81,6 @@ class ZoneModel {
     final data = doc.data() ?? {};
 
     final centerRaw = data['center'];
-    double? safeDouble(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value.toDouble();
-      return double.tryParse(value.toString());
-    }
-
     int safeInt(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
@@ -101,12 +114,12 @@ class ZoneModel {
       nameAr: (data['nameAr'] ?? '').toString(),
       nameEn: (data['nameEn'] ?? '').toString(),
       type: (data['type'] ?? 'circle').toString(),
-      centerLat: safeDouble(centerMap['lat']),
-      centerLng: safeDouble(centerMap['lng']),
-      radiusM: safeDouble(data['radiusM']),
+      centerLat: zoneDoubleOrNull(centerMap['lat']),
+      centerLng: zoneDoubleOrNull(centerMap['lng']),
+      radiusM: zoneDoubleOrNull(data['radiusM']),
       polygonPoints: points,
       priority: safeInt(data['priority']),
-      isActive: data['isActive'] ?? true,
+      isActive: zoneBool(data['isActive']),
       updatedAt: data['updatedAt'] is Timestamp
           ? data['updatedAt'] as Timestamp
           : null,
