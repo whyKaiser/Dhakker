@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project dhakker-rules-test 'node --test rules.test.mjs'"
+    "test": "firebase emulators:exec --only firestore,storage --project dhakker-rules-test 'node --test rules.test.mjs storage.rules.test.mjs'",
+    "test:firestore": "firebase emulators:exec --only firestore --project dhakker-rules-test 'node --test rules.test.mjs'",
+    "test:storage": "firebase emulators:exec --only storage --project dhakker-rules-test 'node --test storage.rules.test.mjs'"
   },
   "//": [
     "Versions are pinned EXACTLY and must stay mutually compatible:",

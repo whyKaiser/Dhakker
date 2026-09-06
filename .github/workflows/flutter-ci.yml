@@ -150,7 +150,7 @@ jobs:
         run: node --test .github/workflows/production_reconcile_workflow.test.mjs
 
   firestore-rules-tests:
-    name: Firestore security rules tests (emulator)
+    name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,6 +170,9 @@ jobs:
         run: npm ci --no-audit --no-fund
       # `firebase emulators:exec` boots the emulator, runs the suite, and
       # tears it down — no long-lived emulator and no real project involved.
-      - name: Run Firestore rules tests
+      # Runs BOTH suites behind one emulator start: firestore.rules and
+      # storage.rules. The Storage suite is what stops a signed-in pilgrim
+      # overwriting the audio of a dua.
+      - name: Run Firestore and Storage rules tests
         working-directory: test_firestore_rules
         run: npm test
