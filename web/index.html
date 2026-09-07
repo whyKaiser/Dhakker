@@ -144,6 +144,16 @@
     // says so: lib/boot_signal.dart calls this hook after its first frame.
     window.dhakkerAppReady = ok;
 
+    // …and failure is signalled the same way. Firebase can fail to
+    // initialize long after every script has loaded successfully, which no
+    // resource listener and no DOM check can observe. Without this the app
+    // would either sit behind the boot screen for the full 30s, or — worse,
+    // and what actually happened before — report itself ready and hand the
+    // viewer a UI whose every data call fails in silence.
+    window.dhakkerAppFailed = function () {
+      fail('the app reported that it could not start');
+    };
+
     // A hard ceiling. Slow networks legitimately take a while, so this is
     // generous — it exists to end an indefinite wait, not to police latency.
     var timer = setTimeout(function () {

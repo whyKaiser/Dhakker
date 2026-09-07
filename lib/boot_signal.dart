@@ -12,7 +12,11 @@
 /// The only party that knows the difference is the app itself, which is why
 /// the signal is sent from Dart rather than inferred from the DOM.
 ///
-/// On every non-web platform this is a no-op, so `main.dart` can call it
+/// The same applies in reverse: `signalAppFailed` tells the page that startup
+/// will not complete, so it can show its failure state immediately rather
+/// than waiting out the watchdog. Startup sends exactly one of the two.
+///
+/// On every non-web platform both are no-ops, so `main.dart` can call them
 /// unconditionally.
 
 library;
