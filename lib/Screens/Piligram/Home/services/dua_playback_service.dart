@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -45,6 +46,25 @@ class DuaPlaybackService {
     await _tts.stop();
   }
 
+  /// Releases the engines themselves.
+  ///
+  /// Separate from [stopEngines]: stopping ends playback and leaves the
+  /// objects usable, while this ends their lives. `dispose()` used to call
+  /// only `stop()`, so the AudioPlayer — and the `onPlayerComplete`
+  /// subscription opened in [init] — stayed alive with its native resources
+  /// held for the rest of the process. Every playback screen leaked one.
+  ///
+  /// `FlutterTts` exposes no dispose; `stop()` is the whole of its teardown.
+  @protected
+  @visibleForTesting
+  Future<void> disposeEngines() async {
+    await _audioPlayer.dispose();
+  }
+
+  /// The completion listener opened by [init]. Held so [dispose] can release
+  /// it; it used to be started and dropped on the floor.
+  StreamSubscription<void>? _completeSub;
+
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
@@ -71,7 +91,7 @@ class DuaPlaybackService {
     // نختار أفضل صوت عربي متوفّر بالجهاز (محسّن/شبكي إن وُجد)
     await _loadBestArabicVoice();
 
-    _audioPlayer.onPlayerComplete.listen((_) {
+    _completeSub = _audioPlayer.onPlayerComplete.listen((_) {
       _updatePlayingState(false);
     });
 
@@ -210,7 +230,14 @@ class DuaPlaybackService {
     await speakText(text);
   }
 
+  /// Stops, then releases. The order matters: cancelling the completion
+  /// listener before the stop would drop the state update that `stop()`
+  /// itself triggers, and disposing the player before stopping it is a use
+  /// of a released object.
   Future<void> dispose() async {
     await stop();
+    await _completeSub?.cancel();
+    _completeSub = null;
+    await disposeEngines();
   }
 }

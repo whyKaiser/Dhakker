@@ -11,7 +11,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 // استيراد الملف الجديد الذي قمنا بتوليده
 import 'firebase_options.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'Screens/auth/splash_screen.dart';
 import 'Screens/auth/onboarding_screen.dart';
@@ -19,15 +18,15 @@ import 'admin_bloc/admin_cubit.dart';
 import 'bloc/cubit.dart';
 import 'generated/l10n.dart';
 import 'locale_controller.dart';
-import 'boot_signal.dart';
+import 'startup.dart';
 
 import 'theme/dhakker_theme.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // تهيئة الفايربيس لكل المنصات.
-  try {
+/// Brings Firebase up for the real app. Separated from [AppStartup] so the
+/// class stays free of platform plugins and can be driven in a test.
+class _FirebaseStartup extends AppStartup {
+  @override
+  Future<void> initializeFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -38,16 +37,36 @@ Future<void> main() async {
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
+  }
+}
 
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
-  } catch (e) {
-    debugPrint("خطأ في تهيئة الفايربيس: $e");
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final startup = _FirebaseStartup();
+
+  // BEFORE anything that can throw. Previously these were assigned after
+  // Firebase.initializeApp inside the same try, so a failed initialization
+  // left the app with no error handler at all — precisely when one is most
+  // needed. See lib/startup.dart.
+  startup.installErrorHandlers();
+
+  if (!await startup.run()) {
+    // No pretending. The app is not usable without Firebase, so it says so
+    // instead of rendering a shell whose every data call fails in silence.
+    startup.signalOutcome();
+    runApp(StartupFailureScreen(onRetry: () async {
+      final ok = await startup.run();
+      if (ok) await _runRealApp(startup);
+      return ok;
+    }));
+    return;
   }
 
+  await _runRealApp(startup);
+}
+
+Future<void> _runRealApp(AppStartup startup) async {
   try {
     await CashHelper.initPreference();
   } catch (e) {
@@ -89,10 +108,11 @@ Future<void> main() async {
 
   runApp(MyApp(widget));
 
-  // Tell the web boot screen the app actually painted. The engine inserts its
-  // host element before any widget renders, so the page cannot tell "started"
-  // from "up" on its own — see lib/boot_signal.dart. No-op off the web.
-  WidgetsBinding.instance.addPostFrameCallback((_) => signalAppReady());
+  // Ready is reported only after a frame has actually painted. `runApp`
+  // merely schedules one, so signalling here synchronously would repeat the
+  // very claim this change exists to stop making: "up" asserted before it is
+  // true. No-op off the web — see lib/boot_signal.dart.
+  WidgetsBinding.instance.addPostFrameCallback((_) => startup.signalOutcome());
 }
 
 class MyApp extends StatefulWidget {

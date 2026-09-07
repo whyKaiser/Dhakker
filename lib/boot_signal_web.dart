@@ -7,6 +7,11 @@ import 'dart:js_interop';
 @JS('dhakkerAppReady')
 external JSFunction? get _dhakkerAppReady;
 
+/// The failure hook installed by `web/index.html`. Same nullable treatment
+/// as the ready hook, and for the same reason.
+@JS('dhakkerAppFailed')
+external JSFunction? get _dhakkerAppFailed;
+
 /// Notifies the host page that the first frame has been painted.
 ///
 /// Deliberately swallows every failure. This is a cosmetic signal to the
@@ -15,6 +20,20 @@ external JSFunction? get _dhakkerAppReady;
 void signalAppReady() {
   try {
     _dhakkerAppReady?.callAsFunction();
+  } catch (_) {
+    // The boot screen will fall back to its timeout. Not worth reporting.
+  }
+}
+
+/// Notifies the host page that startup failed, so it shows its bilingual
+/// failure screen now instead of waiting out the 30-second watchdog.
+///
+/// Swallows every failure for the same reason as [signalAppReady]: this is a
+/// message to the loading screen, and a page that cannot receive it still
+/// falls back to the timeout.
+void signalAppFailed() {
+  try {
+    _dhakkerAppFailed?.callAsFunction();
   } catch (_) {
     // The boot screen will fall back to its timeout. Not worth reporting.
   }

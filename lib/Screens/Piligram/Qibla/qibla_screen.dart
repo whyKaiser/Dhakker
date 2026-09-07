@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +6,16 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 
 class QiblaScreen extends StatefulWidget {
-  const QiblaScreen({super.key});
+  const QiblaScreen({super.key, this.compassEvents});
+
+  /// The heading stream to follow. Defaults to the device compass.
+  ///
+  /// Injectable so a test can supply its own stream and assert the
+  /// subscription is actually released on dispose — the listener used to be
+  /// started and never cancelled, which kept the magnetometer powered and
+  /// the State alive for the rest of the process. Nothing about the needle
+  /// behaviour depends on where the stream comes from.
+  final Stream<CompassEvent>? compassEvents;
 
   @override
   State<QiblaScreen> createState() => _QiblaScreenState();
@@ -17,6 +27,8 @@ class _QiblaScreenState extends State<QiblaScreen>
   double _deviceHeading = 0; // اتجاه الجهاز الحالي
   bool _loading = true;
   String? _error;
+
+  StreamSubscription<CompassEvent>? _compassSub;
 
   late AnimationController _needleController;
   late Animation<double> _needleAnim;
@@ -32,7 +44,36 @@ class _QiblaScreenState extends State<QiblaScreen>
     _needleAnim = Tween<double>(begin: 0, end: 0).animate(
       CurvedAnimation(parent: _needleController, curve: Curves.easeOut),
     );
+    _followCompass();
     _init();
+  }
+
+  /// Starts following the device heading.
+  ///
+  /// Opened here rather than at the end of [_init] so it does not sit
+  /// behind an awaited location lookup that may be slow, denied, or never
+  /// return. Nothing visible changes: `_deviceHeading` only reaches the UI
+  /// through `_CompassView`, which is not built until a fix has arrived,
+  /// and the needle animation below is already gated on
+  /// `_qiblaDirection != null`. The needle logic itself is untouched.
+  void _followCompass() {
+    _compassSub =
+        (widget.compassEvents ?? FlutterCompass.events)?.listen((event) {
+      if (!mounted) return;
+      final h = event.heading ?? 0;
+      setState(() => _deviceHeading = h);
+
+      if (_qiblaDirection != null) {
+        final target = (_qiblaDirection! - h) * (math.pi / 180);
+        _needleAnim = Tween<double>(begin: _prevNeedle, end: target).animate(
+          CurvedAnimation(parent: _needleController, curve: Curves.easeOut),
+        );
+        _prevNeedle = target;
+        _needleController
+          ..reset()
+          ..forward();
+      }
+    });
   }
 
   Future<void> _init() async {
@@ -54,27 +95,14 @@ class _QiblaScreenState extends State<QiblaScreen>
         _loading = false;
       });
     }
-
-    FlutterCompass.events?.listen((event) {
-      if (!mounted) return;
-      final h = event.heading ?? 0;
-      setState(() => _deviceHeading = h);
-
-      if (_qiblaDirection != null) {
-        final target = (_qiblaDirection! - h) * (math.pi / 180);
-        _needleAnim = Tween<double>(begin: _prevNeedle, end: target).animate(
-          CurvedAnimation(parent: _needleController, curve: Curves.easeOut),
-        );
-        _prevNeedle = target;
-        _needleController
-          ..reset()
-          ..forward();
-      }
-    });
   }
 
   @override
   void dispose() {
+    // Cancelled before the controller it drives is disposed: a heading that
+    // arrives in between would otherwise reach a dead AnimationController.
+    _compassSub?.cancel();
+    _compassSub = null;
     _needleController.dispose();
     super.dispose();
   }
