@@ -126,6 +126,15 @@ jobs:
       - name: Validate production-reconcile workflow safety gates
         run: node --test .github/workflows/production_reconcile_workflow.test.mjs
 
+      # The groups inspection points a credential at production to answer one
+      # question. These assert it can only read, and — the check that matters
+      # most — that a join code can never reach a job summary.
+      - name: Run groups-inspection guard tests
+        run: node --test scripts/inspect_groups.test.mjs
+
+      - name: Validate groups-inspection workflow safety gates
+        run: node --test .github/workflows/groups_inspect_workflow.test.mjs
+
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
