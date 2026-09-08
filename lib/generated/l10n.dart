@@ -549,6 +549,26 @@ class S {
     );
   }
 
+  /// `Sign-up could not be completed, so nothing was saved. Please try again.`
+  String get authRegisterRolledBack {
+    return Intl.message(
+      'Sign-up could not be completed, so nothing was saved. Please try again.',
+      name: 'authRegisterRolledBack',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign-up failed partway and could not be undone. Please contact support before trying again.`
+  String get authRegisterOrphaned {
+    return Intl.message(
+      'Sign-up failed partway and could not be undone. Please contact support before trying again.',
+      name: 'authRegisterOrphaned',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `This account is disabled`
   String get authAccountDisabled {
     return Intl.message(
