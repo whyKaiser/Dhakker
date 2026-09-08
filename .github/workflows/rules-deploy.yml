@@ -1,0 +1,316 @@
+# Deploy Firestore rules, Storage rules and Firestore indexes — by hand only.
+#
+# This is the step that makes the security work in this repository real.
+# Everything merged so far — the provenance gate, the admin-only audio path,
+# the group-location fix in #33 — exists only in `main` until this runs. The
+# live project is still enforcing whatever was deployed last.
+#
+# ── What it deploys, and what it deliberately does not ──────────────────
+#
+# Deploys: firestore:rules, storage:rules, firestore:indexes.
+# Does NOT deploy hosting, functions, or anything else.
+#
+# Hosting is excluded on purpose. Shipping the web app is a different
+# decision with a different blast radius, and `firebase deploy` with no
+# `--only` deploys everything in firebase.json — including `hosting`, whose
+# `public` directory is a build output that may be stale or absent in a
+# checkout. A rules deploy must never quietly publish an app build.
+#
+# ── The gate that matters ───────────────────────────────────────────────
+#
+# The full emulator suite runs against the exact rules files that are about
+# to be deployed, and the deploy step does not start unless it passes. Rules
+# are the one artefact here with no staged rollout and no undo: a mistake is
+# live for every pilgrim the moment it lands. Testing after deploying would
+# be testing after the damage.
+#
+# ── Ordering ────────────────────────────────────────────────────────────
+#
+# Indexes first, then rules. Index builds are asynchronous and can take
+# minutes to hours; a query whose index is still building fails. Starting
+# them first shortens the window. It does not close it — see the summary.
+#
+# ── Two runs, always ────────────────────────────────────────────────────
+#
+# `execute: false` runs every check and deploys nothing. Only after reading
+# that output should the run be repeated with `execute: true`.
+#
+# ── Before the first run, for groups ────────────────────────────────────
+#
+# If "Groups inspection (read-only, manual)" reports GROUPS_PRESENT, run the
+# group_codes migration BEFORE this. Deploying the #33 rules first breaks
+# joining for every pre-existing group in the window between.
+
+name: Deploy rules and indexes (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_targets:
+        description: "Type exactly: firestore:rules,storage:rules,firestore:indexes"
+        required: true
+        type: string
+      confirm_groups_checked:
+        description: "Type GROUPS_EMPTY or GROUPS_MIGRATED — the inspection's answer, acted on"
+        required: true
+        type: string
+      confirm_mode:
+        description: "Type exactly: DEPLOY_RULES_AND_INDEXES"
+        required: true
+        type: string
+      execute:
+        description: "Leave false to validate only. true actually deploys."
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: rules-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Validate, then deploy rules and indexes
+    runs-on: ubuntu-latest
+
+    # Its own protected environment. Approval to read production, or to
+    # create a pointer document, is not approval to replace the rules that
+    # decide who may read every pilgrim's data.
+    environment: firebase-rules-deploy
+
+    steps:
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
+      # Checked before checkout and before any credential exists.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_TARGETS: ${{ inputs.confirm_targets }}
+          CONFIRM_GROUPS: ${{ inputs.confirm_groups_checked }}
+          CONFIRM_MODE: ${{ inputs.confirm_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            exit 1
+          fi
+          if [ "$CONFIRM_TARGETS" != "firestore:rules,storage:rules,firestore:indexes" ]; then
+            echo "::error::confirm_targets must be exactly 'firestore:rules,storage:rules,firestore:indexes'."
+            exit 1
+          fi
+          # Not a formality. Deploying the #33 rules before the pointers exist
+          # breaks joining for every pre-existing group.
+          if [ "$CONFIRM_GROUPS" != "GROUPS_EMPTY" ] && [ "$CONFIRM_GROUPS" != "GROUPS_MIGRATED" ]; then
+            echo "::error::confirm_groups_checked must be 'GROUPS_EMPTY' or 'GROUPS_MIGRATED'."
+            echo "::error::Run the groups inspection first, and the migration if it reports GROUPS_PRESENT."
+            exit 1
+          fi
+          if [ "$CONFIRM_MODE" != "DEPLOY_RULES_AND_INDEXES" ]; then
+            echo "::error::confirm_mode must be exactly 'DEPLOY_RULES_AND_INDEXES'."
+            exit 1
+          fi
+          echo "All four confirmations match."
+
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          DEPLOY_SERVICE_ACCOUNT: ${{ vars.FIREBASE_RULES_DEPLOY_SERVICE_ACCOUNT }}
+          READER_SERVICE_ACCOUNT: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          STAGING_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in PROJECT_ID WIF_PROVIDER DEPLOY_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. See docs/RULES_DEPLOY_SETUP.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ] || exit 1
+
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            echo "::error::FIREBASE_PROJECT_ID ($PROJECT_ID) does not match confirm_project."
+            exit 1
+          fi
+          # Deploying rules is a different power from reading documents or
+          # writing one collection. It gets its own principal.
+          if [ "$DEPLOY_SERVICE_ACCOUNT" = "$READER_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_RULES_DEPLOY_SERVICE_ACCOUNT must not be the read-only reconcile account."
+            exit 1
+          fi
+          if [ "$DEPLOY_SERVICE_ACCOUNT" = "$STAGING_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_RULES_DEPLOY_SERVICE_ACCOUNT must not be the staging data account."
+            exit 1
+          fi
+          echo "Configuration matches, and the deploy account is distinct."
+
+      # actions/checkout v7.0.1
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # The Firestore and Storage emulators are Java processes.
+      # actions/setup-java v4.9.1
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install rules-test dependencies
+        working-directory: test_firestore_rules
+        run: npm ci --no-audit --no-fund
+
+      # ── THE GATE ──────────────────────────────────────────────────────
+      #
+      # The full suite runs against the very files about to be deployed.
+      # Rules have no staged rollout and no undo: a mistake is live for every
+      # pilgrim the moment it lands. If this step fails, nothing deploys.
+      - name: Run the full rules suite against the files being deployed
+        working-directory: test_firestore_rules
+        run: npm test
+
+      # A deploy must ship what was reviewed. `firebase deploy` reads
+      # firestore.rules, storage.rules and firestore.indexes.json from the
+      # checkout, so this records exactly what those were.
+      - name: Record what is about to be deployed
+        run: |
+          set -euo pipefail
+          sha256sum firestore.rules storage.rules firestore.indexes.json \
+            | tee deploy-manifest.txt
+
+      # ── Authentication ────────────────────────────────────────────────
+      #
+      # The account needs `roles/firebaserules.admin` and
+      # `roles/datastore.indexAdmin`. It needs NO document read or write
+      # role: deploying rules never touches a document.
+      #
+      # Unlike the read and migration workflows, this one DOES write a
+      # credentials file. firebase-tools authenticates through Application
+      # Default Credentials; it has no supported path for a bare OAuth access
+      # token in an environment variable, so passing one would simply fail to
+      # authenticate.
+      #
+      # What is written is NOT a service-account key. It is a short-lived
+      # external-account configuration that points at the runner's OIDC token
+      # — it carries no private key, it is useless off this runner, and it
+      # expires with the job. `secrets.GCP_SA_KEY` and friends appear nowhere
+      # in this repository and must not.
+      # google-github-actions/auth v3.0.0
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_RULES_DEPLOY_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+
+      # ── The deploy ────────────────────────────────────────────────────
+      #
+      # `--only` is mandatory and explicit. A bare `firebase deploy` would
+      # also publish `hosting`, whose public directory is a build output that
+      # may be stale or missing — shipping an app build as a side effect of a
+      # rules change.
+      #
+      # Indexes first: their builds are asynchronous and slow, so starting
+      # them earlier shortens the window in which a query has rules but no
+      # index.
+      - name: Deploy (validation only unless execute is true)
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EXECUTE" != "true" ]; then
+            echo "Validation only — nothing will be deployed."
+            echo
+            echo "The full rules suite passed against these files:"
+            cat deploy-manifest.txt
+            echo
+            echo "Re-dispatch with execute: true to deploy them."
+            exit 0
+          fi
+
+          ./test_firestore_rules/node_modules/.bin/firebase deploy \
+            --only firestore:indexes \
+            --project "$PROJECT_ID" \
+            --non-interactive | tee deploy-indexes.log
+
+          ./test_firestore_rules/node_modules/.bin/firebase deploy \
+            --only firestore:rules,storage:rules \
+            --project "$PROJECT_ID" \
+            --non-interactive | tee deploy-rules.log
+
+      - name: Report
+        if: always()
+        env:
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Rules and indexes deploy"
+            echo
+            if [ "$EXECUTE" = "true" ]; then
+              echo "Mode: **DEPLOYED** · Project: dhakker-160d0"
+            else
+              echo "Mode: **validation only** · Project: dhakker-160d0"
+            fi
+            echo
+            echo "Targets: \`firestore:rules\`, \`storage:rules\`, \`firestore:indexes\`."
+            echo "Hosting was **not** deployed."
+            echo
+            if [ -f deploy-manifest.txt ]; then
+              echo "Files deployed, by content hash:"
+              echo '```'
+              cat deploy-manifest.txt
+              echo '```'
+            fi
+            echo
+            if [ "$EXECUTE" = "true" ]; then
+              echo "### Still to check by hand"
+              echo
+              echo "Index builds are asynchronous. Open the Firestore console"
+              echo "and confirm all declared indexes report **Enabled** before"
+              echo "relying on them — a query whose index is still building"
+              echo "fails, and the assistant degrades *silently* to"
+              echo "\"no approved source\" rather than erroring."
+              echo
+              echo "Then verify the group rules end to end: create a group,"
+              echo "join it by code from a second account, and confirm a third"
+              echo "account can see neither the group nor its members."
+            else
+              echo "Nothing was deployed. The rules suite passed against the"
+              echo "files above; re-dispatch with \`execute: true\` to ship them."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "No document, no Storage object and no hosting site was modified."

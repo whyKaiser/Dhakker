@@ -134,6 +134,12 @@ jobs:
 
       - name: Validate groups-inspection workflow safety gates
         run: node --test .github/workflows/groups_inspect_workflow.test.mjs
+      # The rules deploy replaces the rules that decide who may read every
+      # pilgrim's data, with no staged rollout and no undo. These assert that
+      # the full emulator suite gates it, that hosting can never be deployed
+      # as a side effect, and that the groups migration must be settled first.
+      - name: Validate rules-deploy workflow safety gates
+        run: node --test .github/workflows/rules_deploy_workflow.test.mjs
 
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
