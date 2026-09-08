@@ -1,0 +1,256 @@
+# Groups inspection — READ ONLY, by hand only.
+#
+# What it answers: how many documents are in `groups`, and does each one
+# already have its `group_codes/{code}` pointer? Nothing else. It writes
+# nothing, creates no pointer, deletes nothing, and deploys nothing.
+#
+# ── Why the question exists ─────────────────────────────────────────────
+#
+# The rules merged in #33 deny `list` on `groups` and resolve a join code
+# through a pointer document instead. Groups created BEFORE that change have
+# no pointer, so once the rules are deployed nobody can join them by code
+# until one exists. Migrate first, deploy second — and migrating is only
+# needed if any group exists at all.
+#
+# The app has not launched, so the expected answer is "none". That
+# expectation is not evidence, and deploying on an assumption is how joining
+# silently breaks for real families.
+#
+# ── Where the read-only guarantee comes from ────────────────────────────
+#
+# NOT from this file. A workflow is text; text can be edited. The guarantee
+# is IAM: this job impersonates the same reader account the production
+# reconciliation uses, which holds `roles/datastore.viewer` and nothing else.
+# A write issued with its token is refused by Google.
+#
+# This file is the second layer, and groups_inspect_workflow.test.mjs asserts
+# its properties statically, so an edit that adds a write, a deploy or the
+# staging service account turns a test red rather than passing review on a
+# skim.
+#
+# ── What must never be printed ──────────────────────────────────────────
+#
+# The join code IS the secret #33 exists to protect. A job summary is read by
+# more people than the database is, so the code is reported as present or
+# absent and never by value. Member documents — which hold live GPS
+# coordinates — are not read at all.
+
+name: Groups inspection (read-only, manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_database:
+        description: "Type the database exactly: (default)"
+        required: true
+        type: string
+      confirm_collection:
+        description: "Type the collection to READ exactly: groups"
+        required: true
+        type: string
+      confirm_mode:
+        description: "Type exactly: INSPECT_READ_ONLY"
+        required: true
+        type: string
+
+# contents: read  — the job only needs to check the repo out.
+# id-token: write — required to mint the OIDC token WIF exchanges. It grants
+#                   nothing in Google Cloud by itself.
+# Everything else is denied by omission.
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: groups-inspect
+  cancel-in-progress: false
+
+jobs:
+  groups-inspect:
+    name: Inspect groups against group_codes
+    runs-on: ubuntu-latest
+
+    # The same protected environment as the production reconciliation: this
+    # reads the same database with the same read-only identity, so it belongs
+    # behind the same approval. Approval is enforced by GitHub before the job
+    # starts — not by anything in this file, which a PR could change.
+    environment: firebase-production-readonly
+
+    steps:
+      # ── Gate 0: main only, before anything at all ─────────────────────
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
+      # ── Gate 1: all four confirmations, BEFORE any credential exists ──
+      #
+      # Runs before checkout and before authentication on purpose. If the
+      # operator mistyped, the run ends while it still holds nothing more
+      # sensitive than a repository name.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+          CONFIRM_COLLECTION: ${{ inputs.confirm_collection }}
+          CONFIRM_MODE: ${{ inputs.confirm_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            exit 1
+          fi
+          if [ "$CONFIRM_DATABASE" != "(default)" ]; then
+            echo "::error::confirm_database must be exactly '(default)'."
+            exit 1
+          fi
+          if [ "$CONFIRM_COLLECTION" != "groups" ]; then
+            echo "::error::confirm_collection must be exactly 'groups'."
+            exit 1
+          fi
+          if [ "$CONFIRM_MODE" != "INSPECT_READ_ONLY" ]; then
+            echo "::error::confirm_mode must be exactly 'INSPECT_READ_ONLY'."
+            exit 1
+          fi
+          echo "All four confirmations match."
+
+      # ── Gate 2: the configuration must match the confirmations ────────
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          READER_SERVICE_ACCOUNT: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          STAGING_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in PROJECT_ID DATABASE_ID WIF_PROVIDER READER_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. See docs/PRODUCTION_RECONCILE_SETUP.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ] || exit 1
+
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            echo "::error::FIREBASE_PROJECT_ID ($PROJECT_ID) does not match confirm_project ($CONFIRM_PROJECT)."
+            exit 1
+          fi
+          if [ "$DATABASE_ID" != "$CONFIRM_DATABASE" ]; then
+            echo "::error::FIREBASE_DATABASE_ID ($DATABASE_ID) does not match confirm_database ($CONFIRM_DATABASE)."
+            exit 1
+          fi
+
+          # The staging service account holds roles/datastore.user — read AND
+          # write, project-wide. Using it here would hand a write-capable
+          # token to a job that must not be able to write.
+          if [ "$READER_SERVICE_ACCOUNT" = "$STAGING_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT must not be the staging account: that one can write."
+            exit 1
+          fi
+          echo "Configuration matches the confirmations, and the reader account is distinct."
+
+      # actions/checkout v7.0.1
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # ── Authentication: read-only identity, short-lived, no key file ──
+      #
+      # 300s is long enough for two listings and far too short to be useful if
+      # it ever leaked. `create_credentials_file: false` keeps nothing on
+      # disk; `export_environment_variables: false` keeps it out of the
+      # ambient env, so it reaches exactly one step through `env:`.
+      # google-github-actions/auth v3.0.0
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      # ── The read ──────────────────────────────────────────────────────
+      #
+      # The tool accepts no argument but --database. It has no write, execute
+      # or filter flag, and rejects anything it does not define.
+      - name: Inspect groups (read-only)
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          FIREBASE_ADMIN_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          node scripts/inspect_groups.mjs \
+            --database="$FIREBASE_DATABASE_ID" | tee inspect.log
+
+          # The report must state that it wrote nothing.
+          grep -q "READ ONLY, nothing is written" inspect.log
+          grep -q "No document was written, created or deleted." inspect.log
+
+          # A join code must never reach the log. This is the check that
+          # matters most: the summary below is read by more people than the
+          # database is.
+          if grep -qE 'HAJJ-[0-9]+' inspect.log; then
+            echo "::error::a join code appeared in the report."
+            exit 1
+          fi
+
+      - name: Report
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "## Groups inspection — read only"
+            echo
+            echo "Collection: \`groups\` · Project: dhakker-160d0"
+            echo
+            if [ -f inspect.log ]; then
+              echo '```'
+              # Counts, ids and presence flags only. The tool never prints a
+              # join code, a coordinate or a member name.
+              grep -E '^(groups:|group_codes:|  - |GROUPS_|[0-9]+ group)' inspect.log || true
+              echo '```'
+              echo
+              if grep -q "GROUPS_EMPTY" inspect.log; then
+                echo "**No groups exist.** No migration is needed — deploy the"
+                echo "rules whenever you are ready."
+              elif grep -q "GROUPS_PRESENT" inspect.log; then
+                echo "**Migration required BEFORE deploying the rules.**"
+                echo
+                echo "Each group marked \`needsPointer=YES\` needs a"
+                echo "\`group_codes/{code}\` document holding its \`groupId\` and"
+                echo "\`ownerId\`, taken from the group's own \`code\` field."
+                echo "Deploying first breaks joining for those groups in the"
+                echo "window between. See docs/GROUP_PRIVACY_MIGRATION.md."
+              fi
+            else
+              echo "The inspection did not produce a report."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Nothing was written, created, deleted or deployed."
