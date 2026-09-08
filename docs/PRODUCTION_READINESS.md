@@ -66,6 +66,17 @@ empty dua list is not a launchable product.
 
 ## Before launch
 
+**`docs/LAUNCH_RUNBOOK.md` is the ordered checklist.** Read that top to
+bottom; the summary below stays here for context, and every step now has a
+runbook of its own:
+
+| Step | Runbook |
+|---|---|
+| Inspect `groups`, migrate, deploy rules | `GROUP_PRIVACY_MIGRATION.md`, `RULES_DEPLOY_SETUP.md` |
+| Admin custom claim | `ADMIN_CLAIM_SETUP.md` |
+| Approve the 73 records | `CONTENT_APPROVAL.md` |
+| Worker secrets and deploy | `WORKER_DEPLOY_SETUP.md` |
+
 In order. Each is manual.
 
 **1 · Deploy and verify the composite Firestore indexes.**
@@ -123,6 +134,14 @@ hosting and the Worker.
   longer code or an attempt limit is the real answer, and it is a deliberate
   decision rather than something to change quietly. See
   `docs/GROUP_PRIVACY_MIGRATION.md`.
+- **Accessibility is effectively absent.** Across 109 Dart files there are
+  zero `Semantics` widgets and zero `semanticLabel` values, and 11 of the 15
+  `IconButton`s carry no tooltip — a screen reader announces them as an
+  unnamed "button". The app does at least respect the OS text-size setting:
+  nothing overrides `textScaler`. For an app used by elderly pilgrims this is
+  worth more than it currently gets, and it is recorded here rather than
+  patched blind, because the labels need wording in two languages and a real
+  screen reader to verify.
 - **Dependency advisories are dev-only.** `npm audit --omit=dev` reports zero
   at the repository root. The outstanding advisories are all transitive
   devDependencies of `firebase-tools` and `eslint` — emulator and lint
