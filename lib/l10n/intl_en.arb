@@ -58,25 +58,22 @@
   "adminHomeTitle": "Admin Panel",
   "adminHomePlaceholder": "Admin UI will be linked later",
   "authNoProfileDoc": "No profile data found for this account",
+  "authRegisterRolledBack": "Sign-up could not be completed, so nothing was saved. Please try again.",
+  "authRegisterOrphaned": "Sign-up failed partway and could not be undone. Please contact support before trying again.",
   "authAccountDisabled": "This account is disabled",
-  "authRegisterTitle": "Create Account",
   "authRegisterSubtitle": "Enter your details to create a new account",
   "authRegisterButton": "Create Account",
   "authCreatingAccount": "Creating account...",
-
   "authFullNameLabel": "Full Name",
   "authFullNameHint": "Type your name",
   "authFullNameRequired": "Name is required",
   "authFullNameMin": "Name is too short",
-
   "authConfirmPasswordLabel": "Confirm Password",
   "authConfirmPasswordRequired": "Confirm password is required",
   "authPasswordsNotMatch": "Passwords do not match",
-
   "authWeakPassword": "Weak password",
   "authEmailAlreadyInUse": "Email already in use",
   "authRegisterSuccess": "Account created successfully",
-
   "authHaveAccount": "Already have an account?",
   "authBackToLogin": "Login",
   "adminPanelTitle": "Admin Panel",
@@ -431,5 +428,4 @@
   "authResetPasswordSuccessTitle": "Link Sent",
   "authResetPasswordSuccessMessage": "A password reset link has been sent to:\n{email}\nPlease check your email to complete the reset process.",
   "authResetPasswordFailed": "Unable to send the password reset link."
-
 }

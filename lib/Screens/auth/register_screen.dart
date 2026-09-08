@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:dhakker/services/registration.dart';
 import 'package:flutter/material.dart';
 
 import '../../generated/l10n.dart';
@@ -43,30 +45,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
 
     try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _pass.text,
+      // Account and profile are created as one unit: if the profile write
+      // fails the account is rolled back, because an account with no profile
+      // document is a permanent lockout — sign-in refuses it and the email is
+      // already taken. See lib/services/registration.dart.
+      final result = await registerPilgrim(
+        createAccount: () async {
+          final cred =
+              await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _email.text.trim(),
+            password: _pass.text,
+          );
+          return cred.user?.uid;
+        },
+        writeProfile: (uid) =>
+            FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'uid': uid,
+          'fullName': _name.text.trim(),
+          'email': _email.text.trim(),
+          'role': 'pilgrim',
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        }),
+        deleteAccount: () async => FirebaseAuth.instance.currentUser?.delete(),
       );
 
-      final uid = cred.user?.uid;
-      if (uid == null) {
-        _showSnack(s.authUnknownError, isError: true);
-        return;
+      switch (result.outcome) {
+        case RegistrationOutcome.created:
+          _showSnack(s.authRegisterSuccess, isError: false);
+          if (!mounted) return;
+          Navigator.of(context).pop();
+        case RegistrationOutcome.accountFailed:
+          final e = result.error;
+          _showSnack(
+            e is FirebaseAuthException
+                ? _mapAuthError(e.code, s)
+                : s.authUnknownError,
+            isError: true,
+          );
+        case RegistrationOutcome.rolledBack:
+          _showSnack(s.authRegisterRolledBack, isError: true);
+        case RegistrationOutcome.orphaned:
+          _showSnack(s.authRegisterOrphaned, isError: true);
       }
-
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'uid': uid,
-        'fullName': _name.text.trim(),
-        'email': _email.text.trim(),
-        'role': 'pilgrim',
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      _showSnack(s.authRegisterSuccess, isError: false);
-
-      if (!mounted) return;
-      Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
       _showSnack(_mapAuthError(e.code, s), isError: true);
     } catch (_) {
