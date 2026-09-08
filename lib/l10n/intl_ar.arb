@@ -57,25 +57,22 @@
   "adminHomeTitle": "لوحة المشرف",
   "adminHomePlaceholder": "واجهة الأدمن سيتم ربطها لاحقًا",
   "authNoProfileDoc": "لا توجد بيانات لهذا الحساب داخل النظام",
+  "authRegisterRolledBack": "تعذّر إكمال إنشاء الحساب، ولم يُحفظ شيء. حاول مرة أخرى.",
+  "authRegisterOrphaned": "توقّف إنشاء الحساب في منتصفه وتعذّر التراجع عنه. تواصل مع الدعم قبل إعادة المحاولة.",
   "authAccountDisabled": "تم تعطيل هذا الحساب",
-  "authRegisterTitle": "إنشاء حساب",
   "authRegisterSubtitle": "أدخل بياناتك لإنشاء حساب جديد",
   "authRegisterButton": "إنشاء حساب",
   "authCreatingAccount": "جارٍ إنشاء الحساب...",
-
   "authFullNameLabel": "الاسم الكامل",
   "authFullNameHint": "اكتب اسمك هنا",
   "authFullNameRequired": "الاسم مطلوب",
   "authFullNameMin": "الاسم قصير جدًا",
-
   "authConfirmPasswordLabel": "تأكيد كلمة المرور",
   "authConfirmPasswordRequired": "تأكيد كلمة المرور مطلوب",
   "authPasswordsNotMatch": "كلمتا المرور غير متطابقتين",
-
   "authWeakPassword": "كلمة المرور ضعيفة",
   "authEmailAlreadyInUse": "البريد مستخدم مسبقًا",
   "authRegisterSuccess": "تم إنشاء الحساب بنجاح",
-
   "authHaveAccount": "لديك حساب؟",
   "authBackToLogin": "تسجيل الدخول",
   "adminPanelTitle": "لوحة المشرف",
@@ -430,5 +427,4 @@
   "authResetPasswordSuccessTitle": "تم إرسال الرابط",
   "authResetPasswordSuccessMessage": "تم إرسال رابط إعادة تعيين كلمة المرور إلى:\n{email}\nيرجى التحقق من بريدك الإلكتروني لإكمال العملية.",
   "authResetPasswordFailed": "تعذر إرسال رابط إعادة تعيين كلمة المرور."
-
 }
