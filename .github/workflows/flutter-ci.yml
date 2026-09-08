@@ -134,6 +134,15 @@ jobs:
 
       - name: Validate groups-inspection workflow safety gates
         run: node --test .github/workflows/groups_inspect_workflow.test.mjs
+      # The group_codes migration is the second tool in this repository that
+      # can write to production. These assert dry-run-by-default, a write
+      # target of exactly one collection, create-only semantics, its own
+      # identity, and that no join code can reach a log.
+      - name: Run group_codes migration guard tests
+        run: node --test scripts/migrate_group_codes.test.mjs
+
+      - name: Validate group_codes migration workflow safety gates
+        run: node --test .github/workflows/group_codes_migration_workflow.test.mjs
 
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
