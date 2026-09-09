@@ -317,6 +317,7 @@ export default {
     let providerUsed = null;
     let replyText;
     const attempted = [];
+    const failures = [];
     for (const provider of chain) {
       attempted.push(provider.name);
       try {
@@ -324,9 +325,13 @@ export default {
         providerUsed = provider.name;
         break;
       } catch (err) {
-        // Deliberately swallowed: an upstream's error text can carry the key
-        // it was called with, or the prompt. The next provider is tried; if
-        // none succeeds the caller gets a bounded 502 and never an answer.
+        // The error text itself is never logged — an upstream body can carry
+        // the key it was called with, or the prompt. What IS logged is a
+        // classified reason, so an operator watching `wrangler tail` can tell
+        // an expired key from a spent quota from a retired model without
+        // reading anything sensitive. Before this, every failure looked
+        // identical and there was no way to know which of three things to fix.
+        failures.push(`${provider.name}:${classifyProviderFailure(err)}`);
       }
     }
 
@@ -336,6 +341,7 @@ export default {
         language,
         provider: attempted.join("+"),
         status: "failed",
+        why: failures.join(" "),
         ms: Date.now() - startedAt,
       });
       return jsonError("upstream_failed", "Assistant is temporarily unavailable", 502, corsHeaders);
@@ -1348,6 +1354,39 @@ async function queryFirestoreKnowledge(keywords, language, projectId, token) {
   return docs.filter((d) => d.documentId && d.title && d.authority);
 }
 
+/**
+ * Turns a provider failure into a short, safe label for the log.
+ *
+ * The error object is NEVER logged. An upstream error body can echo the key
+ * it was called with or the prompt that was sent, and a Worker log is read by
+ * more people than the secret store is. Only these fixed labels are emitted,
+ * chosen from OUR OWN thrown messages (`Groq 401`, `Gemini 429`, …) and from
+ * a small set of shapes; anything unrecognised becomes "error" rather than
+ * being passed through.
+ *
+ * It exists because three providers failing looked identical to one: the log
+ * said `failed` and nothing else, so there was no way to tell an expired key
+ * from a spent quota from a model that had been retired — three different
+ * fixes behind one message.
+ */
+function classifyProviderFailure(err) {
+  const message = err && typeof err.message === "string" ? err.message : "";
+  const status = message.match(/\b(\d{3})\b/);
+  if (status) {
+    const code = status[1];
+    if (code === "401" || code === "403") return `auth_${code}`;
+    if (code === "429") return "quota_429";
+    if (code === "404") return "model_or_route_404";
+    if (code === "400") return "bad_request_400";
+    if (code.startsWith("5")) return `upstream_${code}`;
+    return `http_${code}`;
+  }
+  if (/timed out|timeout|aborted/i.test(message)) return "timeout";
+  if (/no content|empty/i.test(message)) return "empty_response";
+  if (/not configured/i.test(message)) return "not_configured";
+  return "error";
+}
+
 // ── Question tiers ───────────────────────────────────────────────────────
 //
 // An assistant that refuses everything is not safer, it is unused — and an
@@ -1841,6 +1880,9 @@ function logRequest(env, fields) {
       language: fields.language,
       provider: fields.provider,
       status: fields.status,
+      // Classified failure reasons only (see classifyProviderFailure). Absent
+      // on success, and never raw upstream text.
+      ...(fields.why ? { why: fields.why } : {}),
       ms: fields.ms,
     })
   );
@@ -1854,6 +1896,7 @@ function jsonError(code, message, status, corsHeaders) {
 }
 
 export const __testing__ = {
+  classifyProviderFailure,
   isRulingQuestion,
   isScriptureRequest,
   requiresApprovedSource,

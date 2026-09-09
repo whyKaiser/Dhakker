@@ -2725,3 +2725,149 @@ test("a general answer can never come back grounded, whatever the model claims",
       globalThis.fetch = realFetch;
     }
   });
+
+// ── Provider failure diagnostics ──────────────────────────────────────────
+//
+// Three providers failing used to look exactly like one: the log said
+// "failed" and nothing more. An expired key, a spent quota and a retired
+// model are three different fixes, and there was no way to tell them apart
+// from outside. These assert the classifier says which — and that it never
+// says it by passing upstream text through.
+
+const { classifyProviderFailure } = __testing__;
+
+test("provider failures are classified into actionable reasons", () => {
+  const cases = [
+    ["Groq 401", "auth_401"],
+    ["Gemini 403", "auth_403"],
+    ["Groq 429", "quota_429"],
+    ["Gemini 404", "model_or_route_404"],
+    ["Groq 400", "bad_request_400"],
+    ["Gemini 503", "upstream_503"],
+    ["Workers AI timed out", "timeout"],
+    ["Workers AI returned no content", "empty_response"],
+    ["GROQ_API_KEY not configured", "not_configured"],
+  ];
+  for (const [message, expected] of cases) {
+    assert.equal(classifyProviderFailure(new Error(message)), expected, message);
+  }
+});
+
+test("an unrecognised failure is labelled, never echoed", () => {
+  // The whole point: an upstream body can quote the key it was called with,
+  // or the prompt. Nothing from it may reach a log.
+  const leaky = new Error(
+    "upstream said: invalid api_key sk-live-SECRETVALUE for prompt 'ما حكم...'",
+  );
+  const label = classifyProviderFailure(leaky);
+  assert.equal(label.includes("sk-live"), false);
+  assert.equal(label.includes("SECRETVALUE"), false);
+  assert.equal(label.includes("حكم"), false);
+  assert.match(label, /^[a-z0-9_]+$/);
+});
+
+test("a malformed error object does not throw", () => {
+  for (const v of [undefined, null, "a string", 42, {}, { message: 7 }]) {
+    assert.match(classifyProviderFailure(v), /^[a-z0-9_]+$/);
+  }
+});
+
+test("the failure log names each provider and its reason, and no secret",
+  async () => {
+    const realFetch = globalThis.fetch;
+    const realLog = console.log;
+    const lines = [];
+    console.log = (l) => lines.push(String(l));
+    globalThis.fetch = async (url) =>
+      String(url).includes("groq.com")
+        ? new Response("nope", { status: 401 })
+        : new Response("nope", { status: 429 });
+    try {
+      await worker.fetch(
+        new Request("https://worker.example/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "CF-Connecting-IP": "203.0.113.90",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "zzz how far is Mina zzz" }],
+            language: "en",
+          }),
+        }),
+        { ENVIRONMENT: "development", GROQ_API_KEY: "x", GEMINI_API_KEY: "y" },
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+      console.log = realLog;
+    }
+    const entry = lines.map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    }).find((o) => o && o.status === "failed");
+    assert.ok(entry, "no failure log line was emitted");
+    assert.equal(entry.provider, "groq+gemini");
+    assert.equal(entry.why, "groq:auth_401 gemini:quota_429");
+    for (const secret of ["x", "y"]) {
+      assert.equal(
+        JSON.stringify(entry).includes(`"${secret}"`),
+        false,
+        "a key value reached the log",
+      );
+    }
+  });
+
+test("a successful request logs no failure reason at all", async () => {
+  const realFetch = globalThis.fetch;
+  const realLog = console.log;
+  const lines = [];
+  console.log = (l) => lines.push(String(l));
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "Mina is about 8 km away.",
+                grounded: false,
+                citations: [],
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  try {
+    await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CF-Connecting-IP": "203.0.113.91",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "zzz how far is Mina zzz" }],
+          language: "en",
+        }),
+      }),
+      { ENVIRONMENT: "development", GROQ_API_KEY: "x" },
+    );
+  } finally {
+    globalThis.fetch = realFetch;
+    console.log = realLog;
+  }
+  const ok = lines.map((l) => {
+    try {
+      return JSON.parse(l);
+    } catch {
+      return null;
+    }
+  }).find((o) => o && o.status === "ok");
+  assert.ok(ok, "no success log line was emitted");
+  assert.equal("why" in ok, false, "a success carried a failure reason");
+});
