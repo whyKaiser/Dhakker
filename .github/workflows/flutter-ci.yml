@@ -144,6 +144,13 @@ jobs:
       - name: Validate group_codes migration workflow safety gates
         run: node --test .github/workflows/group_codes_migration_workflow.test.mjs
 
+      # The admin claim decides who may replace the audio a pilgrim hears.
+      # These assert one account per run, an explicit confirmation matching
+      # the direction, that existing claims survive the write, and that no
+      # credential can reach a log.
+      - name: Run admin claim guard tests
+        run: node --test scripts/grant_admin_claim.test.mjs
+
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
