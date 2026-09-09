@@ -3,7 +3,7 @@
 ## The supported way: in-process
 
 ```bash
-node --test assistant-proxy/worker.test.mjs      # 155 tests
+node --test assistant-proxy/worker.test.mjs      # 160 tests
 ```
 
 `worker.js` exports a standard module Worker (`export default { fetch }`), so
