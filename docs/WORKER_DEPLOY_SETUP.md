@@ -92,7 +92,7 @@ binding = "AI"
 ## قبل النشر
 
 ```bash
-node --test assistant-proxy/worker.test.mjs     # 155 اختبارًا
+node --test assistant-proxy/worker.test.mjs     # 160 اختبارًا
 npm run lint
 ```
 

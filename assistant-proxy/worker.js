@@ -69,7 +69,11 @@ const GOOGLE_JWKS_URL =
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_BODY_BYTES = 32 * 1024;
-const MODEL = "llama-3.3-70b-versatile"; // server-controlled, client cannot override
+// Groq retired llama-3.3-70b-versatile for free and developer tiers on
+// 2026-06-17, and the Worker started getting 404s from it — a dead model,
+// not a bad key. This is Groq's own recommended replacement.
+// Server-controlled: the client cannot override it.
+const MODEL = "openai/gpt-oss-120b";
 // Workers AI runs on Cloudflare's own edge, so it needs no API key and no
 // third-party account: the `AI` binding IS the credential. That makes it the
 // one provider that cannot be knocked out by a key expiring or a per-key
@@ -85,6 +89,25 @@ const MAX_TOKENS = 700; // server-controlled
 // Groq still leaves room for the Gemini fallback inside a sane total.
 const GROQ_TIMEOUT_MS = 12_000;
 const GEMINI_TIMEOUT_MS = 12_000;
+
+// The whole chain, not one attempt.
+//
+// AssistantService gives up after 20s (`.timeout(Duration(seconds: 20))` in
+// lib/services/assistant_service.dart). Three providers at 12s each is 36s,
+// so a request where the first two fail slowly was abandoned by the app
+// BEFORE the third could answer — the pilgrim saw "could not reach the
+// assistant" while the Worker was still working on a reply nobody would
+// receive. Each attempt is now capped at whatever is left of this budget,
+// and a provider with too little time left is not started at all: an attempt
+// that cannot finish is worse than no attempt, because it spends the budget
+// of the one that could have.
+//
+// Kept below the client deadline so the 502 arrives as a 502, not as a
+// client-side timeout that tells the pilgrim nothing.
+const CHAIN_BUDGET_MS = 17_000;
+
+// Below this there is not enough time left to be worth starting a provider.
+const MIN_ATTEMPT_MS = 2_500;
 // The Workers AI binding is an RPC call, not a fetch, so an AbortController
 // cannot reach it. It is bounded by a race instead — see askWorkersAi.
 const WORKERS_AI_TIMEOUT_MS = 12_000;
@@ -319,9 +342,19 @@ export default {
     const attempted = [];
     const failures = [];
     for (const provider of chain) {
+      const remaining = CHAIN_BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < MIN_ATTEMPT_MS) {
+        failures.push(`${provider.name}:skipped_no_time`);
+        continue;
+      }
       attempted.push(provider.name);
       try {
-        replyText = await provider.run(payload, providerMessages, env);
+        replyText = await provider.run(
+          payload,
+          providerMessages,
+          env,
+          Math.min(provider.budget, remaining),
+        );
         providerUsed = provider.name;
         break;
       } catch (err) {
@@ -1382,7 +1415,14 @@ function classifyProviderFailure(err) {
     return `http_${code}`;
   }
   if (/timed out|timeout|aborted/i.test(message)) return "timeout";
-  if (/no content|empty/i.test(message)) return "empty_response";
+  if (/no content|empty/i.test(message)) {
+    // A shape hint may ride along — field NAMES only, never values. Emitted
+    // only when it is exactly that: an unexpected reply shape is undiagnosable
+    // without it, and a value smuggled in here would be a leak, so the pattern
+    // is checked rather than trusted.
+    const shape = message.match(/\(shape: ([A-Za-z0-9_,]{0,60})\)/);
+    return shape && shape[1] ? `empty_response_${shape[1]}` : "empty_response";
+  }
   if (/not configured/i.test(message)) return "not_configured";
   return "error";
 }
@@ -1531,15 +1571,24 @@ function requiresApprovedSource(text) {
 function providerChain(env) {
   const chain = [];
   if (env?.GROQ_API_KEY) {
-    chain.push({ name: "groq", run: (payload, _messages, e) => callGroq(payload, e) });
+    chain.push({
+      name: "groq",
+      budget: GROQ_TIMEOUT_MS,
+      run: (payload, _messages, e, ms) => callGroq(payload, e, ms),
+    });
   }
   if (env?.AI && typeof env.AI.run === "function") {
-    chain.push({ name: "workers-ai", run: (_payload, messages, e) => askWorkersAi(messages, e) });
+    chain.push({
+      name: "workers-ai",
+      budget: WORKERS_AI_TIMEOUT_MS,
+      run: (_payload, messages, e, ms) => askWorkersAi(messages, e, ms),
+    });
   }
   if (env?.GEMINI_API_KEY) {
     chain.push({
       name: "gemini",
-      run: (_payload, messages, e) => askGemini(messages, e.GEMINI_API_KEY),
+      budget: GEMINI_TIMEOUT_MS,
+      run: (_payload, messages, e, ms) => askGemini(messages, e.GEMINI_API_KEY, ms),
     });
   }
   return chain;
@@ -1555,12 +1604,12 @@ function providerChain(env) {
  * not cancel the underlying call — nothing in the binding API can — it only
  * stops this request waiting on it.
  */
-async function askWorkersAi(messages, env) {
+async function askWorkersAi(messages, env, timeoutMs = WORKERS_AI_TIMEOUT_MS) {
   let timer;
   const deadline = new Promise((_, reject) => {
     timer = setTimeout(
       () => reject(new Error("Workers AI timed out")),
-      WORKERS_AI_TIMEOUT_MS,
+      timeoutMs,
     );
   });
   let result;
@@ -1576,14 +1625,32 @@ async function askWorkersAi(messages, env) {
   } finally {
     clearTimeout(timer);
   }
-  const text = typeof result === "string" ? result : result?.response;
+  // Some Workers AI models answer under `response`, some return the string
+  // itself, and a batch-shaped reply nests it. Try each rather than assuming
+  // one — production reported `empty_response` from this very line, and an
+  // assumption about the shape is exactly what that looks like.
+  const text =
+    typeof result === "string"
+      ? result
+      : (result?.response ??
+        result?.result?.response ??
+        result?.output_text ??
+        (Array.isArray(result?.choices)
+          ? result.choices[0]?.message?.content
+          : undefined));
   if (typeof text !== "string" || text.trim() === "") {
-    throw new Error("Workers AI returned no content");
+    // The KEYS are logged, never the values: a shape mismatch is diagnosable
+    // from field names alone, and the values could hold the model's output.
+    const shape =
+      result && typeof result === "object"
+        ? Object.keys(result).slice(0, 6).join(",")
+        : typeof result;
+    throw new Error(`Workers AI returned no content (shape: ${shape})`);
   }
   return text;
 }
 
-async function callGroq(payload, env) {
+async function callGroq(payload, env, timeoutMs = GROQ_TIMEOUT_MS) {
   if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
   const upstream = await fetchWithTimeout(
     GROQ_ENDPOINT,
@@ -1595,7 +1662,7 @@ async function callGroq(payload, env) {
       },
       body: JSON.stringify(payload),
     },
-    GROQ_TIMEOUT_MS
+    timeoutMs
   );
   if (!upstream.ok) {
     throw new Error(`Groq ${upstream.status}`);
@@ -1606,7 +1673,7 @@ async function callGroq(payload, env) {
   return content;
 }
 
-async function askGemini(messages, apiKey) {
+async function askGemini(messages, apiKey, timeoutMs = GEMINI_TIMEOUT_MS) {
   const systemMessage = messages.find((m) => m.role === "system");
   const turns = messages.filter((m) => m.role !== "system");
   const contents = turns.map((m) => ({
@@ -1624,7 +1691,7 @@ async function askGemini(messages, apiKey) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     },
-    GEMINI_TIMEOUT_MS
+    timeoutMs
   );
   if (!response.ok) throw new Error(`Gemini ${response.status}`);
   const data = await response.json();
@@ -1897,6 +1964,9 @@ function jsonError(code, message, status, corsHeaders) {
 
 export const __testing__ = {
   classifyProviderFailure,
+  MODEL,
+  CHAIN_BUDGET_MS,
+  MIN_ATTEMPT_MS,
   isRulingQuestion,
   isScriptureRequest,
   requiresApprovedSource,
