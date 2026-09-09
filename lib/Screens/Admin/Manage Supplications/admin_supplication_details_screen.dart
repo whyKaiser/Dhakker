@@ -153,6 +153,11 @@ class _AdminSupplicationDetailsScreenState
 
       await _flutterTts.stop();
       await _flutterTts.setLanguage(isAr ? 'ar-SA' : 'en-US');
+      // After the language, not once at init: see assistant_screen.
+      await _flutterTts.setSpeechRate(naturalSpeechRate(
+        isWeb: kIsWeb,
+        platformName: defaultTargetPlatform.name,
+      ));
       await _flutterTts.speak(text);
     } catch (_) {
       _showSnack(s.adminSupplicationDetailsTtsError, isError: true);
