@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
+import 'package:flutter/foundation.dart';
+import '../../Assistant/tts_voice.dart';
 
 class AdminSupplicationDetailsScreen extends StatefulWidget {
   final String supplicationId;
@@ -46,7 +48,10 @@ class _AdminSupplicationDetailsScreenState
   }
 
   Future<void> _configureTts() async {
-    await _flutterTts.setSpeechRate(0.42);
+    await _flutterTts.setSpeechRate(naturalSpeechRate(
+      isWeb: kIsWeb,
+      platformName: defaultTargetPlatform.name,
+    ));
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
 
