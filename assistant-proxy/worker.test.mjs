@@ -354,8 +354,12 @@ test("fetch: empty retrieval returns the deterministic safe response with ground
   const req = new Request("https://worker.example/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // A question with no dev-fixture keyword match at all -> retrieval empty.
-    body: JSON.stringify({ messages: [{ role: "user", content: "zzz nonmatching query zzz" }] }),
+    // A RULING question with no dev-fixture keyword match -> retrieval empty,
+    // and the gate applies. (A non-ruling question now reaches the general
+    // tier instead; that path has its own tests.)
+    body: JSON.stringify({
+      messages: [{ role: "user", content: "zzz is it permissible zzz" }],
+    }),
   });
   // Provider keys ARE configured here, and a global fetch stub would happily
   // return a fabricated ruling if it were ever called. It must not be called.
@@ -406,7 +410,7 @@ test("fetch: empty retrieval NEVER calls the LLM, so arbitrary/malicious model o
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [{ role: "user", content: "zzz nonmatching query zzz" }],
+        messages: [{ role: "user", content: "zzz is it permissible zzz" }],
         language: "en",
       }),
     });
@@ -1189,7 +1193,7 @@ test("end-to-end: an un-migrated registry yields the safe no-approved-source res
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer t" },
       body: JSON.stringify({
-        messages: [{ role: "user", content: "some question about the ritual" }],
+        messages: [{ role: "user", content: "is this ritual valid, what is the ruling" }],
         language: "en",
       }),
     });
@@ -2492,3 +2496,232 @@ test("a hung Workers AI binding cannot hold the request open indefinitely", asyn
     globalThis.setTimeout = realSetTimeout;
   }
 });
+
+// ── Two tiers: general open, ruling and scripture gated ───────────────────
+//
+// An assistant that refuses everything is not safer — it is unused, and an
+// unused assistant sends the pilgrim to whatever else they can find. So
+// ordinary questions are answered from the model's own knowledge, while
+// questions asking for a RULING or for religious TEXT still require an
+// approved record or get no answer at all.
+//
+// What these assert is that opening the general tier did not open the gated
+// one, and that the server — never the model — decides which is which.
+
+const { isRulingQuestion, isScriptureRequest, requiresApprovedSource } =
+  __testing__;
+
+test("ruling wording is recognised across the supported languages", () => {
+  for (const q of [
+    "ما حكم الطواف بغير وضوء؟",
+    "هل يجوز السعي راكبًا؟",
+    "هل يبطل صومي؟",
+    "عليه دم أو كفارة؟",
+    "is it permissible to leave Mina early",
+    "does this invalidate my wudu",
+    "what is the ruling on this",
+    "kya yeh jaiz hai", // transliterated Urdu still carries "jaiz"
+    "bu caiz mi",
+    "apakah hukum ini boleh",
+    "est-ce licite",
+  ]) {
+    assert.equal(isRulingQuestion(q), true, `not gated: ${q}`);
+  }
+});
+
+test("asking for religious TEXT is gated too, though it is not a ruling", () => {
+  // A fabricated supplication is worse than a fabricated ruling: the pilgrim
+  // says it believing it is from the sunnah, and nothing ever corrects them.
+  for (const q of [
+    "ما الدعاء عند الصفا؟",
+    "وش أقول عند الطواف",
+    "أعطني أذكار الصباح",
+    "ما هي آية الكرسي",
+    "give me a dua for travel",
+    "what should I say at Arafah",
+    "quelle invocation dire",
+    "doa apa yang dibaca",
+  ]) {
+    assert.equal(isScriptureRequest(q), true, `not gated: ${q}`);
+    assert.equal(requiresApprovedSource(q), true);
+  }
+});
+
+test("ordinary questions are not gated", () => {
+  for (const q of [
+    "كم صلاة في اليوم",
+    "متى تفتح بوابات الحرم",
+    "كيف أصل من منى إلى عرفة",
+    "what is the weather like in Makkah",
+    "how far is Mina from the Haram",
+    "what does the word miqat mean",
+  ]) {
+    assert.equal(requiresApprovedSource(q), false, `wrongly gated: ${q}`);
+  }
+});
+
+test("Arabic orthography variants cannot slip past the gate", () => {
+  // أ/إ/آ, ة/ه, ى/ي and diacritics are the same word to a reader; they must
+  // be the same word to the gate.
+  assert.equal(isRulingQuestion("هل يَجُوزُ ذلك"), true);
+  assert.equal(isScriptureRequest("ما الدُّعَاءُ هنا"), true);
+  assert.equal(isScriptureRequest("أذكار"), true);
+  assert.equal(isScriptureRequest("اذكار"), true);
+});
+
+test("the gate ignores empty and non-string input rather than throwing", () => {
+  for (const v of [undefined, null, 42, "", "   ", {}]) {
+    assert.equal(requiresApprovedSource(v), false);
+  }
+});
+
+test("a ruling question with no approved source still never reaches the LLM",
+  async () => {
+    const realFetch = globalThis.fetch;
+    let providerCalls = 0;
+    globalThis.fetch = async () => {
+      providerCalls += 1;
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  answer: "FABRICATED: seven circuits suffice, ruling 12345.",
+                  grounded: true,
+                  confidence: "high",
+                  citations: [{ documentId: "made-up" }],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    };
+    try {
+      const res = await worker.fetch(
+        new Request("https://worker.example/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "CF-Connecting-IP": "203.0.113.71",
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "user", content: "zzz what is the ruling on zzz" },
+            ],
+            language: "en",
+          }),
+        }),
+        { ENVIRONMENT: "development", GROQ_API_KEY: "x", GEMINI_API_KEY: "y" },
+      );
+      const body = await res.json();
+      assert.equal(providerCalls, 0, "a ruling question reached the model");
+      assert.ok(!body.answer.includes("FABRICATED"));
+      assert.equal(body.grounded, false);
+      assert.deepEqual(body.citations, []);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+test("a general question is answered instead of refused", async () => {
+  const realFetch = globalThis.fetch;
+  let seenSystemPrompt = null;
+  globalThis.fetch = async (url, init) => {
+    seenSystemPrompt = JSON.parse(init.body).messages[0].content;
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "Mina is about 8 km from the Haram.",
+                grounded: false,
+                confidence: "medium",
+                citations: [],
+                safetyNotice: "General information, not a religious ruling.",
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CF-Connecting-IP": "203.0.113.72",
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", content: "zzz how far is Mina from the Haram zzz" },
+          ],
+          language: "en",
+        }),
+      }),
+      { ENVIRONMENT: "development", GROQ_API_KEY: "x" },
+    );
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.match(body.answer, /8 km/);
+    // Ungrounded by construction: no approved record was used.
+    assert.equal(body.grounded, false);
+    assert.deepEqual(body.citations, []);
+    // The general prompt must still forbid the two things that are dangerous
+    // in every tier.
+    assert.match(seenSystemPrompt, /GENERAL question/);
+    assert.match(seenSystemPrompt, /Do NOT quote the Quran or a hadith from memory/);
+    assert.match(seenSystemPrompt, /Do NOT issue a ruling/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("a general answer can never come back grounded, whatever the model claims",
+  async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  answer: "Mina is 8 km away.",
+                  grounded: true,
+                  confidence: "high",
+                  citations: [{ documentId: "invented-record" }],
+                  requiresHumanGuide: false,
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    try {
+      const res = await worker.fetch(
+        new Request("https://worker.example/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "zzz how far is Mina zzz" }],
+            language: "en",
+          }),
+        }),
+        { ENVIRONMENT: "development", GROQ_API_KEY: "x" },
+      );
+      const body = await res.json();
+      assert.equal(body.grounded, false, "an invented citation was honoured");
+      assert.deepEqual(body.citations, []);
+      assert.equal(body.requiresHumanGuide, true);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
