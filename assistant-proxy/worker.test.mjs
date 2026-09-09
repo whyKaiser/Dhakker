@@ -2251,3 +2251,232 @@ test("a missing retrieved record yields no excerpt at all", () => {
   );
   assert.deepEqual(out, []);
 });
+
+// ── Workers AI as the last-resort provider ────────────────────────────────
+//
+// Groq and Gemini are both key-bearing: an expired key or a spent daily quota
+// takes them out together, and the pilgrim gets "temporarily unavailable"
+// with no way to tell why. Workers AI runs on Cloudflare's own edge, where
+// the binding IS the credential, so it has no key to expire.
+//
+// What these assert is that adding it did not soften anything: it is tried
+// last, only when configured, never in place of a working provider, under the
+// same grounding prompt, and a failure of all three still yields a bounded
+// 502 rather than an answer.
+
+const { providerChain, WORKERS_AI_MODEL, WORKERS_AI_TIMEOUT_MS } = __testing__;
+
+test("the provider chain lists only what is configured, in a fixed order", () => {
+  const names = (env) => providerChain(env).map((p) => p.name);
+
+  assert.deepEqual(names({ GROQ_API_KEY: "x", GEMINI_API_KEY: "y", AI: { run: () => {} } }), [
+    "groq",
+    "gemini",
+    "workers-ai",
+  ]);
+  assert.deepEqual(names({ GROQ_API_KEY: "x" }), ["groq"]);
+  assert.deepEqual(names({ AI: { run: () => {} } }), ["workers-ai"]);
+  // Nothing configured must yield an empty chain, not a phantom provider that
+  // burns the request's time budget failing.
+  assert.deepEqual(names({}), []);
+  assert.deepEqual(names(undefined), []);
+});
+
+test("Workers AI is listed only when the binding is really callable", () => {
+  // A truthy-but-wrong binding (a string from a [vars] entry, an object with
+  // no run) must not earn a slot: it would fail every request that reached it.
+  for (const AI of ["AI", 1, {}, { run: "not a function" }, null]) {
+    assert.deepEqual(providerChain({ AI }).map((p) => p.name), []);
+  }
+});
+
+test("Workers AI answers when both keyed providers fail", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  let seenModel = null;
+  let seenMessages = null;
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "visitor center opening hours" }],
+          language: "en",
+        }),
+      }),
+      {
+        ENVIRONMENT: "development",
+        GROQ_API_KEY: "x",
+        GEMINI_API_KEY: "y",
+        AI: {
+          run: async (model, opts) => {
+            seenModel = model;
+            seenMessages = opts.messages;
+            return {
+              response: JSON.stringify({
+                answer: "Answer from Workers AI.",
+                citations: [{ documentId: "dev-fixture-visitor-center-hours" }],
+                grounded: true,
+                confidence: "medium",
+              }),
+            };
+          },
+        },
+      },
+    );
+
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.answer, "Answer from Workers AI.");
+    assert.equal(seenModel, WORKERS_AI_MODEL);
+    // The grounding rules travel with the request, not the provider: a
+    // fallback answering under a weaker prompt is the whole risk here.
+    assert.equal(seenMessages[0].role, "system");
+    assert.ok(seenMessages[0].content.length > 0);
+    // Citations are still rebuilt from the retrieved record, not trusted.
+    assert.equal(body.citations.length, 1);
+    assert.equal(body.citations[0].authority, DEV_FIXTURE_DOCS[0].authority);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("Workers AI is not called when an earlier provider succeeds", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                answer: "Answer from Groq.",
+                citations: [{ documentId: "dev-fixture-visitor-center-hours" }],
+                grounded: true,
+                confidence: "medium",
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  let aiCalls = 0;
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "visitor center opening hours" }],
+          language: "en",
+        }),
+      }),
+      {
+        ENVIRONMENT: "development",
+        GROQ_API_KEY: "x",
+        AI: {
+          run: async () => {
+            aiCalls += 1;
+            return { response: "{}" };
+          },
+        },
+      },
+    );
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).answer, "Answer from Groq.");
+    assert.equal(aiCalls, 0, "the fallback ran even though the primary worked");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("all three providers failing still yields a bounded 502, never an answer", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "visitor center opening hours" }],
+        }),
+      }),
+      {
+        ENVIRONMENT: "development",
+        GROQ_API_KEY: "x",
+        GEMINI_API_KEY: "y",
+        AI: {
+          run: async () => {
+            throw new Error("workers ai down");
+          },
+        },
+      },
+    );
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.equal(body.error.code, "ERR_UPSTREAM_UNAVAILABLE");
+    assert.equal("answer" in body, false);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("an empty Workers AI response is a failure, not an empty answer", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  try {
+    for (const response of [undefined, "", "   ", null]) {
+      const res = await worker.fetch(
+        new Request("https://worker.example/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "visitor center opening hours" }],
+          }),
+        }),
+        {
+          ENVIRONMENT: "development",
+          GROQ_API_KEY: "x",
+          AI: { run: async () => ({ response }) },
+        },
+      );
+      assert.equal(res.status, 502, `empty response ${JSON.stringify(response)} was accepted`);
+    }
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("a hung Workers AI binding cannot hold the request open indefinitely", async () => {
+  // The binding is RPC, so AbortController cannot reach it. Without the race
+  // in askWorkersAi this test never resolves.
+  assert.ok(WORKERS_AI_TIMEOUT_MS > 0 && WORKERS_AI_TIMEOUT_MS <= 15_000);
+  const realFetch = globalThis.fetch;
+  const realSetTimeout = globalThis.setTimeout;
+  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  // Fire the deadline immediately instead of waiting the real 12s.
+  globalThis.setTimeout = (fn, ms) => realSetTimeout(fn, ms >= WORKERS_AI_TIMEOUT_MS ? 0 : ms);
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "visitor center opening hours" }],
+        }),
+      }),
+      {
+        ENVIRONMENT: "development",
+        GROQ_API_KEY: "x",
+        AI: { run: () => new Promise(() => {}) },
+      },
+    );
+    assert.equal(res.status, 502);
+  } finally {
+    globalThis.fetch = realFetch;
+    globalThis.setTimeout = realSetTimeout;
+  }
+});
