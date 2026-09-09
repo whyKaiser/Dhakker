@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
+import '../../../shared/map/basemap.dart';
 
 class AdminZoneDetailsScreen extends StatefulWidget {
   final String zoneId;
@@ -548,11 +549,12 @@ class _ZoneMapCard extends StatelessWidget {
                       initialZoom: _initialZoom(),
                     ),
                     children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.dhakker.app',
-                        maxZoom: 19,
+                      // Was `{s}.tile.openstreetmap.fr` with no `subdomains`
+                      // list, so the placeholder was never substituted and the
+                      // host could not resolve. Same source as everywhere else
+                      // now, and the bug goes with it.
+                      basemapTileLayer(
+                        isDark: Theme.of(context).brightness == Brightness.dark,
                       ),
                       if (type == 'circle' &&
                           centerLat != null &&
