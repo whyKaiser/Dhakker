@@ -39,6 +39,19 @@
 
 export const IDENTITY_TOOLKIT = "https://identitytoolkit.googleapis.com/v1";
 
+/** What a 403 usually means here, and the command that fixes each. */
+export const HELP_403 = [
+  "",
+  "If that was a 403, it is almost always one of:",
+  "  1. The Identity Toolkit API is not enabled on the project:",
+  "       gcloud services enable identitytoolkit.googleapis.com \\",
+  "         --project=dhakker-160d0",
+  "  2. The signed-in account lacks Firebase Authentication Admin.",
+  "       gcloud auth list          # who am I",
+  "  3. The token was minted for a different project.",
+  "",
+].join("\n");
+
 export const KNOWN_ARGUMENTS = Object.freeze([
   "--uid=<uid>",
   "--confirm=GRANT_ADMIN|REVOKE_ADMIN",
@@ -120,6 +133,39 @@ export function mergeClaims(existingJson, { admin }) {
   return { ...existing, admin: admin === true };
 }
 
+/**
+ * Turns a Google API error into a line an operator can act on.
+ *
+ * A bare `HTTP 403` is three different problems with three different fixes:
+ * the Identity Toolkit API not enabled on the project, the signed-in account
+ * lacking Firebase Authentication Admin, or a token minted for the wrong
+ * project. Google says which in `error.status` and `error.message`, and
+ * swallowing that leaves the operator guessing — the same failure the Worker
+ * had before its diagnostics.
+ *
+ * The message is truncated and any long unbroken token-shaped run is redacted
+ * before it is shown. Google does not echo the Authorization header in an
+ * error, but "does not" is a property of today's API, and a credential in a
+ * terminal scrollback is not recoverable once it is there.
+ */
+export function describeApiError(httpStatus, body) {
+  const err = (body && typeof body === "object" && body.error) || {};
+  const code =
+    typeof err.status === "string" && err.status ? err.status : `HTTP_${httpStatus}`;
+  let message = typeof err.message === "string" ? err.message : "";
+  message = message.replace(/[A-Za-z0-9._-]{40,}/g, "[redacted]").slice(0, 200);
+  return message ? `${code}: ${message}` : code;
+}
+
+/** Reads the response body as JSON, or null. Never throws. */
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
 /** Reads the account. Returns the raw customAttributes string, or "". */
 export async function lookupClaims(plan, deps = {}) {
   const doFetch = deps.fetch ?? globalThis.fetch;
@@ -134,7 +180,9 @@ export async function lookupClaims(plan, deps = {}) {
       body: JSON.stringify({ localId: [plan.uid] }),
     },
   );
-  if (!res.ok) throw new Error(`lookup failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`lookup failed — ${describeApiError(res.status, await safeJson(res))}`);
+  }
   const body = await res.json();
   const user = (body.users ?? [])[0];
   if (!user) {
@@ -162,7 +210,9 @@ export async function setClaims(plan, claims, deps = {}) {
       }),
     },
   );
-  if (!res.ok) throw new Error(`update failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`update failed — ${describeApiError(res.status, await safeJson(res))}`);
+  }
   return true;
 }
 
@@ -189,7 +239,11 @@ export async function revokeExistingTokens(plan, deps = {}) {
       }),
     },
   );
-  if (!res.ok) throw new Error(`token revocation failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `token revocation failed — ${describeApiError(res.status, await safeJson(res))}`,
+    );
+  }
   return true;
 }
 
@@ -236,7 +290,11 @@ const isDirectRun =
 if (isDirectRun) {
   main().catch((err) => {
     console.error(`\n${err.message}`);
-    process.exit(1);
+    console.error(HELP_403);
+    // exitCode, not exit(): process.exit() while stdio is still flushing
+    // trips a libuv assertion on Windows, which buries the message that
+    // matters under a crash that does not.
+    process.exitCode = 1;
   });
 }
 /* c8 ignore stop */
