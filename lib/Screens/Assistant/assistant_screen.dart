@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+
+import 'tts_voice.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../bloc/cubit.dart';
@@ -143,38 +145,24 @@ class _AssistantScreenState extends State<AssistantScreen> {
     };
   }
 
+  /// The device's installed voices, read once and reused.
+  ///
+  /// NOT a chosen voice. This screen used to pin one Arabic voice here, at
+  /// open time, for the life of the screen — and a pinned voice outranks a
+  /// later setLanguage, so English and Turkish replies were read by an Arabic
+  /// mouth. The choice now happens per utterance, against the language the
+  /// SERVER said the reply is in.
+  List<dynamic>? _voices;
+
   Future<void> _initTts() async {
     await _tts.awaitSpeakCompletion(true);
     await _tts.setSpeechRate(0.42);
     await _tts.setPitch(1.0);
-    // نحاول اختيار أفضل صوت عربي متاح على الجهاز (Google > غيره).
     try {
-      final voices = await _tts.getVoices as List?;
-      if (voices != null) {
-        final arVoices = voices.whereType<Map>().where((v) {
-          final locale =
-              (v['locale'] ?? v['language'] ?? '').toString().toLowerCase();
-          return locale.startsWith('ar');
-        }).toList();
-        // نفضّل Google TTS ثم أي صوت عربي آخر.
-        final best = arVoices.firstWhere(
-          (v) => (v['name'] ?? '').toString().toLowerCase().contains('google'),
-          orElse: () =>
-              arVoices.isNotEmpty ? arVoices.first : <String, dynamic>{},
-        );
-        if (best.isNotEmpty == true && best['name'] != null) {
-          // flutter_tts hands back an untyped map, and setVoice wants
-          // Map<String, String>. Convert rather than assume: a plugin that
-          // returns a non-String here would otherwise throw at the channel.
-          await _tts.setVoice({
-            'name': best['name'].toString(),
-            'locale':
-                (best['locale'] ?? best['language'] ?? 'ar-SA').toString(),
-          });
-        }
-      }
+      _voices = await _tts.getVoices as List?;
     } catch (_) {
-      // فشل اختيار الصوت — يعود للافتراضي.
+      // No voice list — setLanguage alone still works.
+      _voices = null;
     }
   }
 
@@ -201,6 +189,39 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _speechReady = false;
     }
     if (mounted) setState(() {});
+  }
+
+  /// Languages already reported as having no installed voice. A pilgrim does
+  /// not need telling twice for the same one.
+  final Set<String> _reportedMissingVoices = <String>{};
+
+  void _noteMissingVoice(String locale) {
+    if (!_reportedMissingVoices.add(locale)) return;
+    if (!mounted) return;
+    final label = _labelForTtsLocale(locale);
+    final ar = _isRtl(_lang.label);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: _p.card,
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          ar
+              ? 'لا يوجد صوت «$label» مثبّت على جهازك، فالقراءة ستكون بصوت آخر. '
+                  'ثبّته من إعدادات النطق في جهازك ليُقرأ بلغته.'
+              : 'No "$label" voice is installed on this device, so it will be '
+                  'read by another. Install it in your device\'s '
+                  'text-to-speech settings.',
+          style: TextStyle(color: _p.textPrimary),
+        ),
+      ),
+    );
+  }
+
+  String _labelForTtsLocale(String locale) {
+    for (final l in _languages) {
+      if (l.ttsLocale == locale) return l.label;
+    }
+    return locale;
   }
 
   void _showVoiceUnavailable() {
@@ -307,7 +328,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         _sending = false;
       });
       _scrollToEnd();
-      await _speak(reply.answer);
+      await _speak(reply.answer, languageCode: reply.language);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -341,7 +362,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
         : 'The assistant is unavailable right now. Please check your connection and try again.';
   }
 
-  Future<void> _speak(String text) async {
+  /// [languageCode] is the language the SERVER resolved for this reply, not a
+  /// guess from the text. Guessing gets Urdu wrong (it is Arabic-script) and
+  /// gets an Arabic reply wrong whenever the app itself is set to English.
+  /// Absent — a message the user typed — the old script heuristic still
+  /// applies, since there is nothing better to go on.
+  Future<void> _speak(String text, {String? languageCode}) async {
     if (text.trim().isEmpty) return;
     if (_speakingText == text) {
       await _tts.stop();
@@ -350,7 +376,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
     try {
       if (mounted) setState(() => _speakingText = text);
-      await _tts.setLanguage(_ttsLocaleFor(text));
+      final locale = languageCode != null && languageCode.isNotEmpty
+          ? ttsLocaleForLanguageCode(languageCode)
+          : _ttsLocaleFor(text);
+      await _tts.setLanguage(locale);
+      final voice = pickVoiceForLocale(_voices, locale);
+      // Null means nothing installed fits: leave setLanguage to decide rather
+      // than forcing a voice from the wrong language, which is the whole bug.
+      if (voice != null) {
+        await _tts.setVoice(voice);
+      } else if (_voices != null && _voices!.isNotEmpty) {
+        // We could read the device's voice list and this language is not in
+        // it. The app cannot install one, and silence about it is what makes
+        // the result feel broken rather than missing — so say it, once per
+        // language, and let the reading proceed on the default.
+        _noteMissingVoice(locale);
+      }
       await _tts.speak(text);
     } catch (_) {
     } finally {
@@ -709,7 +750,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             if (!m.fromUser && !m.isError) ...[
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () => _speak(m.text),
+                onTap: () => _speak(m.text, languageCode: m.response?.language),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   child: _speakingText == m.text
