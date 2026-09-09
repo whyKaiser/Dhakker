@@ -188,4 +188,50 @@ void main() {
           isNull);
     });
   });
+
+  group('speech rate', () {
+    test('normal speed on Android and the web is 1.0', () {
+      // The platforms disagree about the number: Android and web call 1.0
+      // normal. The old hard-coded 0.42 was 42% of it — the reported drawl.
+      expect(naturalSpeechRate(isWeb: true, platformName: 'android'), 1.0);
+      expect(naturalSpeechRate(isWeb: false, platformName: 'android'), 1.0);
+      expect(naturalSpeechRate(isWeb: false, platformName: 'windows'), 1.0);
+      expect(naturalSpeechRate(isWeb: false, platformName: 'linux'), 1.0);
+    });
+
+    test('normal speed on Apple platforms is 0.5, not 1.0', () {
+      // AVSpeechSynthesizer treats 1.0 as roughly double speed. One constant
+      // cannot be right on both families, which is why this is a function.
+      expect(naturalSpeechRate(isWeb: false, platformName: 'ios'), 0.5);
+      expect(naturalSpeechRate(isWeb: false, platformName: 'macOS'), 0.5);
+    });
+
+    test('the web is web whatever platform reports underneath it', () {
+      // Safari on an iPhone is still the Web Speech API: 1.0 is normal there.
+      expect(naturalSpeechRate(isWeb: true, platformName: 'ios'), 1.0);
+    });
+
+    test('nothing is left at the old drawl', () {
+      for (final p in [
+        'android',
+        'ios',
+        'macos',
+        'windows',
+        'linux',
+        'fuchsia'
+      ]) {
+        for (final web in [true, false]) {
+          expect(naturalSpeechRate(isWeb: web, platformName: p),
+              greaterThanOrEqualTo(0.5),
+              reason:
+                  '$p (web: $web) is slower than any platform calls normal');
+        }
+      }
+    });
+
+    test('an unknown platform gets the common default, not silence', () {
+      expect(naturalSpeechRate(isWeb: false, platformName: 'plan9'), 1.0);
+      expect(naturalSpeechRate(isWeb: false, platformName: ''), 1.0);
+    });
+  });
 }

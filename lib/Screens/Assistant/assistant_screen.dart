@@ -12,6 +12,7 @@ import '../../locale_controller.dart';
 import '../../services/assistant_service.dart';
 import '../../services/language_policy.dart';
 import '../../services/pilgrim_context_builder.dart';
+import 'package:flutter/foundation.dart';
 
 /// شاشة المساعد الصوتي الذكي للحج والعمرة.
 /// الحاج يختار لغته، يضغط الميكروفون ويتكلم، فيسمعه المساعد ويرد بصوت بنفس اللغة.
@@ -156,7 +157,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   Future<void> _initTts() async {
     await _tts.awaitSpeakCompletion(true);
-    await _tts.setSpeechRate(0.42);
+    await _tts.setSpeechRate(naturalSpeechRate(
+      isWeb: kIsWeb,
+      platformName: defaultTargetPlatform.name,
+    ));
     await _tts.setPitch(1.0);
     try {
       _voices = await _tts.getVoices as List?;
