@@ -15,6 +15,8 @@ import {
   mergeClaims,
   lookupClaims,
   setClaims,
+  describeApiError,
+  HELP_403,
   run,
 } from "./grant_admin_claim.mjs";
 
@@ -182,8 +184,72 @@ test("a failed lookup raises rather than assuming no claims", async () => {
         { projectId: "p", token: "t", uid: "u" },
         { fetch: async () => new Response("denied", { status: 403 }) },
       ),
-    /HTTP 403/,
+    /lookup failed/,
   );
+});
+
+test("a failure says WHY, not just that it failed", async () => {
+  // A bare "HTTP 403" is three different problems with three different
+  // fixes. Google says which; swallowing it leaves the operator guessing.
+  await assert.rejects(
+    () =>
+      lookupClaims(
+        { projectId: "p", token: "t", uid: "u" },
+        {
+          fetch: async () =>
+            new Response(
+              JSON.stringify({
+                error: {
+                  status: "PERMISSION_DENIED",
+                  message:
+                    "Identity Toolkit API has not been used in project dhakker-160d0 before or it is disabled.",
+                },
+              }),
+              { status: 403 },
+            ),
+        },
+      ),
+    /PERMISSION_DENIED.*has not been used/s,
+  );
+});
+
+test("a token-shaped run in an API error is redacted before it is shown", () => {
+  // Google does not echo the Authorization header today. "Does not" is a
+  // property of today's API, and a credential in a scrollback is not
+  // recoverable once it is there.
+  const described = describeApiError(403, {
+    error: {
+      status: "PERMISSION_DENIED",
+      message: `bad credential ya29.${"A1b2C3d4".repeat(8)} for project p`,
+    },
+  });
+  assert.equal(described.includes("A1b2C3d4A1b2C3d4"), false);
+  assert.match(described, /\[redacted\]/);
+  assert.match(described, /PERMISSION_DENIED/);
+});
+
+test("a non-JSON or shapeless error still produces a usable label", () => {
+  assert.equal(describeApiError(500, null), "HTTP_500");
+  assert.equal(describeApiError(403, "denied"), "HTTP_403");
+  assert.equal(describeApiError(404, { error: {} }), "HTTP_404");
+});
+
+test("an API message is truncated rather than pasted whole", () => {
+  // Words, not one long run: an unbroken run is caught by the redaction, so
+  // a test built from one would pass without the truncation existing at all.
+  const described = describeApiError(400, {
+    error: { status: "INVALID_ARGUMENT", message: "policy denied ".repeat(400) },
+  });
+  assert.ok(described.length < 260, `too long: ${described.length}`);
+  assert.equal(described.includes("[redacted]"), false, "redaction did the work");
+});
+
+test("the 403 help names the enable command, not just the problem", () => {
+  // An error that describes a wall without pointing at the door is half an
+  // error message.
+  assert.match(HELP_403, /identitytoolkit\.googleapis\.com/);
+  assert.match(HELP_403, /gcloud services enable/);
+  assert.match(HELP_403, /Firebase Authentication Admin/);
 });
 
 test("the write targets one uid and carries the merged claims", async () => {
