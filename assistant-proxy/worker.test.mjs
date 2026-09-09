@@ -2271,9 +2271,11 @@ test("the provider chain lists only what is configured, in a fixed order", () =>
 
   assert.deepEqual(names({ GROQ_API_KEY: "x", GEMINI_API_KEY: "y", AI: { run: () => {} } }), [
     "groq",
-    "gemini",
     "workers-ai",
+    "gemini",
   ]);
+  // Removing the middle one closes the gap rather than leaving a hole.
+  assert.deepEqual(names({ GROQ_API_KEY: "x", GEMINI_API_KEY: "y" }), ["groq", "gemini"]);
   assert.deepEqual(names({ GROQ_API_KEY: "x" }), ["groq"]);
   assert.deepEqual(names({ AI: { run: () => {} } }), ["workers-ai"]);
   // Nothing configured must yield an empty chain, not a phantom provider that
@@ -2290,9 +2292,13 @@ test("Workers AI is listed only when the binding is really callable", () => {
   }
 });
 
-test("Workers AI answers when both keyed providers fail", async () => {
+test("Workers AI answers when Groq fails, before Gemini is spent", async () => {
   const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => new Response("upstream boom", { status: 500 });
+  const seenUrls = [];
+  globalThis.fetch = async (url) => {
+    seenUrls.push(String(url));
+    return new Response("upstream boom", { status: 500 });
+  };
   let seenModel = null;
   let seenMessages = null;
   try {
@@ -2330,6 +2336,12 @@ test("Workers AI answers when both keyed providers fail", async () => {
     const body = await res.json();
     assert.equal(body.answer, "Answer from Workers AI.");
     assert.equal(seenModel, WORKERS_AI_MODEL);
+    assert.ok(seenUrls.some((u) => u.includes("groq.com")), "Groq was attempted first");
+    assert.equal(
+      seenUrls.some((u) => u.includes("generativelanguage")),
+      false,
+      "Gemini's quota was spent even though Workers AI had already answered",
+    );
     // The grounding rules travel with the request, not the provider: a
     // fallback answering under a weaker prompt is the whole risk here.
     assert.equal(seenMessages[0].role, "system");

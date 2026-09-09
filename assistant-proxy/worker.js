@@ -1316,23 +1316,29 @@ async function queryFirestoreKnowledge(keywords, language, projectId, token) {
  * budget failing. Order is fixed in code and cannot be influenced by the
  * client: a request must not be able to steer itself onto a chosen model.
  *
- * Workers AI is last on purpose. It is the floor, not the preference — the
- * one that still answers when a key has expired or a per-key daily quota has
- * reset, because the binding is the credential and there is no key to expire.
+ * Order: Groq, then Workers AI, then Gemini.
+ *
+ * Groq stays primary — `MODEL` is its identifier, and `payload` is built in
+ * its dialect. Workers AI comes second because it is the more dependable
+ * second try: its binding IS the credential, so unlike a key-bearing
+ * provider it cannot be taken out by an expired or revoked key, only by a
+ * spent daily allowance. Gemini sits last as the third distinct thing to
+ * fail — another vendor, another network path, another quota — so no single
+ * provider's bad day can silence the assistant.
  */
 function providerChain(env) {
   const chain = [];
   if (env?.GROQ_API_KEY) {
     chain.push({ name: "groq", run: (payload, _messages, e) => callGroq(payload, e) });
   }
+  if (env?.AI && typeof env.AI.run === "function") {
+    chain.push({ name: "workers-ai", run: (_payload, messages, e) => askWorkersAi(messages, e) });
+  }
   if (env?.GEMINI_API_KEY) {
     chain.push({
       name: "gemini",
       run: (_payload, messages, e) => askGemini(messages, e.GEMINI_API_KEY),
     });
-  }
-  if (env?.AI && typeof env.AI.run === "function") {
-    chain.push({ name: "workers-ai", run: (_payload, messages, e) => askWorkersAi(messages, e) });
   }
   return chain;
 }
