@@ -1,6 +1,9 @@
 # Admin custom claim — manual setup
 
-Granting this claim is a **manual step that has not been performed**. Nothing
+Granting this claim is a **manual step that has not been performed**, and
+it BLOCKS content approval: `firestore.rules` refuses a `verified` write from
+an account without it, so it comes before reviewing the source pack, not
+after. Nothing
 in this repository grants it, and nothing should: it is the single control
 that decides who may replace the audio a pilgrim hears.
 
@@ -44,45 +47,89 @@ claim, `"true"` as a string, `1`, or `false` all refuse.
 
 ## Granting it
 
-Run this **once per admin account**, from a trusted machine, with Admin SDK
-credentials. Do not commit the credentials, and do not add this to a
-workflow — a pipeline that can mint admins is a pipeline that can be made to
-mint one.
+Run it **once per admin account**, from a trusted machine. Do not add this to
+a workflow — a pipeline that can mint admins is a pipeline that can be made
+to mint one.
+
+### The supported way: `scripts/grant_admin_claim.mjs`, no key file
+
+The Admin SDK needs a service-account key: a long-lived credential that can
+mint admins, sitting on a laptop. This project avoids creating one everywhere
+else, and the single control over who may replace a pilgrim's audio is a poor
+place to start.
+
+The tool uses the Identity Toolkit REST API with a **short-lived** OAuth
+token instead — about an hour, and never written to disk by the tool.
+
+```bash
+# 1. Find the account's uid: Firebase console → Authentication → Users.
+# 2. A token that expires in an hour. Needs the gcloud CLI, signed in as
+#    someone with Firebase Authentication Admin on the project.
+export FIREBASE_PROJECT_ID=dhakker-160d0
+export GOOGLE_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+
+node scripts/grant_admin_claim.mjs --uid=<uid> --confirm=GRANT_ADMIN
+```
+
+What it will not do, asserted by `scripts/grant_admin_claim.test.mjs`:
+
+* **One account per run**, named explicitly. There is no `--all`, no list, no
+  file input. Granting admin to two accounts in one command has no
+  legitimate use and a very bad failure mode.
+* **No run without a confirmation matching the direction.** Confirming
+  `GRANT_ADMIN` while passing `--revoke` is refused rather than resolved
+  either way; a typo'd uid should cost an error, not an admin.
+* **Existing claims are read and merged.** Identity Toolkit replaces the
+  whole custom-attributes blob, so a naive write erases every other claim
+  without a trace. There is only one claim today; the next one would have
+  gone silently.
+* `admin` is written as the boolean `true`, never `"true"` — `storage.rules`
+  compares against the boolean, and a string would read as granted here and
+  refuse there.
+* A failed lookup **raises** rather than being read as "no claims", which
+  would erase the real ones on the write that followed.
+* The uid is printed; the token never is.
+
+It also invalidates tokens already issued, on grant and on revoke both — see
+below for why that is not optional.
+
+### Revoking
+
+```bash
+node scripts/grant_admin_claim.mjs --uid=<uid> --revoke --confirm=REVOKE_ADMIN
+```
+
+### If you would rather use the Admin SDK
+
+The original path still works and is not wrong — it needs a key file, which
+is the only reason it is no longer the recommendation.
 
 ```js
-// grant-admin.mjs — run locally, then delete. Not part of the repo.
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 initializeApp({ credential: cert("<path to service account json>") });
-
-const uid = "<the admin's Firebase Auth UID>";
-await getAuth().setCustomUserClaims(uid, { admin: true });
-console.log("granted");
+await getAuth().setCustomUserClaims("<uid>", { admin: true });
+await getAuth().revokeRefreshTokens("<uid>");
 ```
-
-Or with the Firebase CLI logged in as a project owner, using the Admin SDK
-through `firebase functions:shell`, if you prefer not to handle a key file.
 
 ### After granting
 
-1. The claim reaches the client only on a **fresh ID token**. The account
-   must sign out and back in, or the app must call
+1. The claim reaches the client only on a **fresh ID token**. The tool
+   invalidates existing sessions, so the account must sign in again. If the
+   claim was set some other way, the account must sign out and back in, or
+   the app must call
    `user.getIdToken(true)` to force a refresh. Until then the old token is
    still claimless and uploads still fail.
 2. Verify from the admin screen by uploading one small file, not by reading
    the claim back in code.
 
-### Revoking
+### Why token revocation is not optional
 
-```js
-await getAuth().setCustomUserClaims(uid, { admin: false });
-await getAuth().revokeRefreshTokens(uid);   // existing tokens keep the old claim otherwise
-```
-
-The second line matters. A claim change does not invalidate tokens already
-issued; without revoking, a removed admin keeps write access until their
-current token expires (up to an hour).
+A claim change does not invalidate tokens already issued. Without revoking,
+a removed admin keeps write access until their current token expires — up to
+an hour. `grant_admin_claim.mjs` does it on both directions, and a test
+asserts it for each.
 
 ## What this does not do
 
