@@ -20,6 +20,7 @@ import '../Home/models/zone_model.dart';
 import '../Home/services/zone_detection_service.dart';
 import '../../../bloc/cubit.dart';
 import '../../../bloc/states.dart';
+import '../../../shared/map/basemap.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -549,19 +550,14 @@ class _MapScreenState extends State<MapScreen>
                               maxZoom: 20.0,
                             ),
                             children: [
-                              TileLayer(
-                                urlTemplate: isDark
-                                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                subdomains: const ['a', 'b', 'c', 'd'],
-                                userAgentPackageName: 'dhakker',
-                              ),
+                              basemapTileLayer(isDark: isDark),
                               if (polygonZones.isNotEmpty)
                                 PolygonLayer(polygons: polygonZones),
                               if (circleZones.isNotEmpty)
                                 CircleLayer(circles: circleZones),
                               if (allMarkers.isNotEmpty)
                                 MarkerLayer(markers: allMarkers),
+                              basemapAttribution(),
                             ],
                           ),
                         ),

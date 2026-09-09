@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../theme/dhakker_theme.dart';
+import '../../../shared/map/basemap.dart';
 
 /// شاشة اختيار موقع من الخريطة — UX قريب من قوقل ماب:
 ///   - الوضع المفرد: crosshair في المنتصف دائماً، الخريطة تتحرك تحته.
@@ -215,15 +216,10 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen>
               onMapEvent: _onMapEvent,
             ),
             children: [
-              TileLayer(
-                urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'dhakker',
-              ),
+              basemapTileLayer(isDark: isDark),
               if (polygons.isNotEmpty) PolygonLayer(polygons: polygons),
               if (markers.isNotEmpty) MarkerLayer(markers: markers),
+              basemapAttribution(),
             ],
           ),
 
