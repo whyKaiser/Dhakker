@@ -396,6 +396,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
         // language, and let the reading proceed on the default.
         _noteMissingVoice(locale);
       }
+      // Rate LAST, immediately before speaking. It was set once in _initTts,
+      // before any language or voice had been chosen — and this screen now
+      // changes both on every utterance. Whether a given engine keeps engine
+      // parameters across a voice switch is a platform detail we should not
+      // be relying on; setting it here is correct on all of them.
+      await _tts.setSpeechRate(naturalSpeechRate(
+        isWeb: kIsWeb,
+        platformName: defaultTargetPlatform.name,
+      ));
       await _tts.speak(text);
     } catch (_) {
     } finally {

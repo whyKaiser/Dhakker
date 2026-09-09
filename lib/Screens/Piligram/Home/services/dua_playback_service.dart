@@ -30,7 +30,29 @@ class DuaPlaybackService {
 
   @protected
   @visibleForTesting
-  Future<void> speakText(String text) => _tts.speak(text);
+  Future<void> setTtsRate(double rate) => _tts.setSpeechRate(rate);
+
+  @protected
+  @visibleForTesting
+  Future<void> speakOnly(String text) => _tts.speak(text);
+
+  /// Applies the rate, then speaks.
+  ///
+  /// The rate used to be set once in [init], before any language or voice had
+  /// been chosen, and this service changes both before speaking. Whether an
+  /// engine keeps its parameters across a voice switch is a platform detail
+  /// we should not depend on. Split into two seams so the ORDER is testable
+  /// without a method channel — a rate applied after `speak` would be a
+  /// no-op, and would look identical in a test that only checked the value.
+  @protected
+  @visibleForTesting
+  Future<void> speakText(String text) async {
+    await setTtsRate(naturalSpeechRate(
+      isWeb: kIsWeb,
+      platformName: defaultTargetPlatform.name,
+    ));
+    await speakOnly(text);
+  }
 
   @protected
   @visibleForTesting
