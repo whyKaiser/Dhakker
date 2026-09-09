@@ -70,6 +70,11 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_BODY_BYTES = 32 * 1024;
 const MODEL = "llama-3.3-70b-versatile"; // server-controlled, client cannot override
+// Workers AI runs on Cloudflare's own edge, so it needs no API key and no
+// third-party account: the `AI` binding IS the credential. That makes it the
+// one provider that cannot be knocked out by a key expiring or a per-key
+// quota resetting, which is exactly what a last-resort fallback should be.
+const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const TEMPERATURE = 0.3; // server-controlled
 const MAX_TOKENS = 700; // server-controlled
 
@@ -80,6 +85,9 @@ const MAX_TOKENS = 700; // server-controlled
 // Groq still leaves room for the Gemini fallback inside a sane total.
 const GROQ_TIMEOUT_MS = 12_000;
 const GEMINI_TIMEOUT_MS = 12_000;
+// The Workers AI binding is an RPC call, not a fetch, so an AbortController
+// cannot reach it. It is bounded by a race instead — see askWorkersAi.
+const WORKERS_AI_TIMEOUT_MS = 12_000;
 const JWKS_TIMEOUT_MS = 5_000;
 const FIRESTORE_TIMEOUT_MS = 6_000;
 
@@ -287,22 +295,41 @@ export default {
     };
 
     const startedAt = Date.now();
-    let providerUsed = "groq";
+    // Tried in order, first success wins. Every provider is handed the SAME
+    // `providerMessages`, so a fallback cannot answer under a weaker system
+    // prompt than the primary — the grounding rules travel with the request,
+    // not with the provider.
+    const chain = providerChain(env);
+    if (chain.length === 0) {
+      logRequest(env, { uid, language, provider: "none", status: "failed", ms: Date.now() - startedAt });
+      return jsonError("upstream_failed", "Assistant is temporarily unavailable", 502, corsHeaders);
+    }
+
+    let providerUsed = null;
     let replyText;
-    try {
-      replyText = await callGroq(payload, env);
-    } catch (groqErr) {
-      if (!env.GEMINI_API_KEY) {
-        logRequest(env, { uid, language, provider: "groq", status: "failed", ms: Date.now() - startedAt });
-        return jsonError("upstream_failed", "Assistant is temporarily unavailable", 502, corsHeaders);
-      }
+    const attempted = [];
+    for (const provider of chain) {
+      attempted.push(provider.name);
       try {
-        providerUsed = "gemini";
-        replyText = await askGemini(providerMessages, env.GEMINI_API_KEY);
-      } catch (geminiErr) {
-        logRequest(env, { uid, language, provider: "both", status: "failed", ms: Date.now() - startedAt });
-        return jsonError("upstream_failed", "Assistant is temporarily unavailable", 502, corsHeaders);
+        replyText = await provider.run(payload, providerMessages, env);
+        providerUsed = provider.name;
+        break;
+      } catch (err) {
+        // Deliberately swallowed: an upstream's error text can carry the key
+        // it was called with, or the prompt. The next provider is tried; if
+        // none succeeds the caller gets a bounded 502 and never an answer.
       }
+    }
+
+    if (providerUsed === null) {
+      logRequest(env, {
+        uid,
+        language,
+        provider: attempted.join("+"),
+        status: "failed",
+        ms: Date.now() - startedAt,
+      });
+      return jsonError("upstream_failed", "Assistant is temporarily unavailable", 502, corsHeaders);
     }
 
     logRequest(env, { uid, language, provider: providerUsed, status: "ok", ms: Date.now() - startedAt });
@@ -1281,6 +1308,79 @@ async function queryFirestoreKnowledge(keywords, language, projectId, token) {
 
 // ── Providers ────────────────────────────────────────────────────────────
 
+/**
+ * The providers to try, in order, for this request.
+ *
+ * A provider is listed ONLY if it is actually configured, so an unconfigured
+ * one can never occupy a slot in the chain and consume the request's time
+ * budget failing. Order is fixed in code and cannot be influenced by the
+ * client: a request must not be able to steer itself onto a chosen model.
+ *
+ * Order: Groq, then Workers AI, then Gemini.
+ *
+ * Groq stays primary — `MODEL` is its identifier, and `payload` is built in
+ * its dialect. Workers AI comes second because it is the more dependable
+ * second try: its binding IS the credential, so unlike a key-bearing
+ * provider it cannot be taken out by an expired or revoked key, only by a
+ * spent daily allowance. Gemini sits last as the third distinct thing to
+ * fail — another vendor, another network path, another quota — so no single
+ * provider's bad day can silence the assistant.
+ */
+function providerChain(env) {
+  const chain = [];
+  if (env?.GROQ_API_KEY) {
+    chain.push({ name: "groq", run: (payload, _messages, e) => callGroq(payload, e) });
+  }
+  if (env?.AI && typeof env.AI.run === "function") {
+    chain.push({ name: "workers-ai", run: (_payload, messages, e) => askWorkersAi(messages, e) });
+  }
+  if (env?.GEMINI_API_KEY) {
+    chain.push({
+      name: "gemini",
+      run: (_payload, messages, e) => askGemini(messages, e.GEMINI_API_KEY),
+    });
+  }
+  return chain;
+}
+
+/**
+ * Cloudflare Workers AI, via the `AI` binding.
+ *
+ * The binding is an RPC call rather than a fetch, so `fetchWithTimeout` and
+ * its AbortController cannot bound it. A race does instead: without one, a
+ * hung binding would hold the request open past every other provider's
+ * deadline and defeat the point of having a fallback at all. The race does
+ * not cancel the underlying call — nothing in the binding API can — it only
+ * stops this request waiting on it.
+ */
+async function askWorkersAi(messages, env) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Workers AI timed out")),
+      WORKERS_AI_TIMEOUT_MS,
+    );
+  });
+  let result;
+  try {
+    result = await Promise.race([
+      env.AI.run(WORKERS_AI_MODEL, {
+        messages,
+        temperature: TEMPERATURE,
+        max_tokens: MAX_TOKENS,
+      }),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+  const text = typeof result === "string" ? result : result?.response;
+  if (typeof text !== "string" || text.trim() === "") {
+    throw new Error("Workers AI returned no content");
+  }
+  return text;
+}
+
 async function callGroq(payload, env) {
   if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
   const upstream = await fetchWithTimeout(
@@ -1591,6 +1691,9 @@ function jsonError(code, message, status, corsHeaders) {
 }
 
 export const __testing__ = {
+  providerChain,
+  WORKERS_AI_MODEL,
+  WORKERS_AI_TIMEOUT_MS,
   validateRequestBody,
   validateContext,
   parseModelJson,
