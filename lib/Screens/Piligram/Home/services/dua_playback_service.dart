@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/supplication_model.dart';
+import '../../../Assistant/tts_voice.dart';
 
 class DuaPlaybackService {
   // Lazily built. Both plugin objects wire platform channels the moment they
@@ -84,7 +85,10 @@ class DuaPlaybackService {
 
   Future<void> init() async {
     await _tts.awaitSpeakCompletion(true);
-    await _tts.setSpeechRate(0.42);
+    await _tts.setSpeechRate(naturalSpeechRate(
+      isWeb: kIsWeb,
+      platformName: defaultTargetPlatform.name,
+    ));
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
 

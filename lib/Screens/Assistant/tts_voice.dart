@@ -154,3 +154,30 @@ Map<String, String>? pickVoiceForLocale(
   final chosen = sameLanguage.first;
   return {'name': chosen['name']!, 'locale': chosen['locale']!};
 }
+
+/// The speech rate that sounds NORMAL on this platform.
+///
+/// `flutter_tts` passes this straight to the platform engine, and the
+/// platforms disagree about what the number means: Android and the web treat
+/// 1.0 as normal speed, Apple's AVSpeechSynthesizer treats 0.5 as normal and
+/// 1.0 as roughly double.
+///
+/// Every screen had `setSpeechRate(0.42)` hard-coded — one magic number
+/// copied three times, with no comment. On Apple that is a shade under
+/// normal; on Android and the web it is 42% of normal, which is the drawl
+/// that was reported. A single constant cannot be right on both.
+///
+/// Deliberately not slowed for religious text: the assistant reads its own
+/// prose, and stored recitations are audio files, not synthesis. If a slower
+/// reading is ever wanted for a supplication it should be an explicit,
+/// separate decision — not a number that quietly slows everything.
+double naturalSpeechRate({required bool isWeb, required String platformName}) {
+  if (isWeb) return 1.0;
+  switch (platformName.toLowerCase()) {
+    case 'ios':
+    case 'macos':
+      return 0.5;
+    default:
+      return 1.0;
+  }
+}
