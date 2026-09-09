@@ -52,8 +52,11 @@ String ttsLocaleForLanguageCode(String? code) {
 ///
 /// Order of preference:
 ///   1. exact locale match (`ur-PK` for `ur-PK`)
-///   2. same language, different region (`ar-EG` for `ar-SA`) — a regional
-///      accent is a far smaller error than the wrong language entirely
+///   2. same language, another region — ranked by [_regionPreference], so
+///      Arabic reaches for Saudi first and for Egyptian only as a last
+///      resort. All of these voices read Modern Standard Arabic; the region
+///      is an accent, not a dialect. But this app is read in the Haramain,
+///      and the accent of the place is the right default.
 ///   3. nothing: return null so the caller does NOT call setVoice
 ///
 /// Within a tier, a Google voice wins: on Android these are the neural ones,
@@ -62,6 +65,33 @@ String ttsLocaleForLanguageCode(String? code) {
 /// Returning null matters. Calling `setVoice` with a mismatched voice is
 /// exactly the bug this file exists to fix, so when nothing fits it is better
 /// to let `setLanguage` alone decide.
+/// Which regional variants to reach for, per language, best first.
+///
+/// Only Arabic needs an opinion today: the six app languages have one obvious
+/// region each except Arabic, which has many, all of them reading the same
+/// Modern Standard Arabic in different accents.
+const Map<String, List<String>> _regionPreference = {
+  'ar': ['sa', 'ae', 'kw', 'qa', 'bh', 'om', 'jo', 'iq', 'ye'],
+};
+
+/// Regional variants to use only if nothing else in the language exists.
+///
+/// Still far better than reading Arabic with an English voice — the point is
+/// ordering, not exclusion.
+const Map<String, List<String>> _regionLastResort = {
+  'ar': ['eg', 'ma', 'dz', 'tn', 'ly'],
+};
+
+int _regionRank(String language, String region) {
+  final preferred = _regionPreference[language] ?? const [];
+  final index = preferred.indexOf(region);
+  if (index >= 0) return index;
+  if ((_regionLastResort[language] ?? const []).contains(region)) return 1000;
+  // An unlisted region sits between: unknown is not a reason to rank it below
+  // one we deliberately deprioritised.
+  return 500;
+}
+
 Map<String, String>? pickVoiceForLocale(
   List<dynamic>? voices,
   String locale,
@@ -99,6 +129,28 @@ Map<String, String>? pickVoiceForLocale(
     return {'name': chosen['name']!, 'locale': chosen['locale']!};
   }
 
-  return bestOf((v) => v['locale'] == wanted) ??
-      bestOf((v) => v['locale']!.split('-').first == wantedLanguage);
+  final exact = bestOf((v) => v['locale'] == wanted);
+  if (exact != null) return exact;
+
+  // Same language, best region first. A stable sort by rank keeps the
+  // Google-preference inside each rank intact.
+  final sameLanguage = candidates
+      .where((v) => v['locale']!.split('-').first == wantedLanguage)
+      .toList();
+  if (sameLanguage.isEmpty) return null;
+  String regionOf(Map<String, String> v) {
+    final parts = v['locale']!.split('-');
+    return parts.length > 1 ? parts[1] : '';
+  }
+
+  sameLanguage.sort((a, b) {
+    final ra = _regionRank(wantedLanguage, regionOf(a));
+    final rb = _regionRank(wantedLanguage, regionOf(b));
+    if (ra != rb) return ra.compareTo(rb);
+    final ga = isGoogle(a) ? 0 : 1;
+    final gb = isGoogle(b) ? 0 : 1;
+    return ga.compareTo(gb);
+  });
+  final chosen = sameLanguage.first;
+  return {'name': chosen['name']!, 'locale': chosen['locale']!};
 }

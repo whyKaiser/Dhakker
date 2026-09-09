@@ -76,6 +76,56 @@ void main() {
       expect(picked!['locale'], 'ar-eg');
     });
 
+    test('Gulf Arabic is preferred over Egyptian when Saudi is absent', () {
+      // The app is read in the Haramain. Every one of these voices reads
+      // Modern Standard Arabic — the region is an accent, not a dialect —
+      // but the accent of the place is the right default, and Egyptian is
+      // the most audibly marked of them.
+      final picked = pickVoiceForLocale([
+        {'name': 'Google Egyptian Arabic', 'locale': 'ar-EG'},
+        {'name': 'ar-ae-x-default', 'locale': 'ar-AE'},
+      ], 'ar-SA');
+      expect(picked!['locale'], 'ar-ae');
+    });
+
+    test('a Google Egyptian voice does not outrank a plain Gulf one', () {
+      // Region is ranked BEFORE the Google preference: a neural voice in the
+      // wrong accent is still the wrong accent.
+      final picked = pickVoiceForLocale([
+        {'name': 'Google Arabic (Egypt)', 'locale': 'ar-EG'},
+        {'name': 'ar-kw-x-basic', 'locale': 'ar-KW'},
+      ], 'ar-SA');
+      expect(picked!['locale'], 'ar-kw');
+    });
+
+    test('Saudi still wins outright when it is installed', () {
+      final picked = pickVoiceForLocale([
+        {'name': 'Google Egyptian Arabic', 'locale': 'ar-EG'},
+        {'name': 'ar-sa-x-default', 'locale': 'ar-SA'},
+      ], 'ar-SA');
+      expect(picked!['locale'], 'ar-sa');
+    });
+
+    test('Egyptian is still used rather than reading Arabic in English', () {
+      // Ordering, not exclusion. A marked Arabic accent beats an English
+      // voice spelling out Arabic phonemes, which is the original bug.
+      final picked = pickVoiceForLocale([
+        {'name': 'Google US English', 'locale': 'en-US'},
+        {'name': 'Google Egyptian Arabic', 'locale': 'ar-EG'},
+      ], 'ar-SA');
+      expect(picked!['locale'], 'ar-eg');
+    });
+
+    test('an unlisted Arabic region is not ranked below a deprioritised one',
+        () {
+      // Unknown is not a reason to rank below one we deliberately pushed down.
+      final picked = pickVoiceForLocale([
+        {'name': 'Google Egyptian Arabic', 'locale': 'ar-EG'},
+        {'name': 'ar-xx-experimental', 'locale': 'ar-XX'},
+      ], 'ar-SA');
+      expect(picked!['locale'], 'ar-xx');
+    });
+
     test('no voice for the language returns null rather than a wrong one', () {
       // THE regression that started this. Forcing a mismatched voice is worse
       // than letting setLanguage alone decide.
