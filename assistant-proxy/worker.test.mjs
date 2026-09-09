@@ -2871,3 +2871,134 @@ test("a successful request logs no failure reason at all", async () => {
   assert.ok(ok, "no success log line was emitted");
   assert.equal("why" in ok, false, "a success carried a failure reason");
 });
+
+// ── Chain budget, retired model, and shape diagnostics ────────────────────
+
+test("the chain budget is under the client's own deadline", () => {
+  // AssistantService gives up at 20s. A chain that can outlast that produces
+  // a reply nobody receives, and a pilgrim who is told the assistant is
+  // unreachable while it is still working.
+  assert.ok(__testing__.CHAIN_BUDGET_MS < 20_000);
+  assert.ok(__testing__.MIN_ATTEMPT_MS > 0);
+});
+
+test("the Groq model is not the one Groq retired", () => {
+  // llama-3.3-70b-versatile was retired for free/developer tiers on
+  // 2026-06-17, and production answered 404. A dead model, not a bad key.
+  assert.notEqual(__testing__.MODEL, "llama-3.3-70b-versatile");
+  assert.ok(typeof __testing__.MODEL === "string" && __testing__.MODEL.length > 0);
+});
+
+test("a provider with too little budget left is skipped, not started", async () => {
+  // Simulated elapsed time, not real waiting: the clock jumps past the whole
+  // chain budget after the request starts, so every provider must be skipped
+  // rather than started on time it does not have. An attempt that cannot
+  // finish is worse than none — it spends the budget of the one that could.
+  const realFetch = globalThis.fetch;
+  const realNow = Date.now;
+  const realLog = console.log;
+  const lines = [];
+  let providerCalls = 0;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    return new Response("nope", { status: 500 });
+  };
+  console.log = (l) => lines.push(String(l));
+  // A clock that advances 30s on every read: whatever call captures
+  // startedAt, the next comparison is already past the whole budget.
+  let clock = 1_000_000;
+  Date.now = () => {
+    clock += 30_000;
+    return clock;
+  };
+  try {
+    const res = await worker.fetch(
+      new Request("https://worker.example/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CF-Connecting-IP": "203.0.113.95",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "zzz how far is Mina zzz" }],
+          language: "en",
+        }),
+      }),
+      { ENVIRONMENT: "development", GROQ_API_KEY: "x", GEMINI_API_KEY: "y" },
+    );
+    assert.equal(res.status, 502);
+    assert.equal(providerCalls, 0, "a provider was started with no time left");
+    const entry = lines
+      .map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      })
+      .find((o) => o && o.status === "failed");
+    assert.ok(entry, "no failure line");
+    assert.match(entry.why, /skipped_no_time/);
+  } finally {
+    globalThis.fetch = realFetch;
+    Date.now = realNow;
+    console.log = realLog;
+  }
+});
+
+test("Workers AI is read from any of the shapes its models actually use",
+  async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response("nope", { status: 500 });
+    const answer = JSON.stringify({
+      answer: "Mina is about 8 km away.",
+      grounded: false,
+      citations: [],
+    });
+    const shapes = [
+      answer,
+      { response: answer },
+      { result: { response: answer } },
+      { output_text: answer },
+      { choices: [{ message: { content: answer } }] },
+    ];
+    try {
+      for (const [i, shape] of shapes.entries()) {
+        const res = await worker.fetch(
+          new Request("https://worker.example/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "CF-Connecting-IP": `198.51.100.${10 + i}`,
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: "zzz how far is Mina zzz" }],
+              language: "en",
+            }),
+          }),
+          {
+            ENVIRONMENT: "development",
+            GROQ_API_KEY: "x",
+            AI: { run: async () => shape },
+          },
+        );
+        const body = await res.json();
+        assert.match(body.answer, /8 km/, `shape ${i} was not read`);
+      }
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+test("an unreadable Workers AI reply reports its field names, never its values",
+  () => {
+    const label = __testing__.classifyProviderFailure(
+      new Error("Workers AI returned no content (shape: usage,tool_calls)"),
+    );
+    assert.equal(label, "empty_response_usage,tool_calls");
+    // A value smuggled into the hint is rejected rather than echoed.
+    const sneaky = __testing__.classifyProviderFailure(
+      new Error("Workers AI returned no content (shape: key=sk-live-SECRET)"),
+    );
+    assert.equal(sneaky, "empty_response");
+  });
