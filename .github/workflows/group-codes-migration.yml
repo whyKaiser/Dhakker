@@ -1,0 +1,271 @@
+# group_codes migration — by hand only, dry run by default.
+#
+# What it does: creates the `group_codes/{code}` pointer document for every
+# pre-existing group that lacks one. Nothing else. It never writes to
+# `groups`, never to `members` (which hold live GPS coordinates of pilgrims),
+# never to `supplications` or the archive, and never contacts Cloud Storage.
+#
+# ── Why it exists ───────────────────────────────────────────────────────
+#
+# The rules merged in #33 deny `list` on `groups` and resolve a join code
+# through a pointer instead. Groups created BEFORE that change have no
+# pointer, so once the rules are deployed nobody can join them by code until
+# one exists. Migrate first, deploy second.
+#
+# ── Run the inspection first ────────────────────────────────────────────
+#
+# "Groups inspection (read-only, manual)" answers whether this is needed at
+# all. If it reports GROUPS_EMPTY, do not run this workflow: there is nothing
+# to migrate, and dispatching a write-capable job for nothing is how a
+# mistake gets made.
+#
+# ── Where the safety actually comes from ────────────────────────────────
+#
+# NOT from this file. A workflow is text; text can be edited. The layers are:
+#
+#   1. IAM — the service account this job impersonates must be able to write
+#      ONLY `group_codes`. It is a separate principal from the read-only
+#      reconciler and from the staging account, and this file refuses to run
+#      if it is either of them.
+#   2. Firestore rules — `group_codes` update and delete are denied to
+#      everyone, so even this credential cannot repoint a claimed code.
+#   3. The tool — creation is `POST ?documentId=`, which 409s on an existing
+#      document. It is idempotent and cannot overwrite.
+#   4. This file, whose properties group_codes_migration_workflow.test.mjs
+#      asserts statically.
+#
+# ── Two runs, always ────────────────────────────────────────────────────
+#
+# Dry run first, with `execute: false`. Read its output. Only then dispatch
+# again with `execute: true`. The tool writes nothing without it.
+
+name: group_codes migration (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_project:
+        description: "Type the project id exactly: dhakker-160d0"
+        required: true
+        type: string
+      confirm_database:
+        description: "Type the database exactly: (default)"
+        required: true
+        type: string
+      confirm_collection:
+        description: "Type the collection to WRITE exactly: group_codes"
+        required: true
+        type: string
+      confirm_mode:
+        description: "Type exactly: MIGRATE_GROUP_CODES"
+        required: true
+        type: string
+      execute:
+        description: "Leave false for a dry run. true actually creates pointers."
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: group-codes-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Create group_codes pointers for pre-existing groups
+    runs-on: ubuntu-latest
+
+    # A protected environment of its own, with its own required reviewers.
+    # Approval to READ production is not approval to write to it, so this
+    # must not borrow firebase-production-readonly.
+    environment: firebase-group-codes-migration
+
+    steps:
+      - name: Refuse to run from any ref except main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::This workflow may only be dispatched from refs/heads/main (got: $REF)."
+            exit 1
+          fi
+          echo "Ref check passed: refs/heads/main."
+
+      # Checked before checkout and before any credential exists. A mistyped
+      # run ends while it still holds nothing.
+      - name: Verify manual confirmations
+        env:
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+          CONFIRM_COLLECTION: ${{ inputs.confirm_collection }}
+          CONFIRM_MODE: ${{ inputs.confirm_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PROJECT" != "dhakker-160d0" ]; then
+            echo "::error::confirm_project must be exactly 'dhakker-160d0'."
+            exit 1
+          fi
+          if [ "$CONFIRM_DATABASE" != "(default)" ]; then
+            echo "::error::confirm_database must be exactly '(default)'."
+            exit 1
+          fi
+          if [ "$CONFIRM_COLLECTION" != "group_codes" ]; then
+            echo "::error::confirm_collection must be exactly 'group_codes'."
+            exit 1
+          fi
+          if [ "$CONFIRM_MODE" != "MIGRATE_GROUP_CODES" ]; then
+            echo "::error::confirm_mode must be exactly 'MIGRATE_GROUP_CODES'."
+            exit 1
+          fi
+          echo "All four confirmations match."
+
+      - name: Verify environment configuration
+        env:
+          PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          MIGRATION_SERVICE_ACCOUNT: ${{ vars.FIREBASE_GROUP_CODES_SERVICE_ACCOUNT }}
+          READER_SERVICE_ACCOUNT: ${{ vars.FIREBASE_PRODUCTION_READER_SERVICE_ACCOUNT }}
+          STAGING_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          CONFIRM_PROJECT: ${{ inputs.confirm_project }}
+          CONFIRM_DATABASE: ${{ inputs.confirm_database }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in PROJECT_ID DATABASE_ID WIF_PROVIDER MIGRATION_SERVICE_ACCOUNT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured. See docs/GROUP_PRIVACY_MIGRATION.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = "0" ] || exit 1
+
+          if [ "$PROJECT_ID" != "$CONFIRM_PROJECT" ]; then
+            echo "::error::FIREBASE_PROJECT_ID ($PROJECT_ID) does not match confirm_project."
+            exit 1
+          fi
+          if [ "$DATABASE_ID" != "$CONFIRM_DATABASE" ]; then
+            echo "::error::FIREBASE_DATABASE_ID ($DATABASE_ID) does not match confirm_database."
+            exit 1
+          fi
+
+          # The staging account holds roles/datastore.user — read AND write,
+          # project-wide. Using it here would grant far more than this job
+          # needs. The read-only account cannot write at all, so using it
+          # would fail confusingly halfway through. Neither is this identity.
+          if [ "$MIGRATION_SERVICE_ACCOUNT" = "$STAGING_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_GROUP_CODES_SERVICE_ACCOUNT must not be the staging account: that one can write project-wide."
+            exit 1
+          fi
+          if [ "$MIGRATION_SERVICE_ACCOUNT" = "$READER_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_GROUP_CODES_SERVICE_ACCOUNT must not be the read-only reconcile account."
+            exit 1
+          fi
+          echo "Configuration matches, and the migration account is distinct."
+
+      # actions/checkout v7.0.1
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "20"
+
+      # The guard tests run against the very commit that is about to write to
+      # production. A tool whose safety tests do not pass does not run.
+      - name: Run the migration tool's own guard tests
+        run: node --test scripts/migrate_group_codes.test.mjs
+
+      # 300s: long enough for two listings and a handful of creates, far too
+      # short to be useful if it ever leaked. No key file, no ambient export.
+      # google-github-actions/auth v3.0.0
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_GROUP_CODES_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Migrate (dry run unless execute is true)
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_DATABASE_ID: ${{ vars.FIREBASE_DATABASE_ID }}
+          FIREBASE_ADMIN_TOKEN: ${{ steps.auth.outputs.access_token }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          if [ "$EXECUTE" = "true" ]; then
+            node scripts/migrate_group_codes.mjs \
+              --database="$FIREBASE_DATABASE_ID" --execute | tee migrate.log
+            grep -q "No group, member or supplication document was modified." migrate.log
+          else
+            node scripts/migrate_group_codes.mjs \
+              --database="$FIREBASE_DATABASE_ID" | tee migrate.log
+            grep -q "DRY RUN, nothing is written" migrate.log
+            if grep -qE '^  created pointer' migrate.log; then
+              echo "::error::a dry run reported a creation."
+              exit 1
+            fi
+          fi
+
+          grep -q "Storage:   NOT CONTACTED" migrate.log
+
+          # A join code must never reach the log. The summary below is read by
+          # more people than the database is.
+          if grep -qE 'HAJJ-[0-9]+' migrate.log; then
+            echo "::error::a join code appeared in the report."
+            exit 1
+          fi
+
+      - name: Report
+        if: always()
+        env:
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## group_codes migration"
+            echo
+            if [ "$EXECUTE" = "true" ]; then
+              echo "Mode: **EXECUTE** · Project: dhakker-160d0"
+            else
+              echo "Mode: **dry run** · Project: dhakker-160d0"
+            fi
+            echo
+            if [ -f migrate.log ]; then
+              echo '```'
+              # Counts, ids and outcomes only — never a join code.
+              grep -E '^(groups:|already |to create|skipped|  |[0-9]+ pointer)' migrate.log || true
+              echo '```'
+              echo
+              if [ "$EXECUTE" = "true" ]; then
+                echo "Pointers now exist for every group that had a usable code."
+                echo "Deploying the new rules will not break joining for them."
+                echo
+                echo "Any group listed as SKIPPED has no usable code and cannot"
+                echo "be joined by code before or after the rules change. Those"
+                echo "need a human decision, not a migration."
+              else
+                echo "Nothing was written. Re-dispatch with \`execute: true\`"
+                echo "once the plan above looks right."
+              fi
+            else
+              echo "The migration did not produce a report."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "No group, member, supplication or Storage object was touched."
