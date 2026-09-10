@@ -1,9 +1,14 @@
 # Admin custom claim — manual setup
 
-Granting this claim is a **manual step that has not been performed**, and
-it BLOCKS content approval: `firestore.rules` refuses a `verified` write from
-an account without it, so it comes before reviewing the source pack, not
-after. Nothing
+Granting this claim is a **manual step that has not been performed**. It
+gates **audio upload only** — not content approval. `firestore.rules` decides
+admin by `users/{uid}.role == 'admin'`, so verifying records works without
+it, and the section below on what this does not do says so explicitly.
+
+> An earlier edit of this paragraph claimed the opposite — that the claim
+> blocks approval. It was wrong, and it sent someone to install the gcloud
+> CLI for a step that was not blocking anything. Corrected here and in
+> `docs/LAUNCH_RUNBOOK.md`. Nothing
 in this repository grants it, and nothing should: it is the single control
 that decides who may replace the audio a pilgrim hears.
 
