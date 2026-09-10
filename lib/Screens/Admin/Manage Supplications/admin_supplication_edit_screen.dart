@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // التحكم بالاهتزاز الحسّي
 import '../../../generated/l10n.dart';
 import '../../../theme/dhakker_theme.dart';
+import '../../../shared/audio/audio_staleness.dart';
 
 class AdminSupplicationEditScreen extends StatefulWidget {
   final String supplicationId;
@@ -72,11 +70,16 @@ class _AdminSupplicationEditScreenState
   }
 
   /// Stable hash of the reviewed text, so a later edit to the content of a
-  /// verified record is detectable (the stored hash stops matching). Uses
-  /// sha256 over the ar+en bodies.
-  String _contentHash(String ar, String en) {
-    return sha256.convert(utf8.encode('$ar\u0000$en')).toString();
-  }
+  /// verified record is detectable (the stored hash stops matching).
+  ///
+  /// Delegates to the shared formula in `audio_staleness.dart` — the same
+  /// one the review ledger records and the importer computes — so the
+  /// places that must agree on "the same text" cannot drift apart.
+  String _contentHash(String ar, String en) => supplicationContentHash(ar, en);
+
+  /// Hash of the text as it was READ from Firestore, so a save can notice
+  /// that it changes it. Null when the record carried no text to read.
+  String? _loadedTextHash;
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _zoneDocs = [];
 
@@ -154,6 +157,15 @@ class _AdminSupplicationEditScreenState
       _titleEnController.text = (titleMap['en'] ?? '').toString();
       _textArController.text = (textMap['ar'] ?? '').toString();
       _textEnController.text = (textMap['en'] ?? '').toString();
+      // Remembered so the save can tell whether THIS edit changed the text.
+      // Taken from the loaded text rather than from the stored `contentHash`:
+      // that field is written only alongside a verification, so an unverified
+      // record has none, and comparing against it would read every such save
+      // as a change.
+      _loadedTextHash = _contentHash(
+        _textArController.text,
+        _textEnController.text,
+      );
 
       final tagsAr = data['tagsAr'];
       final tagsEn = data['tagsEn'];
@@ -252,6 +264,26 @@ class _AdminSupplicationEditScreenState
       return;
     }
 
+    // A stored recitation belongs to one exact text. If this save changes the
+    // text and does not bring a new recording, the old file no longer recites
+    // what the record holds — so it is dropped and playback falls back to TTS,
+    // which always reads the CURRENT text. See `audio_staleness.dart`.
+    final savedTextHash = _contentHash(
+      _textArController.text.trim(),
+      _textEnController.text.trim(),
+    );
+    final droppingStaleAudio = storedAudioIsStale(
+      loadedTextHash: _loadedTextHash,
+      currentTextHash: savedTextHash,
+      audioMode: _audioMode,
+      audioUrl: _existingAudioUrl,
+      replacingAudio: _newAudioBytes != null,
+    );
+    if (droppingStaleAudio) {
+      _audioMode = 'tts';
+      _existingAudioUrl = null;
+    }
+
     setState(() {
       _isSaving = true;
     });
@@ -320,8 +352,20 @@ class _AdminSupplicationEditScreenState
           .doc(widget.supplicationId)
           .update(data);
 
+      // The saved text is the new baseline: without this a second save of the
+      // same screen would read the first edit as a fresh change.
+      _loadedTextHash = savedTextHash;
+
       if (!mounted) return;
-      _showSnack(s.adminSupplicationEditSuccess);
+      // Said plainly rather than buried: the admin needs to know the record
+      // has no recitation now, so a new one can be made for the new text.
+      var message = s.adminSupplicationEditSuccess;
+      if (droppingStaleAudio) {
+        message = 'تم الحفظ. تغيّر النص، فحُذف التسجيل الصوتي القديم لأنه '
+            'يقرأ نصًّا لم يعد مخزَّنًا. التشغيل الآن بالقراءة الآلية حتى '
+            'يُرفع تسجيل جديد.';
+      }
+      _showSnack(message);
       Navigator.pop(context, true);
     } catch (_) {
       if (!mounted) return;
@@ -397,12 +441,11 @@ class _AdminSupplicationEditScreenState
               controller: _titleEnController,
               label: s.adminSupplicationTitleEn,
               hint: s.adminSupplicationTitleEnHint,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return s.adminSupplicationTitleEnRequired;
-                }
-                return null;
-              },
+              // English is OPTIONAL. The ministry source is Arabic, and not one
+              // of the 85 records in the pack carries a `text.en`; requiring a
+              // translation here would either block every real record or invite
+              // one to be invented at the keyboard. An empty string is stored,
+              // and the app already renders Arabic alone.
             ),
           ],
         ),
@@ -431,12 +474,11 @@ class _AdminSupplicationEditScreenState
               label: s.adminSupplicationTextEn,
               hint: s.adminSupplicationTextEnHint,
               maxLines: 5,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return s.adminSupplicationTextEnRequired;
-                }
-                return null;
-              },
+              // English is OPTIONAL. The ministry source is Arabic, and not one
+              // of the 85 records in the pack carries a `text.en`; requiring a
+              // translation here would either block every real record or invite
+              // one to be invented at the keyboard. An empty string is stored,
+              // and the app already renders Arabic alone.
             ),
           ],
         ),
