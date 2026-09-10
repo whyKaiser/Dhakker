@@ -26,6 +26,7 @@ const _addScreen =
 const _editScreen =
     'lib/Screens/Admin/Manage Supplications/admin_supplication_edit_screen.dart';
 const _importer = 'scripts/import_source_pack.mjs';
+const _audioGenerator = 'scripts/generate_dua_audio.mjs';
 const _service = 'lib/Screens/Piligram/Home/services/supplication_service.dart';
 
 void main() {
@@ -45,8 +46,16 @@ void main() {
           if (entity.path.endsWith('.test.mjs')) continue;
           final src = entity.readAsStringSync();
 
-          if (src.contains('PRODUCTION_COLLECTION') &&
-              src.contains('method: "PATCH"')) {
+          // A Node script writes by PATCHing a Firestore document URL. The
+          // earlier form of this check looked for `PRODUCTION_COLLECTION`,
+          // a token only the importer happens to define — so
+          // scripts/generate_dua_audio.mjs, which PATCHes the same
+          // collection, passed the inventory unseen. The test's premise was
+          // false and nothing said so. Match the mechanism instead: the
+          // Firestore host, a PATCH, and the collection by name.
+          if (src.contains('firestore.googleapis.com') &&
+              src.contains('method: "PATCH"') &&
+              src.contains('supplications')) {
             writers.add(entity.path);
             continue;
           }
@@ -86,13 +95,18 @@ void main() {
       }
       writers.sort();
 
-      expect(writers, containsAll([_addScreen, _editScreen, _importer]),
+      expect(
+          writers,
+          containsAll([_addScreen, _editScreen, _importer, _audioGenerator]),
           reason: 'the known writers must still be detected');
 
       const allowed = {
         _addScreen,
         _editScreen,
         _importer,
+        // Refuses any record whose revokedAt is set — a withdrawn text is
+        // never given a voice. It creates nothing, so no backfill concern.
+        _audioGenerator,
         // usage_count only — these create nothing, so no revokedAt concern.
         'lib/Screens/Piligram/Home/controllers/home_dua_controller.dart',
         'lib/Screens/Piligram/Duas/duas_screen.dart',
