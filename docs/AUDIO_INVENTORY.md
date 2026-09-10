@@ -88,6 +88,23 @@ Naming files by that hash makes the shared pair collapse to one file
 automatically, and makes a changed text produce a changed filename — so a
 corrected transcription can never keep playing the old recitation.
 
+> **What was actually built, and why it differs.** Both the admin console and
+> `scripts/generate_dua_audio.mjs` name the object
+> `audio/duas/<duaId>.mp3`, not by hash. The path is derived from the document
+> id in `admin_supplication_edit_screen.dart`, and the client plays whatever
+> `audioUrl` holds, so a hash-named scheme would have to change all three at
+> once.
+>
+> The property this section wanted from hash naming — *a corrected
+> transcription can never keep playing the old recitation* — is enforced
+> instead at the moment of correction: saving a text change on a record that
+> carries a stored file **drops the file** and returns the record to TTS
+> (`lib/shared/audio/audio_staleness.dart`). The other property, the shared
+> pair collapsing to one object, is **not** enforced: البقرة 201 will occupy
+> two identical objects, one per record. That is bytes wasted, not a text
+> misread, and it is the reason this note explains a difference rather than
+> claiming the two schemes are equivalent.
+
 ## Rules
 
 - Guidance and evidence get **no** audio file, ever. A file existing for them
