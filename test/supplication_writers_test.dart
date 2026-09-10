@@ -95,8 +95,7 @@ void main() {
       }
       writers.sort();
 
-      expect(
-          writers,
+      expect(writers,
           containsAll([_addScreen, _editScreen, _importer, _audioGenerator]),
           reason: 'the known writers must still be detected');
 
