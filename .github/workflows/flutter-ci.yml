@@ -159,6 +159,14 @@ jobs:
       - name: Run dua audio generator guard tests
         run: node --test scripts/generate_dua_audio.test.mjs
 
+      # Bulk approval is forbidden by docs/CONTENT_APPROVAL.md. This tool is
+      # the one narrow exception: it applies a review already recorded in the
+      # ledger, and ONLY to a record whose live text still hashes to the
+      # value the reviewer wrote down. These tests exist to keep that hash
+      # comparison load-bearing — most of them try to get around it.
+      - name: Run bulk approval guard tests
+        run: node --test scripts/approve_supplications.test.mjs
+
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
