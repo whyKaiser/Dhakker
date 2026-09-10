@@ -329,12 +329,11 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
               controller: _titleEnController,
               label: s.adminSupplicationTitleEn,
               hint: s.adminSupplicationTitleEnHint,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return s.adminSupplicationTitleEnRequired;
-                }
-                return null;
-              },
+              // English is OPTIONAL. The ministry source is Arabic, and not one
+              // of the 85 records in the pack carries a `text.en`; requiring a
+              // translation here would either block every real record or invite
+              // one to be invented at the keyboard. An empty string is stored,
+              // and the app already renders Arabic alone.
             ),
           ],
         ),
@@ -363,12 +362,11 @@ class _AdminSupplicationAddScreenState extends State<AdminSupplicationAddScreen>
               label: s.adminSupplicationTextEn,
               hint: s.adminSupplicationTextEnHint,
               maxLines: 5,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return s.adminSupplicationTextEnRequired;
-                }
-                return null;
-              },
+              // English is OPTIONAL. The ministry source is Arabic, and not one
+              // of the 85 records in the pack carries a `text.en`; requiring a
+              // translation here would either block every real record or invite
+              // one to be invented at the keyboard. An empty string is stored,
+              // and the app already renders Arabic alone.
             ),
           ],
         ),
