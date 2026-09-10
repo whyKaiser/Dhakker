@@ -27,6 +27,7 @@ const _editScreen =
     'lib/Screens/Admin/Manage Supplications/admin_supplication_edit_screen.dart';
 const _importer = 'scripts/import_source_pack.mjs';
 const _audioGenerator = 'scripts/generate_dua_audio.mjs';
+const _approver = 'scripts/approve_supplications.mjs';
 const _service = 'lib/Screens/Piligram/Home/services/supplication_service.dart';
 
 void main() {
@@ -95,8 +96,10 @@ void main() {
       }
       writers.sort();
 
-      expect(writers,
-          containsAll([_addScreen, _editScreen, _importer, _audioGenerator]),
+      expect(
+          writers,
+          containsAll(
+              [_addScreen, _editScreen, _importer, _audioGenerator, _approver]),
           reason: 'the known writers must still be detected');
 
       const allowed = {
@@ -106,6 +109,10 @@ void main() {
         // Refuses any record whose revokedAt is set — a withdrawn text is
         // never given a voice. It creates nothing, so no backfill concern.
         _audioGenerator,
+        // Refuses any record whose revokedAt is set — a withdrawal is not
+        // undone in bulk. It creates nothing, so no backfill concern, and it
+        // only ever stamps a review the ledger already records.
+        _approver,
         // usage_count only — these create nothing, so no revokedAt concern.
         'lib/Screens/Piligram/Home/controllers/home_dua_controller.dart',
         'lib/Screens/Piligram/Duas/duas_screen.dart',
