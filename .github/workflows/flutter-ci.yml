@@ -151,6 +151,14 @@ jobs:
       - name: Run admin claim guard tests
         run: node --test scripts/grant_admin_claim.test.mjs
 
+      # The audio generator puts a voice on a religious text. These assert
+      # that an unapproved or non-recitable record is never synthesised, that
+      # an existing recording is never overwritten, that the write touches
+      # exactly the three audio fields, and that neither an access token nor
+      # a Storage download token can reach a log.
+      - name: Run dua audio generator guard tests
+        run: node --test scripts/generate_dua_audio.test.mjs
+
   firestore-rules-tests:
     name: Firestore and Storage security rules tests (emulator)
     runs-on: ubuntu-latest
