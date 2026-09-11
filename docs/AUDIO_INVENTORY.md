@@ -2,16 +2,20 @@
 
 ## Current state, stated precisely
 
-There are **zero audio files in this repository**. Every record has an empty
-`audioUrl` and an unset `audioMode`, so every playback today goes through
-device TTS.
+**Audio is live.** All 53 approved records carry an `audioUrl` and play a
+stored recording; device TTS is now only the fallback for a record that has
+none. The files were generated with the Google Cloud Text-to-Speech voice
+`ar-XA-Chirp3-HD-Algieba` and published by
+`review/publish-algieba-audio.mjs`.
 
-That is **not** a claim that no audio exists. The project owner has existing
-AI-generated audio files **outside the repository**. They cannot be matched
-to records yet: matching needs either the filenames, the files themselves, or
-a hash of each file's source text. Until one of those is supplied, no
-statement can be made about how many of the 58 needed recitations are already
-covered.
+Still true, and worth keeping straight: there are **zero audio files in this
+repository**. They live in Cloud Storage under `audio/duas/`, and the repo
+holds only the tools that put them there.
+
+The bucket also contains older objects from before this run — hand-uploaded
+recordings named by document id, and four seed files (`D_TAWAF_01.mp3` and
+friends). They are unreferenced by any current record. Harmless, and not yet
+cleaned up.
 
 ## How many files are needed
 
@@ -88,22 +92,28 @@ Naming files by that hash makes the shared pair collapse to one file
 automatically, and makes a changed text produce a changed filename — so a
 corrected transcription can never keep playing the old recitation.
 
-> **What was actually built, and why it differs.** Both the admin console and
-> `scripts/generate_dua_audio.mjs` name the object
-> `audio/duas/<duaId>.mp3`, not by hash. The path is derived from the document
-> id in `admin_supplication_edit_screen.dart`, and the client plays whatever
-> `audioUrl` holds, so a hash-named scheme would have to change all three at
-> once.
+> **What was actually built.** Production uses
+> `audio/duas/<voice>-<sha256 of the audio bytes>.mp3` — written first by
+> `review/publish-algieba-audio.mjs`, and now by
+> `scripts/generate_dua_audio.mjs`, which was realigned to match rather than
+> leave two naming schemes in one folder. The 53 approved records occupy 52
+> objects: البقرة 201 is printed twice in the pack under two
+> classifications, and hashing the bytes collapses the pair into one file
+> exactly as this section intended.
 >
-> The property this section wanted from hash naming — *a corrected
-> transcription can never keep playing the old recitation* — is enforced
-> instead at the moment of correction: saving a text change on a record that
-> carries a stored file **drops the file** and returns the record to TTS
-> (`lib/shared/audio/audio_staleness.dart`). The other property, the shared
-> pair collapsing to one object, is **not** enforced: البقرة 201 will occupy
-> two identical objects, one per record. That is bytes wasted, not a text
-> misread, and it is the reason this note explains a difference rather than
-> claiming the two schemes are equivalent.
+> One correction to what this section claims. Hashing does **not**, on its
+> own, stop a corrected transcription from playing its old recitation: a new
+> name for the new audio does not change the `audioUrl` a record already
+> holds. That protection is separate and explicit —
+> `lib/shared/audio/audio_staleness.dart` drops the stored file when the text
+> it recites is edited. The hash earns its place for deduplication and for
+> never overwriting a recording in place; the staleness guard is what keeps a
+> pilgrim from hearing words the record no longer contains.
+>
+> The admin console still uploads hand-made audio to
+> `audio/duas/<duaId>.mp3`. That is deliberate: a person choosing a file has
+> no audio bytes to hash until after the upload, and their recording is
+> theirs to name.
 
 ## Rules
 

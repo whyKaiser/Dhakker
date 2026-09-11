@@ -55,7 +55,7 @@
  * `--limit` is accepted only against staging, exactly as in the importer.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   RECITABLE_CONTENT_KINDS,
@@ -281,8 +281,43 @@ export function pickVoice(voices) {
   return arabic.map((v) => v.name).sort()[0];
 }
 
-export function storagePath(duaId) {
-  return `audio/duas/${duaId}.mp3`;
+/**
+ * The voice's short name, lowercased, for use in an object name.
+ *
+ * `ar-XA-Chirp3-HD-Algieba` becomes `algieba`. Keeping it in the filename
+ * means the voice a file was made with is visible without opening it, which
+ * matters once a second voice ever exists in the same bucket.
+ */
+export function voiceSlug(voiceName) {
+  const last = String(voiceName ?? "").split("-").pop() ?? "";
+  const slug = last.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // An unnameable voice must not silently produce `-<hash>.mp3`, which would
+  // read as "no voice" rather than "unknown voice".
+  return slug || "voice";
+}
+
+/**
+ * Where one recording lives.
+ *
+ * Named for the voice and the sha256 of the AUDIO BYTES — the scheme already
+ * in the bucket, written by `review/publish-algieba-audio.mjs`. Two things
+ * follow from hashing the bytes rather than the id:
+ *
+ *   Identical audio is one object. The pack prints البقرة 201 twice, under
+ *   two classifications, so two records legitimately carry the same text;
+ *   they now share a single file instead of two identical uploads.
+ *
+ *   A re-generation after a text correction lands at a NEW name rather than
+ *   overwriting the old recording in place.
+ *
+ * What this does NOT do, and must not be relied on for: it does not stop a
+ * record from pointing at a stale file. The object name changing does not
+ * change `audioUrl`; that protection is `lib/shared/audio/audio_staleness.dart`,
+ * which drops the recording when the text it recites is edited.
+ */
+export function storagePath(voiceName, bytes) {
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  return `audio/duas/${voiceSlug(voiceName)}-${digest}.mp3`;
 }
 
 /**
@@ -297,6 +332,52 @@ export function downloadUrl(bucket, path, token) {
     `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/` +
     `${encodeURIComponent(path)}?alt=media&token=${token}`
   );
+}
+
+/**
+ * What a Google API error actually says, in one line an operator can act on.
+ *
+ * A bare `HTTP 403` is three different problems with three different fixes,
+ * and the operator is left guessing which. Google names it in `error.status`
+ * and `error.message`; swallowing that is the same failure the Worker had
+ * before its diagnostics, and the same one `grant_admin_claim.mjs` was fixed
+ * for — a lesson this file did not learn until a 403 arrived here too.
+ *
+ * The message is redacted and truncated before it is shown: Google does not
+ * echo the Authorization header today, but "does not" is a property of
+ * today's API, and a credential in a terminal scrollback is not recoverable.
+ */
+export function describeApiError(httpStatus, body) {
+  const err = (body && typeof body === "object" && body.error) || {};
+  const code =
+    typeof err.status === "string" && err.status ? err.status : `HTTP_${httpStatus}`;
+  let message = typeof err.message === "string" ? err.message : "";
+  message = message.replace(/[A-Za-z0-9._-]{40,}/g, "[redacted]").slice(0, 200);
+  return message ? `${code}: ${message}` : code;
+}
+
+/** What a 403 usually means here, and the command that fixes each. */
+export const HELP_403 = [
+  "",
+  "If that was a 403, it is almost always one of:",
+  "  1. The Text-to-Speech API is not enabled on the project:",
+  "       gcloud services enable texttospeech.googleapis.com \\",
+  "         --project=dhakker-160d0",
+  "  2. The project has no billing account. The free tier still requires",
+  "     one; nothing is charged within it.",
+  "  3. The signed-in account cannot use the API, or cannot write to the",
+  "     bucket:",
+  "       gcloud auth list          # who am I",
+  "",
+].join("\n");
+
+/** Reads a response body as JSON, or null. Never throws. */
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 /** Synthesises one text. Returns the raw MP3 bytes. */
@@ -317,7 +398,11 @@ export async function synthesise(text, voiceName, plan, deps = {}) {
       audioConfig: { audioEncoding: AUDIO_ENCODING },
     }),
   });
-  if (!res.ok) throw new Error(`synthesis failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `synthesis failed — ${describeApiError(res.status, await safeJson(res))}`,
+    );
+  }
   const body = await res.json();
   const b64 = body?.audioContent;
   if (typeof b64 !== "string" || b64 === "") {
@@ -335,9 +420,9 @@ export async function synthesise(text, voiceName, plan, deps = {}) {
  * The token is minted here rather than reused, so re-uploading a file rotates
  * the URL instead of leaving an old one valid.
  */
-export async function uploadAudio(duaId, bytes, plan, deps = {}) {
+export async function uploadAudio(duaId, bytes, voiceName, plan, deps = {}) {
   const doFetch = deps.fetch ?? globalThis.fetch;
-  const path = storagePath(duaId);
+  const path = storagePath(voiceName, bytes);
   const encoded = encodeURIComponent(path);
   const token = deps.uuid ? deps.uuid() : randomUUID();
 
@@ -353,7 +438,11 @@ export async function uploadAudio(duaId, bytes, plan, deps = {}) {
       body: bytes,
     },
   );
-  if (!up.ok) throw new Error(`upload of ${duaId} failed: HTTP ${up.status}`);
+  if (!up.ok) {
+    throw new Error(
+      `upload of ${duaId} failed — ${describeApiError(up.status, await safeJson(up))}`,
+    );
+  }
 
   const meta = await doFetch(
     `https://storage.googleapis.com/storage/v1/b/${plan.bucket}/o/${encoded}`,
@@ -370,7 +459,9 @@ export async function uploadAudio(duaId, bytes, plan, deps = {}) {
     },
   );
   if (!meta.ok) {
-    throw new Error(`metadata for ${duaId} failed: HTTP ${meta.status}`);
+    throw new Error(
+      `metadata for ${duaId} failed — ${describeApiError(meta.status, await safeJson(meta))}`,
+    );
   }
   return downloadUrl(plan.bucket, path, token);
 }
@@ -502,7 +593,7 @@ export async function run(plan, deps = {}, log = console.log) {
   let generated = 0;
   for (const row of eligible) {
     const bytes = await synthesise(row.text, voiceName, plan, deps);
-    const url = await uploadAudio(row.documentId, bytes, plan, deps);
+    const url = await uploadAudio(row.documentId, bytes, voiceName, plan, deps);
     await attachAudio(row.documentId, url, plan, deps);
     await verifyAttached(row.documentId, plan, deps);
     generated += 1;
@@ -521,7 +612,11 @@ export async function listVoices(plan, deps = {}) {
     `${VOICES_ENDPOINT}?languageCode=${TTS_LANGUAGE_CODE}`,
     { headers: { Authorization: `Bearer ${plan.token}` } },
   );
-  if (!res.ok) throw new Error(`voice list failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `voice list failed — ${describeApiError(res.status, await safeJson(res))}`,
+    );
+  }
   const body = await res.json();
   return body?.voices ?? [];
 }
@@ -550,6 +645,9 @@ const isDirectRun =
 if (isDirectRun) {
   main().catch((err) => {
     console.error(`\n${err.message}`);
+    if (/\b403\b|PERMISSION_DENIED/.test(err.message)) {
+      console.error(HELP_403);
+    }
     // exitCode, not exit(): process.exit() while stdio is still flushing
     // trips a libuv assertion on Windows.
     process.exitCode = 1;
