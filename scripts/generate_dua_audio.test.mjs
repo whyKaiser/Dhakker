@@ -7,6 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
@@ -29,6 +30,7 @@ import {
   selectRecords,
   listVoices,
   storagePath,
+  voiceSlug,
   synthesise,
   uploadAudio,
   verifyAttached,
@@ -353,15 +355,59 @@ test("a failed synthesis raises rather than returning silence", async () => {
 
 // ── Upload ────────────────────────────────────────────────────────────────
 
-test("the file lands at the path the app already reads", () => {
-  // admin_supplication_edit_screen.dart writes audio/duas/<id>.mp3. A
-  // generated file and a hand-uploaded one must be the same object.
-  assert.equal(storagePath("dua-1"), "audio/duas/dua-1.mp3");
+const VOICE = "ar-XA-Chirp3-HD-Algieba";
+const BYTES = Buffer.from("ID3fake-mp3-bytes");
+const BYTES_SHA = createHash("sha256").update(BYTES).digest("hex");
+
+test("the name matches the scheme already in the bucket", () => {
+  // review/publish-algieba-audio.mjs wrote every file in production as
+  // `audio/duas/algieba-<sha256 of the audio bytes>.mp3`. Two schemes in one
+  // folder is how a bucket becomes unreadable to whoever inherits it.
+  assert.equal(storagePath(VOICE, BYTES), `audio/duas/algieba-${BYTES_SHA}.mp3`);
+});
+
+test("identical audio is one object, not two", () => {
+  // The pack prints البقرة 201 twice under two classifications, so two
+  // records legitimately carry the same text. Hashing the bytes collapses
+  // them; hashing the document id would have uploaded the same audio twice.
+  assert.equal(storagePath(VOICE, BYTES), storagePath(VOICE, Buffer.from(BYTES)));
+});
+
+test("different audio never collides", () => {
+  assert.notEqual(storagePath(VOICE, BYTES), storagePath(VOICE, Buffer.from("other")));
+});
+
+test("the voice is part of the name", () => {
+  // So a second voice in the same bucket is visible without opening a file.
+  assert.notEqual(
+    storagePath(VOICE, BYTES),
+    storagePath("ar-XA-Chirp3-HD-Zephyr", BYTES),
+  );
+  assert.match(storagePath("ar-XA-Chirp3-HD-Zephyr", BYTES), /zephyr-/);
+});
+
+test("the voice slug is the short name, lowercased", () => {
+  assert.equal(voiceSlug(VOICE), "algieba");
+  assert.equal(voiceSlug("ar-XA-Wavenet-A"), "a");
+  assert.equal(voiceSlug("ar-XA-Standard-B"), "b");
+});
+
+test("an unnameable voice is labelled, never left blank", () => {
+  // A blank slug would produce `-<hash>.mp3`, which reads as "no voice"
+  // rather than "unknown voice".
+  for (const bad of [null, undefined, "", "   ", "---", "!!!"]) {
+    assert.match(storagePath(bad, BYTES), /audio\/duas\/voice-[0-9a-f]{64}\.mp3/);
+  }
+});
+
+test("the name is a plain, safe object path", () => {
+  const path = storagePath(VOICE, BYTES);
+  assert.match(path, /^audio\/duas\/[a-z0-9]+-[0-9a-f]{64}\.mp3$/);
 });
 
 test("the upload names the object and the metadata carries the token", async () => {
   const calls = [];
-  const url = await uploadAudio("dua-1", Buffer.from("mp3"), PLAN, {
+  const url = await uploadAudio("dua-1", BYTES, VOICE, PLAN, {
     uuid: () => "TOKEN-123",
     fetch: async (u, init) => {
       calls.push({ url: String(u), method: init.method, body: init.body });
@@ -370,19 +416,22 @@ test("the upload names the object and the metadata carries the token", async () 
   });
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /uploadType=media/);
-  assert.match(calls[0].url, /name=audio%2Fduas%2Fdua-1\.mp3/);
+  assert.match(calls[0].url, new RegExp(`name=audio%2Fduas%2Falgieba-${BYTES_SHA}`));
   assert.equal(calls[1].method, "PATCH");
   assert.deepEqual(JSON.parse(calls[1].body).metadata, {
     firebaseStorageDownloadTokens: "TOKEN-123",
   });
-  assert.equal(url, downloadUrl(PLAN.bucket, "audio/duas/dua-1.mp3", "TOKEN-123"));
+  assert.equal(
+    url,
+    downloadUrl(PLAN.bucket, storagePath(VOICE, BYTES), "TOKEN-123"),
+  );
 });
 
 test("a failed upload is not followed by a metadata call", async () => {
   const calls = [];
   await assert.rejects(
     () =>
-      uploadAudio("dua-1", Buffer.from("mp3"), PLAN, {
+      uploadAudio("dua-1", BYTES, VOICE, PLAN, {
         fetch: async (u) => {
           calls.push(String(u));
           return new Response("no", { status: 403 });
@@ -752,7 +801,7 @@ test("every failing call carries the reason through, not the bare status", async
   );
   await assert.rejects(
     () =>
-      uploadAudio("d", Buffer.from("x"), PLAN, {
+      uploadAudio("d", Buffer.from("x"), VOICE, PLAN, {
         fetch: async () => new Response(body, { status: 403 }),
       }),
     /PERMISSION_DENIED: API not enabled/,
