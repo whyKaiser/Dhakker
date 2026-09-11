@@ -299,6 +299,52 @@ export function downloadUrl(bucket, path, token) {
   );
 }
 
+/**
+ * What a Google API error actually says, in one line an operator can act on.
+ *
+ * A bare `HTTP 403` is three different problems with three different fixes,
+ * and the operator is left guessing which. Google names it in `error.status`
+ * and `error.message`; swallowing that is the same failure the Worker had
+ * before its diagnostics, and the same one `grant_admin_claim.mjs` was fixed
+ * for — a lesson this file did not learn until a 403 arrived here too.
+ *
+ * The message is redacted and truncated before it is shown: Google does not
+ * echo the Authorization header today, but "does not" is a property of
+ * today's API, and a credential in a terminal scrollback is not recoverable.
+ */
+export function describeApiError(httpStatus, body) {
+  const err = (body && typeof body === "object" && body.error) || {};
+  const code =
+    typeof err.status === "string" && err.status ? err.status : `HTTP_${httpStatus}`;
+  let message = typeof err.message === "string" ? err.message : "";
+  message = message.replace(/[A-Za-z0-9._-]{40,}/g, "[redacted]").slice(0, 200);
+  return message ? `${code}: ${message}` : code;
+}
+
+/** What a 403 usually means here, and the command that fixes each. */
+export const HELP_403 = [
+  "",
+  "If that was a 403, it is almost always one of:",
+  "  1. The Text-to-Speech API is not enabled on the project:",
+  "       gcloud services enable texttospeech.googleapis.com \\",
+  "         --project=dhakker-160d0",
+  "  2. The project has no billing account. The free tier still requires",
+  "     one; nothing is charged within it.",
+  "  3. The signed-in account cannot use the API, or cannot write to the",
+  "     bucket:",
+  "       gcloud auth list          # who am I",
+  "",
+].join("\n");
+
+/** Reads a response body as JSON, or null. Never throws. */
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 /** Synthesises one text. Returns the raw MP3 bytes. */
 export async function synthesise(text, voiceName, plan, deps = {}) {
   const doFetch = deps.fetch ?? globalThis.fetch;
@@ -317,7 +363,11 @@ export async function synthesise(text, voiceName, plan, deps = {}) {
       audioConfig: { audioEncoding: AUDIO_ENCODING },
     }),
   });
-  if (!res.ok) throw new Error(`synthesis failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `synthesis failed — ${describeApiError(res.status, await safeJson(res))}`,
+    );
+  }
   const body = await res.json();
   const b64 = body?.audioContent;
   if (typeof b64 !== "string" || b64 === "") {
@@ -353,7 +403,11 @@ export async function uploadAudio(duaId, bytes, plan, deps = {}) {
       body: bytes,
     },
   );
-  if (!up.ok) throw new Error(`upload of ${duaId} failed: HTTP ${up.status}`);
+  if (!up.ok) {
+    throw new Error(
+      `upload of ${duaId} failed — ${describeApiError(up.status, await safeJson(up))}`,
+    );
+  }
 
   const meta = await doFetch(
     `https://storage.googleapis.com/storage/v1/b/${plan.bucket}/o/${encoded}`,
@@ -370,7 +424,9 @@ export async function uploadAudio(duaId, bytes, plan, deps = {}) {
     },
   );
   if (!meta.ok) {
-    throw new Error(`metadata for ${duaId} failed: HTTP ${meta.status}`);
+    throw new Error(
+      `metadata for ${duaId} failed — ${describeApiError(meta.status, await safeJson(meta))}`,
+    );
   }
   return downloadUrl(plan.bucket, path, token);
 }
@@ -521,7 +577,11 @@ export async function listVoices(plan, deps = {}) {
     `${VOICES_ENDPOINT}?languageCode=${TTS_LANGUAGE_CODE}`,
     { headers: { Authorization: `Bearer ${plan.token}` } },
   );
-  if (!res.ok) throw new Error(`voice list failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      `voice list failed — ${describeApiError(res.status, await safeJson(res))}`,
+    );
+  }
   const body = await res.json();
   return body?.voices ?? [];
 }
@@ -550,6 +610,9 @@ const isDirectRun =
 if (isDirectRun) {
   main().catch((err) => {
     console.error(`\n${err.message}`);
+    if (/\b403\b|PERMISSION_DENIED/.test(err.message)) {
+      console.error(HELP_403);
+    }
     // exitCode, not exit(): process.exit() while stdio is still flushing
     // trips a libuv assertion on Windows.
     process.exitCode = 1;

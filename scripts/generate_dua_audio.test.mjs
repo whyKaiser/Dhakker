@@ -11,6 +11,8 @@ import { readFileSync } from "node:fs";
 
 import {
   AUDIO_WRITE_FIELDS,
+  HELP_403,
+  describeApiError,
   MAX_CHARACTERS_PER_RECORD,
   SYNTHESIS_ENDPOINT,
   TTS_LANGUAGE_CODE,
@@ -25,6 +27,7 @@ import {
   planLine,
   run,
   selectRecords,
+  listVoices,
   storagePath,
   synthesise,
   uploadAudio,
@@ -342,7 +345,9 @@ test("a failed synthesis raises rather than returning silence", async () => {
       synthesise("x", "v", PLAN, {
         fetch: async () => new Response("nope", { status: 429 }),
       }),
-    /HTTP 429/,
+    // The status still survives when the body carries no reason at all —
+    // a non-JSON 429 is a real case, and "quota" must not be guessed.
+    /synthesis failed — HTTP_429/,
   );
 });
 
@@ -672,6 +677,86 @@ test("the plan prints a length, never the text of a supplication", () => {
   assert.equal(line.includes("اللهم"), false);
   assert.match(line, /dua-1/);
   assert.match(line, /10 chars/);
+});
+
+// ── Saying WHY, not just that it failed ───────────────────────────────────
+
+test("a failure names the reason Google gave, not just a status", () => {
+  // A bare "HTTP 403" is three different problems with three different
+  // fixes. This file shipped with exactly that, and a real 403 arrived with
+  // nothing to act on — the same failure grant_admin_claim.mjs had already
+  // been fixed for.
+  const described = describeApiError(403, {
+    error: {
+      status: "PERMISSION_DENIED",
+      message:
+        "Cloud Text-to-Speech API has not been used in project dhakker-160d0 before or it is disabled.",
+    },
+  });
+  assert.match(described, /PERMISSION_DENIED/);
+  assert.match(described, /has not been used/);
+});
+
+test("a token-shaped run in an error is redacted before it is shown", () => {
+  const described = describeApiError(403, {
+    error: {
+      status: "PERMISSION_DENIED",
+      message: `bad credential ya29.${"A1b2C3d4".repeat(8)} for project p`,
+    },
+  });
+  assert.equal(described.includes("A1b2C3d4A1b2C3d4"), false);
+  assert.match(described, /\[redacted\]/);
+});
+
+test("a long message is truncated rather than pasted whole", () => {
+  // Words, not one long run: an unbroken run is caught by the redaction
+  // first, so a test built from one would pass with no truncation at all.
+  const described = describeApiError(400, {
+    error: { status: "INVALID_ARGUMENT", message: "policy denied ".repeat(400) },
+  });
+  assert.ok(described.length < 260, `too long: ${described.length}`);
+  assert.equal(described.includes("[redacted]"), false, "redaction did the work");
+});
+
+test("a shapeless error still produces a usable label", () => {
+  assert.equal(describeApiError(500, null), "HTTP_500");
+  assert.equal(describeApiError(403, "denied"), "HTTP_403");
+  assert.equal(describeApiError(404, { error: {} }), "HTTP_404");
+});
+
+test("the 403 help names the enable command and the billing requirement", () => {
+  // An error that describes a wall without pointing at the door is half an
+  // error message.
+  assert.match(HELP_403, /texttospeech\.googleapis\.com/);
+  assert.match(HELP_403, /gcloud services enable/);
+  assert.match(HELP_403, /billing account/);
+});
+
+test("every failing call carries the reason through, not the bare status", async () => {
+  const body = JSON.stringify({
+    error: { status: "PERMISSION_DENIED", message: "API not enabled" },
+  });
+  await assert.rejects(
+    () =>
+      listVoices(PLAN, {
+        fetch: async () => new Response(body, { status: 403 }),
+      }),
+    /PERMISSION_DENIED: API not enabled/,
+  );
+  await assert.rejects(
+    () =>
+      synthesise("x", "v", PLAN, {
+        fetch: async () => new Response(body, { status: 403 }),
+      }),
+    /PERMISSION_DENIED: API not enabled/,
+  );
+  await assert.rejects(
+    () =>
+      uploadAudio("d", Buffer.from("x"), PLAN, {
+        fetch: async () => new Response(body, { status: 403 }),
+      }),
+    /PERMISSION_DENIED: API not enabled/,
+  );
 });
 
 // ── What the file must never contain ──────────────────────────────────────
