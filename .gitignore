@@ -55,3 +55,12 @@ wrangler.toml
 
 # Local environment files
 .env*
+
+# Audio operator state contains live download tokens and Firestore snapshots.
+.local/
+# Generated recordings and reports are operator artifacts, not source code.
+/review/algieba-*-20*/
+/review/audio-preview-20*/
+/review/audio-voice-comparison-20*/
+/review/audio-voice-alternatives-20*/
+/review/Dhakker-Algieba-*.zip

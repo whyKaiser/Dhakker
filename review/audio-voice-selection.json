@@ -1,0 +1,16 @@
+{
+  "project": "dhakker-160d0",
+  "voice": "ar-XA-Chirp3-HD-Algieba",
+  "languageCode": "ar-XA",
+  "selectedBy": "user",
+  "selectedOn": "2026-09-10",
+  "stage": "published_to_supplications",
+  "syntheticVoice": true,
+  "referenceSample": "algieba-pacing-preview-2026-09-10/02-algieba-repeat-slower.mp3",
+  "referenceAudioSha256": "8880b411f6946ccafb60dd1c0728eadae7c4d76fc578845e2fd2b4059517ba3f",
+  "pronunciationReviewStatus": "sample-approved; other-records-not-human-reviewed",
+  "published": true,
+  "linkedRecords": 53,
+  "publicationReport": "algieba-final-2026-09-10/publication.json",
+  "verifiedAt": "2026-09-10T18:21:23.687Z"
+}
